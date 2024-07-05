@@ -70,11 +70,6 @@ if __name__ == "__main__":
     del obj_scan, blank_scan, dark_scan
 
     print("\n*******************************************************",
-          "\n********* Interpolate defective sino entries **********",
-          "\n*******************************************************")
-    sino, defective_pixel_list = mbirjax.preprocess.interpolate_defective_pixels(sino, defective_pixel_list)
-
-    print("\n*******************************************************",
           "\n************** Correct background offset **************",
           "\n*******************************************************")
     background_offset = mbirjax.preprocess.calc_background_offset(sino)
