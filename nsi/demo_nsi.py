@@ -72,7 +72,7 @@ if __name__ == "__main__":
     print("\n*******************************************************",
           "\n************** Correct background offset **************",
           "\n*******************************************************")
-    background_offset = mbirjax.preprocess.calc_background_offset(sino)
+    background_offset = mbirjax.preprocess.estimate_background_offset(sino)
     print("background_offset = ", background_offset)
     sino = sino - background_offset
 
