@@ -43,26 +43,19 @@ if __name__ == "__main__":
     print("\n*******************************************************",
           "\n************** NSI dataset preprocessing **************",
           "\n*******************************************************")
-    sino, angles, geo_params_jax = \
+    sino, cone_beam_params, optional_params = \
         mbirjax.preprocess.NSI.compute_sino_and_params(dataset_dir,
                                                        downsample_factor=downsample_factor,
                                                        subsample_view_factor=subsample_view_factor)
-    
+
     print("\n*******************************************************",
           "\n***************** Set up MBIRJAX model ****************",
           "\n*******************************************************")
     # ConeBeamModel constructor
-    ct_model = mbirjax.ConeBeamModel(sinogram_shape=geo_params_jax["sinogram_shape"], 
-                                     angles=angles, 
-                                     source_detector_dist=geo_params_jax["source_detector_dist"], 
-                                     source_iso_dist=geo_params_jax["source_iso_dist"],
-                                    )
+    ct_model = mbirjax.ConeBeamModel(**cone_beam_params)
     
     # Set additional geometry arguments
-    ct_model.set_params(det_row_offset=geo_params_jax["det_row_offset"],
-                        det_channel_offset=geo_params_jax["det_channel_offset"],
-                        delta_det_channel=geo_params_jax["delta_det_channel"],
-                        delta_det_row=geo_params_jax["delta_det_row"])
+    ct_model.set_params(**optional_params)
 
     # Set reconstruction parameter values
     ct_model.set_params(sharpness=sharpness, verbose=1)
