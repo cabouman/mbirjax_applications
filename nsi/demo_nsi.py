@@ -47,7 +47,7 @@ if __name__ == "__main__":
           "\n** Load scan images, angles, geometry params, and defective pixel information **",
           "\n********************************************************************************")
     obj_scan, blank_scan, dark_scan, angles, geo_params_jax, defective_pixel_list = \
-            mbirjax.preprocess_NSI.load_scans_and_params(dataset_dir,
+            mbirjax.preprocess.NSI.load_scans_and_params(dataset_dir,
                                                          downsample_factor=downsample_factor, 
                                                          subsample_view_factor=subsample_view_factor)
     
@@ -62,9 +62,9 @@ if __name__ == "__main__":
           "\n********** Compute sinogram from scan images **********",
           "\n*******************************************************")
     sino, defective_pixel_list = \
-            mbirjax.preprocess.transmission_CT_compute_sino(obj_scan, blank_scan, dark_scan,
-                                                            defective_pixel_list
-                                                           )
+            mbirjax.preprocess.compute_sino_transmission(obj_scan, blank_scan, dark_scan,
+                                                         defective_pixel_list
+                                                        )
     
     # delete scan images to optimize memory usage
     del obj_scan, blank_scan, dark_scan
