@@ -58,7 +58,7 @@ if __name__ == "__main__":
                                      source_iso_dist=geo_params_jax["source_iso_dist"],
                                     )
     
-    # Set additonal geometry arguments
+    # Set additional geometry arguments
     ct_model.set_params(det_row_offset=geo_params_jax["det_row_offset"],
                         det_channel_offset=geo_params_jax["det_channel_offset"],
                         delta_det_channel=geo_params_jax["delta_det_channel"],
