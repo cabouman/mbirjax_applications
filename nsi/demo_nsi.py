@@ -40,47 +40,14 @@ if __name__ == "__main__":
     sharpness=0.0
     # ###################### End of parameters
 
-    # ###########################################################################
-    # NSI preprocess: obtain sinogram, sino weights, angles, and geometry params
-    # ###########################################################################
-    print("\n********************************************************************************",
-          "\n** Load scan images, angles, geometry params, and defective pixel information **",
-          "\n********************************************************************************")
-    obj_scan, blank_scan, dark_scan, angles, geo_params_jax, defective_pixel_list = \
-            mbirjax.preprocess.NSI.load_scans_and_params(dataset_dir,
-                                                         downsample_factor=downsample_factor, 
-                                                         subsample_view_factor=subsample_view_factor)
+    print("\n*******************************************************",
+          "\n************** NSI dataset preprocessing **************",
+          "\n*******************************************************")
+    sino, angles, geo_params_jax = \
+        mbirjax.preprocess.NSI.compute_sino_and_params(dataset_dir,
+                                                       downsample_factor=downsample_factor,
+                                                       subsample_view_factor=subsample_view_factor)
     
-
-    print("MBIRJAX geometry paramemters:")
-    pp.pprint(geo_params_jax)
-    print('obj_scan shape = ', obj_scan.shape)
-    print('blank_scan shape = ', blank_scan.shape)
-    print('dark_scan shape = ', dark_scan.shape)
-
-    print("\n*******************************************************",
-          "\n********** Compute sinogram from scan images **********",
-          "\n*******************************************************")
-    sino, defective_pixel_list = \
-            mbirjax.preprocess.compute_sino_transmission(obj_scan, blank_scan, dark_scan,
-                                                         defective_pixel_list
-                                                        )
-    
-    # delete scan images to optimize memory usage
-    del obj_scan, blank_scan, dark_scan
-
-    print("\n*******************************************************",
-          "\n************** Correct background offset **************",
-          "\n*******************************************************")
-    background_offset = mbirjax.preprocess.estimate_background_offset(sino)
-    print("background_offset = ", background_offset)
-    sino = sino - background_offset
-
-    print("\n*******************************************************",
-          "\n**** Rotate sino images w.r.t. rotation axis tilt *****",
-          "\n*******************************************************")
-    sino = mbirjax.preprocess.correct_det_rotation(sino, det_rotation=geo_params_jax["det_rotation"])
-   
     print("\n*******************************************************",
           "\n***************** Set up MBIRJAX model ****************",
           "\n*******************************************************")
