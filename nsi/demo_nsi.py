@@ -4,7 +4,6 @@ import time
 import pprint
 import jax.numpy as jnp
 import mbirjax
-import mbirjax.plot_utils as pu
 import demo_utils
 import pprint
 pp = pprint.PrettyPrinter(indent=4)
@@ -94,6 +93,6 @@ if __name__ == "__main__":
     vmin = 0
     vmax = downsample_factor[0]*0.008
     # Display results
-    pu.slice_viewer(recon, vmin=0, vmax=vmax, slice_axis=0, slice_label='Axial Slice', title='MBIRJAX recon')
-    pu.slice_viewer(recon, vmin=0, vmax=vmax, slice_axis=1, slice_label='Coronal Slice', title='MBIRJAX recon')
-    pu.slice_viewer(recon, vmin=0, vmax=vmax, slice_axis=2, slice_label='Sagittal Slice', title='MBIRJAX recon')
+    mbirjax.slice_viewer(recon, vmin=0, vmax=vmax, slice_axis=0, slice_label='Axial Slice', title='MBIRJAX recon')
+    mbirjax.slice_viewer(recon, vmin=0, vmax=vmax, slice_axis=1, slice_label='Coronal Slice', title='MBIRJAX recon')
+    mbirjax.slice_viewer(recon, vmin=0, vmax=vmax, slice_axis=2, slice_label='Sagittal Slice', title='MBIRJAX recon')
