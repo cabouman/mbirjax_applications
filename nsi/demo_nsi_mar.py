@@ -87,10 +87,8 @@ if __name__ == "__main__":
     print("\n*******************************************************",
           "\n************ Calculate MAR sinogram weights ***********",
           "\n*******************************************************")
-    metal_threshold = downsample_factor[0]*0.013
-    weights_mar = ct_model.gen_weights_mar(sino, metal_threshold,
-                                           beta=1.0, gamma=4.0,
-                                           init_recon=init_recon)
+    weights_mar = ct_model.gen_weights_mar(sino, init_recon=init_recon,
+                                           beta=1.0, gamma=3.0)
     
     print("\n*******************************************************",
           "\n*********** Perform recon with MAR weights. ***********",
