@@ -115,7 +115,15 @@ if __name__ == "__main__":
     rot_angle = 17.165 # rotate angle in the plane defined by axes [0,2].
     init_recon = scipy.ndimage.rotate(init_recon, rot_angle, [0,2], reshape=False, order=3)
     recon_mar = scipy.ndimage.rotate(recon_mar, rot_angle, [0,2], reshape=False, order=3) 
-    
+   
+    # export reconstruction data to hdf5 files. 
+    mbirjax.preprocess.hdf5_write(init_recon, os.path.join(output_path, "init_recon.h5"),
+                                  recon_description="Recon of MAR dataset with transmission_root weight",
+                                  alu_description="1 ALU = 0.508 mm") 
+    mbirjax.preprocess.hdf5_write(recon_mar, os.path.join(output_path, "recon_mar.h5"),
+                                  recon_description="Recon of MAR dataset with MAR weight",
+                                  alu_description="1 ALU = 0.508 mm") 
+
     # Display results
     vmin = 0
     vmax = downsample_factor[0]*0.008
