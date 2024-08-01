@@ -84,9 +84,9 @@ if __name__ == "__main__":
     # Print out parameters used in recon
     pprint.pprint(recon_params._asdict())
     
-    mbirjax.preprocess.hdf5_write(recon, os.path.join(output_path, "recon.h5"),
-                                  recon_description="MBIRJAX recon of MAR phantom",
-                                  alu_description="1 ALU = 0.508 mm")
+    mbirjax.preprocess.export_recon_to_hdf5(recon, os.path.join(output_path, "recon.h5"),
+                                            recon_description="MBIRJAX recon of MAR phantom",
+                                            alu_description="1 ALU = 0.508 mm")
 
     # change the image data shape to (slices, rows, cols), so that the rotation axis points up when viewing the coronal/sagittal slices with slice_viewer
     recon = np.transpose(recon, (2,1,0))

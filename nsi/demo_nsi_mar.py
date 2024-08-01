@@ -97,7 +97,7 @@ if __name__ == "__main__":
     # Perform VCD reconstruction
     time0 = time.time()
 
-    recon_mar, recon_params = ct_model.recon(sino, weights=weights_mar, init_recon=init_recon, num_iterations=10)
+    recon_mar, recon_params = ct_model.recon(sino, weights=weights_mar, init_recon=init_recon)
 
     recon_mar.block_until_ready()
     elapsed = time.time() - time0
@@ -117,17 +117,15 @@ if __name__ == "__main__":
     recon_mar = scipy.ndimage.rotate(recon_mar, rot_angle, [0,2], reshape=False, order=3) 
    
     # export reconstruction data to hdf5 files. 
-    mbirjax.preprocess.hdf5_write(init_recon, os.path.join(output_path, "init_recon.h5"),
-                                  recon_description="Recon of MAR dataset with transmission_root weight",
+    mbirjax.preprocess.export_recon_to_hdf5(init_recon, os.path.join(output_path, "init_recon.h5"),
+                                            recon_description="Recon of MAR dataset with transmission_root weight",
                                   alu_description="1 ALU = 0.508 mm") 
-    mbirjax.preprocess.hdf5_write(recon_mar, os.path.join(output_path, "recon_mar.h5"),
-                                  recon_description="Recon of MAR dataset with MAR weight",
-                                  alu_description="1 ALU = 0.508 mm") 
+    mbirjax.preprocess.export_recon_to_hdf5(recon_mar, os.path.join(output_path, "recon_mar.h5"),
+                                            recon_description="Recon of MAR dataset with MAR weight",
+                                            alu_description="1 ALU = 0.508 mm") 
 
     # Display results
     vmin = 0
     vmax = downsample_factor[0]*0.008
 
     pu.slice_viewer(init_recon, recon_mar, vmin=0, vmax=vmax, slice_axis=2, slice_label='Sagittal Slice', title='recon with transmission_root weight (left) VS recon with MAR weight (right)')
-    pu.slice_viewer(init_recon, recon_mar, vmin=0, vmax=vmax, slice_axis=1, slice_label='Coronal Slice', title='recon with transmission_root weight (left) VS recon with MAR weight (right)')
-    pu.slice_viewer(init_recon, recon_mar, vmin=0, vmax=vmax, slice_axis=0, slice_label='Axial Slice', title='recon with transmission_root weight (left) VS recon with MAR weight (right)')
