@@ -43,7 +43,7 @@ if __name__ == "__main__":
           "\n************** NSI dataset preprocessing **************",
           "\n*******************************************************")
     sino, cone_beam_params, optional_params = \
-        mbirjax.preprocess.NSI.compute_sino_and_params(dataset_dir,
+        mbirjax.preprocess.nsi.compute_sino_and_params(dataset_dir,
                                                        downsample_factor=downsample_factor,
                                                        subsample_view_factor=subsample_view_factor)
 
