@@ -39,6 +39,9 @@ if __name__ == "__main__":
 
     # #### recon parameters
     sharpness = 0.0
+    
+    # #### Beam-hardening correction parameter.
+    bh_coeff = 0.0 # typical choices are 0.5, 1.0, and 1.5
     # ###################### End of parameters
 
     print("\n*******************************************************",
@@ -48,6 +51,9 @@ if __name__ == "__main__":
         mbirjax.preprocess.nsi.compute_sino_and_params(dataset_dir,
                                                        downsample_factor=downsample_factor,
                                                        subsample_view_factor=subsample_view_factor)
+
+    # perform beam hardening correction to the sinogram data
+    sino = sino + bh_coeff*sino*sino
 
     print("\n*******************************************************",
           "\n***************** Set up MBIRJAX model ****************",
