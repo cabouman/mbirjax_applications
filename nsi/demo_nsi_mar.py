@@ -97,7 +97,7 @@ if __name__ == "__main__":
     # Perform VCD reconstruction
     time0 = time.time()
 
-    recon_mar, recon_params = ct_model.recon(sino, weights=weights_mar, init_recon=init_recon, num_iterations=10)
+    recon_mar, recon_params = ct_model.recon(sino, weights=weights_mar, init_recon=init_recon)
 
     recon_mar.block_until_ready()
     elapsed = time.time() - time0
@@ -129,9 +129,5 @@ if __name__ == "__main__":
     vmin = 0
     vmax = downsample_factor[0] * 0.008
 
-    mbirjax.slice_viewer(init_recon, recon_mar, vmin=0, vmax=vmax, slice_axis=0, slice_label='Axial Slice',
-                         title='recon with transmission_root weight (left) VS recon with MAR weight (right)')
-    mbirjax.slice_viewer(init_recon, recon_mar, vmin=0, vmax=vmax, slice_axis=1, slice_label='Coronal Slice',
-                         title='recon with transmission_root weight (left) VS recon with MAR weight (right)')
     mbirjax.slice_viewer(init_recon, recon_mar, vmin=0, vmax=vmax, slice_axis=2, slice_label='Sagittal Slice',
                          title='recon with transmission_root weight (left) VS recon with MAR weight (right)')
