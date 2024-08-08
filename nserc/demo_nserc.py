@@ -1,14 +1,14 @@
 import numpy as np
 import os
 import time
-import pprint
 import jax.numpy as jnp
 import mbirjax
 import dxchange
 import tomopy
 import mbirjax
 import mbirjax.plot_utils as pu
-
+#from reconstruction import remove_outlier1d
+import pprint
 pp = pprint.PrettyPrinter(indent=4)
 
 def create_circular_mask(h, w, center=None, radius=None):
