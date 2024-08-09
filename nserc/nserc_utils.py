@@ -1,3 +1,5 @@
+import numpy as np
+
 def create_circular_mask(height, width, center=None, radius=None):
     """ This function creates a 2D binary mask, which denotes the circular region specified by (height, width, center, radius).
     Args:
