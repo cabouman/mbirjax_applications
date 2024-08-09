@@ -18,6 +18,8 @@ if __name__ == "__main__":
     output_path = './output/nserc_demo_sand/'  # path to store output recon images
     os.makedirs(output_path, exist_ok=True)  # mkdir if directory does not exist
 
+    # Currently user needs to manually download the dataset.
+    # Will replace this with an automated download process in the future. 
     dataset_path = "./20240425_164409_nist-sand-30-200-mix_27keV_z8mm_n657.h5"    
    
     # ##################### preprocessing parameters
