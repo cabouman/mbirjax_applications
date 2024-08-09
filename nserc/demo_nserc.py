@@ -35,7 +35,7 @@ if __name__ == "__main__":
     ringVo_dim=1
 
     # ###################### geometry parameters
-    cor = 1265.5 # this is used to calculated det_channel_offset
+    cor = 1265.5 # this is used to calculated det_channel_offset. det_channel_offset = int((cor - numrays/2)
     
     # ###################### recon parameters
     sharpness = 0.0
@@ -68,7 +68,7 @@ if __name__ == "__main__":
 
     print("Reading object, blank, and dark scans from the input hdf5 file ...")
     obj_scan, blank_scan, dark_scan, angles = dxchange.exchange.read_aps_tomoscan_hdf5(dataset_path, sino=(sinoused[0],sinoused[1],sinoused[2]))
-    angles = -angles
+    angles = -angles # I don't know the reason behind the angle flip. Maybe the rotation direction is defined differently in MBIRJAX and in LBNL instrumentation?
     obj_scan = obj_scan.astype(np.float32,copy=False)
     blank_scan = blank_scan.astype(np.float32,copy=False)
     dark_scan = dark_scan.astype(np.float32,copy=False)
