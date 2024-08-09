@@ -7,36 +7,43 @@ import dxchange
 import tomopy
 import mbirjax
 import mbirjax.plot_utils as pu
-#from reconstruction import remove_outlier1d
+
+
 import pprint
 pp = pprint.PrettyPrinter(indent=4)
 
-def create_circular_mask(h, w, center=None, radius=None):
-
-    if center is None: # use the middle of the image
-        center = (int(w/2), int(h/2))
-    if radius is None: # use the smallest distance between the center and image walls
-        radius = min(center[0], center[1], w-center[0], h-center[1])
-
-    Y, X = np.ogrid[:h, :w]
-    dist_from_center = np.sqrt((X - center[0])**2 + (Y-center[1])**2)
-
-    mask = dist_from_center <= radius
-    return mask
 
 if __name__ == "__main__":
-    # ###################### User defined params. Change the parameters below for your own use case.
+    # ##################### User defined params. Change the parameters below for your own use case.
     output_path = './output/nserc_demo_sand/'  # path to store output recon images
     os.makedirs(output_path, exist_ok=True)  # mkdir if directory does not exist
 
     dataset_path = "./20240425_164409_nist-sand-30-200-mix_27keV_z8mm_n657.h5"    
+   
+    # ##################### preprocessing parameters
+    # #### paramters specific to outlier removal
+    outlier_diff1D = 750
+    outlier_size1D = 3
+ 
+    # #### paramters specific to projection data smoothing
+    ringSize = 5 #Size of the filter used to smooth the projection data 
     
-    # #### recon parameters
+    # #### parameters specific to strip artifact removal
+    ringVo_snr= 1.1 #Ring Removal SNR: Sensitivity of large stripe detection method. Smaller is more sensitive. No affect on small stripes. Recommended values: 1.1 -- 3.0.
+    ringVo_la_size=75 #Large Ring Size: Window size of the median filter to remove large stripes. Set to appx width of large stripes -- should be larger value than Small Ring Size. Always choose odd value, set to 1 to turn off.
+    ringVo_sm_size=15 #Small Ring Size: Window size of the median filter to remove small stripes. Larger is stronger but takes longer. Set to appx width of small stripes. Always choose odd value, set to 1 to turn off.
+    ringVo_dim=1
+
+    # ###################### geometry parameters
+    cor = 1265.5 # this is used to calculated det_channel_offset
+    
+    # ###################### recon parameters
     sharpness = 0.0
+    recon_margin = 256 # margin width of the reconstruction. The region of reconstruction will zero-padded during the reconstruction process. This margin will be cropped out afterwards.
     # ###################### End of parameters
 
     print("\n*******************************************************",
-          "\n*********** Load NSERC data and meta data *************",
+          "\n**************** Load NSERC meta data *****************",
           "\n*******************************************************")
     numslices = int(dxchange.read_hdf5(dataset_path, "/measurement/instrument/detector/dimension_y")[0])
     numrays = int(dxchange.read_hdf5(dataset_path, "/measurement/instrument/detector/dimension_x")[0])
@@ -53,68 +60,64 @@ if __name__ == "__main__":
         print('white light mode detected; energy is set to 30 kev for the phase retrieval function')
 
     print("\n*******************************************************",
-          "\n************* Preprocessing NSERC data ****************",
+          "\n************* Preprocess NSERC data ****************",
           "\n*******************************************************")
     sinoused = (-1,10,1) #using the whole numslices will make it run out of memory
     if sinoused[0] < 0:
-            sinoused = (int(np.floor(numslices / 2.0) - np.ceil(sinoused[1] / 2.0)), int(np.floor(numslices / 2.0) + np.floor(sinoused[1] / 2.0)), 1)
+        sinoused = (int(np.floor(numslices / 2.0) - np.ceil(sinoused[1] / 2.0)), int(np.floor(numslices / 2.0) + np.floor(sinoused[1] / 2.0)), 1)
 
-    tomo, flat, dark, anglelist = dxchange.exchange.read_aps_tomoscan_hdf5(dataset_path, sino=(sinoused[0],sinoused[1],sinoused[2]))
-    anglelist = -anglelist
-    tomo = tomo.astype(np.float32,copy=False)
-    flat = flat.astype(np.float32,copy=False)
-    dark = dark.astype(np.float32,copy=False)
-    print("shape of tomo = ", tomo.shape)
-    print("shape of flat = ", flat.shape)
-    print("shape of dark = ", dark.shape)
+    print("Reading object, blank, and dark scans from the input hdf5 file ...")
+    obj_scan, blank_scan, dark_scan, angles = dxchange.exchange.read_aps_tomoscan_hdf5(dataset_path, sino=(sinoused[0],sinoused[1],sinoused[2]))
+    angles = -angles
+    obj_scan = obj_scan.astype(np.float32,copy=False)
+    blank_scan = blank_scan.astype(np.float32,copy=False)
+    dark_scan = dark_scan.astype(np.float32,copy=False)
+    print("shape of object scan = ", obj_scan.shape)
+    print("shape of blank scan = ", blank_scan.shape)
+    print("shape of dark scan = ", dark_scan.shape)
     
-    outlier_diff1D = 750
-    outlier_size1D = 3
-    #remove_outlier1d(tomo, outlier_diff1D, size=outlier_size1D, out=tomo, ncore=64)
-    #remove_outlier1d(flat, outlier_diff1D, size=outlier_size1D, out=flat, ncore=64)
+    print("Removing high intensity bright spots from object and blank scans ...")
+    tomopy.misc.corr.remove_outlier(obj_scan, outlier_diff1D, size=outlier_size1D, out=obj_scan, ncore=64)
+    tomopy.misc.corr.remove_outlier(blank_scan, outlier_diff1D, size=outlier_size1D, out=blank_scan, ncore=64)
+    
+    print("Computing sinogram data from object, blank, and dark scans ...")
+    sinogram, _ = mbirjax.preprocess.utilities.compute_sino_transmission(obj_scan, blank_scan, dark_scan)
+    print("shape of sinogram data = ", sinogram.shape) 
 
-    tomopy.normalize(tomo, flat, dark, out=tomo, ncore=64)
-    tomopy.minus_log(tomo, out=tomo, ncore=64);
+    print("Normalizing sinogram data using a smoothing filter ...")
+    sinogram = tomopy.remove_stripe_sf(sinogram, size=ringSize)
+    
+    print("Removing all types of stripe artifacts from sinogram using Nghia Vo’s approach ...")
+    sinogram = tomopy.remove_all_stripe(sinogram,snr=ringVo_snr, la_size=ringVo_la_size, sm_size=ringVo_sm_size, dim=ringVo_dim)
 
-    # ringSize = 5
-    # tomo = tomopy.remove_stripe_sf(tomo, size=ringSize)
+    det_channel_offset = int((cor - numrays/2))
 
-    ringVo_snr= 1.1 #Ring Removal SNR: Sensitivity of large stripe detection method. Smaller is more sensitive. No affect on small stripes. Recommended values: 1.1 -- 3.0.
-    ringVo_la_size=75 #Large Ring Size: Window size of the median filter to remove large stripes. Set to appx width of large stripes -- should be larger value than Small Ring Size. Always choose odd value, set to 1 to turn off.
-    ringVo_sm_size=15 #Small Ring Size: Window size of the median filter to remove small stripes. Larger is stronger but takes longer. Set to appx width of small stripes. Always choose odd value, set to 1 to turn off.
-    ringVo_dim=1
+    sinogram = jnp.array(sinogram)
 
-    tomo = tomopy.remove_all_stripe(tomo,snr=ringVo_snr, la_size=ringVo_la_size, sm_size=ringVo_sm_size, dim=ringVo_dim, ncore=64)
-
-    cor = 1265.5
-    theshift = int((cor - numrays/2))
-
-    sinogram = jnp.array(tomo)
-
-    # = jax.device_put() 
     # View sinogram
-    pu.slice_viewer(tomo.transpose((0, 2, 1)), title='Original sinogram')
-
+    pu.slice_viewer(sinogram.transpose((0, 2, 1)), title='Original sinogram')
 
     print("\n*******************************************************",
-          "\n*********** Perform MBIRJAX reconstruction ************",
+          "\n***************** Set up MBIRJAX model ****************",
           "\n*******************************************************")
-    parallel_model = mbirjax.ParallelBeamModel(sinogram_shape=sinogram.shape, angles=anglelist)
+    parallel_model = mbirjax.ParallelBeamModel(sinogram_shape=sinogram.shape, angles=angles)
     recon_shape = parallel_model.get_params('recon_shape')
-    npad = 256
-    recon_shape = (recon_shape[0] + npad*2, recon_shape[1] + npad*2, recon_shape[2])
+    recon_shape = (recon_shape[0] + recon_margin*2, recon_shape[1] + recon_margin*2, recon_shape[2])
     parallel_model.set_params(recon_shape=recon_shape)
 
     # Generate weights array
     # weights = parallel_model.gen_weights(sinogram / sinogram.max(), weight_type='transmission_root')
 
     # Set reconstruction parameter values
-    parallel_model.set_params(sharpness=sharpness, det_channel_offset=theshift, verbose=1)
+    parallel_model.set_params(sharpness=sharpness, det_channel_offset=det_channel_offset, verbose=1)
 
 
     # Print out model parameters
     parallel_model.print_params()
-
+    
+    print("\n*******************************************************",
+          "\n*********** Perform MBIRJAX reconstruction ************",
+          "\n*******************************************************")
     # ##########################
     # Perform VCD reconstruction
     time0 = time.time()
@@ -130,9 +133,13 @@ if __name__ == "__main__":
     print("\n*******************************************************",
           "\n**************** Display recon results ****************",
           "\n*******************************************************")
+    print("Scaling the reconstruction by pixel size ...")
     recon /= pxsize #scale by pixel size to units of 1/cm
-    recon = recon[npad:-npad, npad:-npad, :] #undo padding of recon   
+    
+    print("Cropping the reconstruction margin ...")
+    recon = recon[recon_margin:-recon_margin, recon_margin:-recon_margin, :] #undo padding of recon   
 
-    themask = create_circular_mask(recon.shape[0],recon.shape[1]).astype(int)
-    recon = recon*themask[:,:,np.newaxis]
+    print("Masking the reconstruction to display the circular ROR region ...")
+    circular_mask = create_circular_mask(recon.shape[0],recon.shape[1]).astype(int)
+    recon = recon*circular_mask[:,:,np.newaxis]
     pu.slice_viewer(recon, vmin=-5, vmax=10, title='VCD Recon (right)')
