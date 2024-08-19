@@ -8,7 +8,7 @@ import tomopy
 import mbirjax
 import mbirjax.plot_utils as pu
 import demo_utils
-import nserc_utils
+import nersc_utils
 
 import pprint
 pp = pprint.PrettyPrinter(indent=4)
@@ -16,7 +16,7 @@ pp = pprint.PrettyPrinter(indent=4)
 
 if __name__ == "__main__":
     # ##################### User defined params. Change the parameters below for your own use case.
-    output_path = './output/nserc_demo_sand/'  # path to store output recon images
+    output_path = './output/nersc_demo_sand/'  # path to store output recon images
     os.makedirs(output_path, exist_ok=True)  # mkdir if directory does not exist
     
     # ##### params for dataset downloading. User may change these parameters for their own datasets.
@@ -147,6 +147,6 @@ if __name__ == "__main__":
     recon = recon[recon_margin:-recon_margin, recon_margin:-recon_margin, :] #undo padding of recon   
 
     print("Masking the reconstruction to display the circular ROR region ...")
-    circular_mask = nserc_utils.create_circular_mask(recon.shape[0],recon.shape[1]).astype(int)
+    circular_mask = nersc_utils.create_circular_mask(recon.shape[0],recon.shape[1]).astype(int)
     recon = recon*circular_mask[:,:,np.newaxis]
     pu.slice_viewer(recon, vmin=-5, vmax=10, title='VCD Recon (right)')
