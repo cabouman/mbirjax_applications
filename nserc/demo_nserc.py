@@ -7,7 +7,8 @@ import dxchange
 import tomopy
 import mbirjax
 import mbirjax.plot_utils as pu
-from nserc_utils import create_circular_mask
+import demo_utils
+import nserc_utils
 
 import pprint
 pp = pprint.PrettyPrinter(indent=4)
@@ -17,10 +18,14 @@ if __name__ == "__main__":
     # ##################### User defined params. Change the parameters below for your own use case.
     output_path = './output/nserc_demo_sand/'  # path to store output recon images
     os.makedirs(output_path, exist_ok=True)  # mkdir if directory does not exist
-
-    # Currently user needs to manually download the dataset.
-    # Will replace this with an automated download process in the future. 
-    dataset_path = "./20240425_164409_nist-sand-30-200-mix_27keV_z8mm_n657.h5"    
+    
+    # ##### params for dataset downloading. User may change these parameters for their own datasets.
+    # An example NSERC dataset (tarball) will be downloaded from `dataset_url`, and saved to `download_dir`.
+    # url to NSERC dataset. 
+    dataset_url = 'https://engineering.purdue.edu/~bouman/data_repository/data/nersc-sand.tgz'
+    # destination path to download and extract the NSERC data and metadata.
+    download_dir = './demo_data/'
+    _, dataset_path = demo_utils.download_and_extract_tar(dataset_url, download_dir)
    
     # ##################### preprocessing parameters
     # #### paramters specific to outlier removal
@@ -142,6 +147,6 @@ if __name__ == "__main__":
     recon = recon[recon_margin:-recon_margin, recon_margin:-recon_margin, :] #undo padding of recon   
 
     print("Masking the reconstruction to display the circular ROR region ...")
-    circular_mask = create_circular_mask(recon.shape[0],recon.shape[1]).astype(int)
+    circular_mask = nserc_utils.create_circular_mask(recon.shape[0],recon.shape[1]).astype(int)
     recon = recon*circular_mask[:,:,np.newaxis]
     pu.slice_viewer(recon, vmin=-5, vmax=10, title='VCD Recon (right)')
