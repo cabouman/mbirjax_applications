@@ -7,7 +7,6 @@ import dxchange
 import tomopy
 import mbirjax
 import mbirjax.plot_utils as pu
-import demo_utils
 import nersc_utils
 
 import pprint
@@ -25,7 +24,7 @@ if __name__ == "__main__":
     dataset_url = 'https://engineering.purdue.edu/~bouman/data_repository/data/nersc-sand.tgz'
     # destination path to download and extract the NERSC data and metadata.
     download_dir = './demo_data/'
-    _, dataset_path = demo_utils.download_and_extract_tar(dataset_url, download_dir)
+    _, dataset_path = nersc_utils.download_and_extract_tar(dataset_url, download_dir)
    
     # ##################### preprocessing parameters
     # #### paramters specific to outlier removal
