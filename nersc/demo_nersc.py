@@ -20,10 +20,10 @@ if __name__ == "__main__":
     os.makedirs(output_path, exist_ok=True)  # mkdir if directory does not exist
     
     # ##### params for dataset downloading. User may change these parameters for their own datasets.
-    # An example NSERC dataset (tarball) will be downloaded from `dataset_url`, and saved to `download_dir`.
-    # url to NSERC dataset. 
+    # An example NERSC dataset (tarball) will be downloaded from `dataset_url`, and saved to `download_dir`.
+    # url to NERSC dataset. 
     dataset_url = 'https://engineering.purdue.edu/~bouman/data_repository/data/nersc-sand.tgz'
-    # destination path to download and extract the NSERC data and metadata.
+    # destination path to download and extract the NERSC data and metadata.
     download_dir = './demo_data/'
     _, dataset_path = demo_utils.download_and_extract_tar(dataset_url, download_dir)
    
@@ -50,7 +50,7 @@ if __name__ == "__main__":
     # ###################### End of parameters
 
     print("\n*******************************************************",
-          "\n**************** Load NSERC meta data *****************",
+          "\n**************** Load NERSC meta data *****************",
           "\n*******************************************************")
     numslices = int(dxchange.read_hdf5(dataset_path, "/measurement/instrument/detector/dimension_y")[0])
     numrays = int(dxchange.read_hdf5(dataset_path, "/measurement/instrument/detector/dimension_x")[0])
@@ -67,7 +67,7 @@ if __name__ == "__main__":
         print('white light mode detected; energy is set to 30 kev for the phase retrieval function')
 
     print("\n*******************************************************",
-          "\n************* Preprocess NSERC data ****************",
+          "\n************* Preprocess NERSC data ****************",
           "\n*******************************************************")
     sinoused = (-1,10,1) #using the whole numslices will make it run out of memory
     if sinoused[0] < 0:
