@@ -1,6 +1,7 @@
 
 nsi/demo_data/*
 nsi/output/*
+nsi/demo_data/*
 
 
 # ignore jupyter notebook files
