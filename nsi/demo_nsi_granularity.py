@@ -37,9 +37,10 @@ if __name__ == "__main__":
     subsample_view_factor = 1  # view subsample factor.
 
     # #### recon parameters
-    sharpness = 0.0
-    granularity = [1, 8, 64, 512]
-    partition_sequence = [0, 1, 1, 2, 2, 2, 3]
+    sharpness = 1.5
+    snr_db = 35
+    granularity = [1, 3, 9, 27, 81, 243]
+    partition_sequence = [0, 1, 2, 3, 4, 5]
     num_iterations = 15
     # ###################### End of parameters
 
@@ -61,7 +62,7 @@ if __name__ == "__main__":
     ct_model.set_params(**optional_params)
 
     # Set reconstruction parameter values
-    ct_model.set_params(sharpness=sharpness, verbose=1)
+    ct_model.set_params(sharpness=sharpness, snr_db=snr_db, verbose=1)
 
     # Set granularity and partition sequence
     ct_model.set_params(granularity=granularity)
@@ -82,7 +83,7 @@ if __name__ == "__main__":
     # Perform VCD reconstruction
     time0 = time.time()
 
-    recon, recon_params = ct_model.recon(sino, weights=weights, num_iterations=num_iterations)
+    recon, recon_params = ct_model.recon(sino, weights=weights, num_iterations=num_iterations, compute_prior_loss=True)
 
     recon.block_until_ready()
     elapsed = time.time() - time0
