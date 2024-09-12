@@ -36,7 +36,7 @@ if __name__ == "__main__":
           "\n**************** Load NERSC meta data *****************",
           "\n*******************************************************")
     
-    with h5py.File(dataset_path, 'r') as f:
+    with h5py.File(dataset_path, 'r') as f: 
         numslices = int(f['/measurement/instrument/detector/dimension_y'][0])
         numrays = int(f['/measurement/instrument/detector/dimension_x'][0])
         pxsize = f['/measurement/instrument/detector/pixel_size'][0] / 10.0  # /10 to convert units from mm to cm
@@ -129,4 +129,4 @@ if __name__ == "__main__":
     print("Masking the reconstruction to display the circular ROR region ...")
     circular_mask = nersc_utils.create_circular_mask(recon.shape[0],recon.shape[1]).astype(int)
     recon = recon*circular_mask[:,:,np.newaxis]
-    pu.slice_viewer(recon, vmin=-5, vmax=10, title='VCD Recon (right)')
+    pu.slice_viewer(recon, vmin=-5, vmax=10, title='VCD Recon')
