@@ -16,8 +16,7 @@ This repository contains scripts that demonstrate the usage of [MBIRJAX](https:/
      ```
    * NERSC:
      ```
+     pip install mbirjax
      cd mbirjax_applications/nersc
-     source install_requirements.sh 
      python demo_nersc.py
      ```
-On machines utilizing Nividia GPUs, it may be necessary to install the packages in install_requirements.sh before installing MBIRJAX into your current environment
