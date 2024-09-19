@@ -14,3 +14,9 @@ This repository contains scripts that demonstrate the usage of [MBIRJAX](https:/
      cd mbirjax_applications/nsi
      python demo_nsi.py
      ```
+   * NERSC:
+     ```
+     pip install mbirjax
+     cd mbirjax_applications/nersc
+     python demo_nersc.py
+     ```
