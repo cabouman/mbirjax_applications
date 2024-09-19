@@ -4,81 +4,63 @@ import urllib.request
 import tarfile
 import warnings
 
-
-# Temporarily move a copy of this here
 def download_and_extract_tar(download_url, save_dir):
-    """ Given a download url, download the tarball file from ``download_url`` , extract the tarball to ``save_dir``, and return the paths to the tarball file as well as the extracted file. 
-        If the file already exists in ``save_dir``, user will be queried whether it is desired to download and overwrite the existing files.
-        ``download_url`` is assumed to have the format <url/{tarball_name}>.
-        The tarball file is assumed to contain a single top-level directory.
- 
+    """Downloads a tarball file from `download_url`, extracts it to `save_dir`, and returns the file paths. 
+       If an `.h5` file exists in `save_dir`, it automatically detects and uses that file without downloading or extracting.
+
     Args:
-        download_url: An url to download the data. This url needs to be public.
-        save_dir (string): Path to parent directory where downloaded file will be saved and extracted to. 
-    Return:
-        A tuple containing:
-            - path to the tarball file. This will be ``save_dir``+ downloaded_file_name.
-            - A list containing the names of the top level files 
+        download_url (str): The URL to download the tarball from. The URL must be public and accessible.
+        save_dir (str): The directory where the downloaded file will be saved and extracted.
+
+    Returns:
+        tuple: A tuple containing:
+            - tarball_path (str): The path to the tarball file saved in `save_dir`.
+            - extracted_file_name (str): The name of the extracted top-level file or directory, or the detected `.h5` file.
     """
 
-    is_download = True
-    # the download url is assumed to have the format "**/{tarball_name}"
+    # Local function to handle tarball extraction
+    def extract_tarball(tarball_path, save_dir):
+        print(f"Extracting tarball file to {save_dir} ...")
+        try:
+            with tarfile.open(tarball_path) as tar_file:
+                extracted_file_name = os.path.join(save_dir, os.path.commonprefix(tar_file.getnames()))
+                tar_file.extractall(save_dir)
+                print(f"Extraction successful! File extracted to {extracted_file_name}")
+            return extracted_file_name
+        except Exception:
+            warnings.warn(f"Extraction failed. Please make sure {tarball_path} is a tarball file.")
+            return None
+
+    # Check if .h5 file exists in save_dir
+    if os.path.exists(save_dir):
+        h5_files = sorted([f for f in os.listdir(save_dir) if f.endswith('.h5')])
+        if h5_files:
+            print(f"h5 file {h5_files[0]} detected, using that.")
+            return None, os.path.join(save_dir, h5_files[0])
+
+    # Prepare for download and extraction
     tarball_name = download_url.split('/')[-1]
-    # full path to the tarball file 
     tarball_path = os.path.join(save_dir, tarball_name)
-    
-    # If the tarball already exists, then prompt user whether to download and overwrite the existing file.
-    if os.path.exists(tarball_path):
-        is_download = query_yes_no(f"{tarball_path} already exists. Do you still want to download and overwrite the file?")
-    
-    ################### Download and extract tarball file
-    if is_download:
-        # make the directory where the tarball will be saved, if necessary.
+
+    # Check if tarball exists
+    yes_download = not os.path.exists(tarball_path) or query_yes_no(f"{tarball_path} already exists. Do you want to overwrite?")
+
+    # Download the tarball if needed
+    if yes_download:
         os.makedirs(os.path.dirname(tarball_path), exist_ok=True)
-        ###### download the tarball
         print("Downloading file ...")
         try:
             urllib.request.urlretrieve(download_url, tarball_path)
+            print(f"Download successful! Tarball file saved to {tarball_path}")
         except urllib.error.HTTPError as e:
-            if e.code == 401:
-                raise RuntimeError(
-                    f'HTTP status code {e.code}: URL authentication failed! Currently we do not support downloading data from a url that requires authentication.')
-            elif e.code == 403:
-                raise RuntimeError(
-                    f'HTTP status code {e.code}: URL forbidden! Please make sure the provided URL is public.')
-            elif e.code == 404:
-                raise RuntimeError(
-                    f'HTTP status code {e.code}: URL not Found! Please check and make sure the download URL provided is correct.')
-            else:
-                raise RuntimeError(
-                    f'HTTP status code {e.code}: {e.reason}. For more details please refer to https://en.wikipedia.org/wiki/List_of_HTTP_status_codes')
-        except urllib.error.URLError as e:
+            raise RuntimeError(f"HTTP status code {e.code}")
+        except urllib.error.URLError:
             raise RuntimeError('URLError raised! Please check your internet connection.')
-        
-        # download is successful if no exceptions occur
-        print(f"Download successful! Tarball file saved to {tarball_path}")
-        
-        ###### Extract to save_dir.
-        print(f"Extracting tarball file to {save_dir} ...")
-        try:
-            tar_file = tarfile.open(tarball_path)
-            extracted_file_name = os.path.join(save_dir, os.path.commonprefix(tar_file.getnames()))
-            tar_file.extractall(save_dir)
-            tar_file.close
-            print(f"Extraction successful! File extracted to {extracted_file_name}")
-        except:
-            warnings.warn(f"Extraction failed. Please make sure {tarball_path} is a tarball file.")
-            return tarball_path
 
+    # Extract tarball
+    extracted_file_name = extract_tarball(tarball_path, save_dir)
 
-    ################### Skip download and extraction steps
-    else:
-        print("Skipped data download and extraction step.")
-        # Get top level file names without extracting the tarball
-        tar_file =  tarfile.open(tarball_path, mode='r')
-        extracted_file_name = os.path.join(save_dir, os.path.commonprefix(tar_file.getnames()))
-    
-    return tar_file, extracted_file_name
+    return tarball_path, extracted_file_name
 
 
 # Temporarily move a copy of this here
