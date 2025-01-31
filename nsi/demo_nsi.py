@@ -73,10 +73,15 @@ if __name__ == "__main__":
           "\n*******************************************************")
     # ##########################
     # Perform VCD reconstruction
+
     time0 = time.time()
-
-    recon, recon_params = ct_model.recon(sino, weights=weights)
-
+    # Using FDK reconstruction as initialization of VCD
+    print('Starting fdk')
+    fdk_recon = ct_model.fdk_recon(sino)
+    elapsed = time.time() - time0
+    print('Elapsed time for fdk is {:.3f} seconds'.format(elapsed))
+    time0 = time.time()
+    recon, recon_params = ct_model.recon(sino, weights=weights, init_recon=fdk_recon)
     recon.block_until_ready()
     elapsed = time.time() - time0
     print('Elapsed time for recon is {:.3f} seconds'.format(elapsed))

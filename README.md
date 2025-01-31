@@ -7,16 +7,19 @@ This repository contains scripts that demonstrate the usage of [MBIRJAX](https:/
    ```
    git clone git@github.com:cabouman/mbirjax_applications.git
    ```
-3. Run demo scripts for the application of your choice. Availble applications include:
+3. Run demo scripts for the application of your choice. Note that if you do not have a GPU with cuda, 
+then replace `pip install mbirjax[cuda12]` with `pip install mbirjax`
+
+Available applications include:
    * Cone-beam CT reconstruction with NorthStar Instrument (NSI) system:
      ```
-     pip install mbirjax
+     pip install mbirjax[cuda12]
      cd mbirjax_applications/nsi
      python demo_nsi.py
      ```
    * NERSC:
      ```
-     pip install mbirjax
+     pip install mbirjax[cuda12]
      cd mbirjax_applications/nersc
      python demo_nersc.py
      ```
