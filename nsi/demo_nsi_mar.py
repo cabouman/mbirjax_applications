@@ -91,7 +91,7 @@ if __name__ == "__main__":
     init_recon, recon_params = ct_model.recon(sino, weights=weights_trans, init_recon=fdk_recon)
     init_recon.block_until_ready()
     elapsed = time.time() - time0
-    print('Elapsed time for initial recon is {:.3f} seconds'.format(elapsed))
+    print('Elapsed time for initial trans weight VCD recon is {:.3f} seconds'.format(elapsed))
     # ##########################
 
     print("\n*******************************************************",
