@@ -24,7 +24,7 @@ if __name__ == "__main__":
     # ##### params for dataset downloading. User may change these parameters for their own datasets.
     # An example NSI dataset (tarball) will be downloaded from `dataset_url`, and saved to `download_dir`.
     # url to NSI dataset.
-    dataset_url = 'https://www.datadepot.rcac.purdue.edu/bouman/data/demo_data_nsi.tgz'
+    dataset_url = 'https://engineering.purdue.edu/~bouman/data_repository/data/demo_data_nsi.tgz'
     # destination path to download and extract the NSI data and metadata.
     download_dir = './demo_data/'
     # Path to NSI scan directory.
