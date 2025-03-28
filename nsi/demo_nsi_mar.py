@@ -25,7 +25,7 @@ if __name__ == "__main__":
     # ##### params for dataset downloading. User may change these parameters for their own datasets.
     # An example NSI dataset (tarball) will be downloaded from `dataset_url`, and saved to `download_dir`.
     # url to NSI dataset.
-    dataset_url = 'https://engineering.purdue.edu/~bouman/data_repository/data/mar_demo_data.tgz'
+    dataset_url = 'https://www.datadepot.rcac.purdue.edu/bouman/data/mar_demo_data.tgz'
     # destination path to download and extract the NSI data and metadata.
     download_dir = './demo_data/'
     # Path to NSI scan directory.
@@ -39,7 +39,7 @@ if __name__ == "__main__":
 
     # #### recon parameters
     sharpness = 0.0
-    
+
     # #### Beam-hardening correction parameter.
     bh_coeff = 0.0 # typical choices are 0.5, 1.0, and 1.5
     # ###################### End of parameters
