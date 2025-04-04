@@ -38,7 +38,7 @@ if __name__ == "__main__":
     subsample_view_factor = 1  # view subsample factor.
 
     # #### recon parameters
-    sharpness = 0.0
+    sharpness = 1.0
 
     # #### Beam-hardening correction parameter.
     bh_coeff = 0.0 # typical choices are 0.5, 1.0, and 1.5

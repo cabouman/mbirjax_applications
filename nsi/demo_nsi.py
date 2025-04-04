@@ -37,7 +37,7 @@ if __name__ == "__main__":
     subsample_view_factor = 1  # view subsample factor.
 
     # #### recon parameters
-    sharpness = 0.0
+    sharpness = 1.0
     # ###################### End of parameters
 
     print("\n*******************************************************",
