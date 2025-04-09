@@ -91,7 +91,7 @@ if __name__ == "__main__":
     pprint.pprint(recon_params._asdict())
 
     mbirjax.preprocess.export_recon_to_hdf5(recon, os.path.join(output_path, "recon.h5"),
-                                            recon_description="MBIRJAX recon of MAR phantom",
+                                            recon_description="MBIRJAX recon of phantom",
                                             alu_description="1 ALU = 0.508 mm")
 
     # change the image data shape to (slices, rows, cols), so that the rotation axis points up when viewing the
