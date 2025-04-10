@@ -37,7 +37,7 @@ if __name__ == "__main__":
     subsample_view_factor = 1  # view subsample factor.
 
     # #### recon parameters
-    sharpness = 0.0
+    sharpness = 1.0
     # ###################### End of parameters
 
     print("\n*******************************************************",
@@ -75,13 +75,7 @@ if __name__ == "__main__":
     # Perform VCD reconstruction
 
     time0 = time.time()
-    # Using FDK reconstruction as initialization of VCD
-    print('Starting fdk')
-    fdk_recon = ct_model.fdk_recon(sino)
-    elapsed = time.time() - time0
-    print('Elapsed time for fdk is {:.3f} seconds'.format(elapsed))
-    time0 = time.time()
-    recon, recon_params = ct_model.recon(sino, weights=weights, init_recon=fdk_recon)
+    recon, recon_params = ct_model.recon(sino, weights=weights)
     recon.block_until_ready()
     elapsed = time.time() - time0
     print('Elapsed time for recon is {:.3f} seconds'.format(elapsed))
@@ -91,7 +85,7 @@ if __name__ == "__main__":
     pprint.pprint(recon_params._asdict())
 
     mbirjax.preprocess.export_recon_to_hdf5(recon, os.path.join(output_path, "recon.h5"),
-                                            recon_description="MBIRJAX recon of MAR phantom",
+                                            recon_description="MBIRJAX recon of phantom",
                                             alu_description="1 ALU = 0.508 mm")
 
     # change the image data shape to (slices, rows, cols), so that the rotation axis points up when viewing the
