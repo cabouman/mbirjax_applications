@@ -34,11 +34,12 @@ if __name__ == "__main__":
     # dataset_dir = "/depot/bouman/data/share_conebeam_data/Autoinjection-Full-LowRes/Vertical-0.5mmTin"
 
     # #### preprocessing parameters
-    downsample_factor = [2, 2]  # downsample factor of scan images along detector rows and detector columns.
-    subsample_view_factor = 2  # view subsample factor.
+    downsample_factor = [4, 4]  # downsample factor of scan images along detector rows and detector columns.
+    subsample_view_factor = 4  # view subsample factor.
 
     # #### recon parameters
     sharpness = 1.0
+    snr_db = 30.0
     # ###################### End of parameters
 
     print("\n*******************************************************",
@@ -59,7 +60,7 @@ if __name__ == "__main__":
     ct_model.set_params(**optional_params)
 
     # Set reconstruction parameter values
-    ct_model.set_params(sharpness=sharpness, verbose=1)
+    ct_model.set_params(sharpness=sharpness, snr_db=snr_db, verbose=1)
 
     # Print out model parameters
     ct_model.print_params()
@@ -76,7 +77,7 @@ if __name__ == "__main__":
     # ##########################
     # Perform FDK reconstruction
     fdk_recon = ct_model.direct_recon(sino)
-    mbirjax.slice_viewer(fdk_recon)
+    #mbirjax.slice_viewer(fdk_recon)
 
     print("\n*******************************************************",
           "\n************** Perform MBIR reconstruction ************",
@@ -85,22 +86,22 @@ if __name__ == "__main__":
     # ##########################
     # Perform MBIR reconstruction
     time0 = time.time()
-    recon, recon_params = ct_model.recon(sino, weights=weights)
-    recon.block_until_ready()
+    mbir_recon, mbir_recon_params = ct_model.recon(sino, weights=weights)
+    mbir_recon.block_until_ready()
     elapsed = time.time() - time0
     print('Elapsed time for recon is {:.3f} seconds'.format(elapsed))
     # ##########################
 
     # Print out parameters used in recon
-    pprint.pprint(recon_params._asdict())
+    pprint.pprint(mbir_recon_params._asdict())
 
-    mbirjax.preprocess.export_recon_to_hdf5(recon, os.path.join(output_path, "recon.h5"),
+    mbirjax.preprocess.export_recon_to_hdf5(mbir_recon, os.path.join(output_path, "recon.h5"),
                                             recon_description="MBIRJAX recon of phantom",
                                             alu_description="1 ALU = 0.508 mm")
 
+    # Display results
     vmin = 0
     vmax = downsample_factor[0] * 0.008
-    # Display results
-    mbirjax.slice_viewer(recon, data2=fdk_recon, vmin=0, vmax=vmax, slice_axis=2, slice_axis2=2, slice_label='MBIR', slice_label2='FDK', title='Axial Slice')
-    mbirjax.slice_viewer(recon, data2=fdk_recon, vmin=0, vmax=vmax, slice_axis=0, slice_axis2=0, slice_label='MBIR', slice_label2='FDK', title='Coronal Slice')
-    mbirjax.slice_viewer(recon, data2=fdk_recon, vmin=0, vmax=vmax, slice_axis=1, slice_axis2=1, slice_label='MBIR', slice_label2='FDK', title='Sagittal Slice')
+    mbirjax.slice_viewer(fdk_recon, data2=mbir_recon, vmin=0, vmax=vmax, slice_axis=2, slice_axis2=2, slice_label='FDK', slice_label2='MBIR', title='Axial Slice')
+    mbirjax.slice_viewer(fdk_recon, data2=mbir_recon, vmin=0, vmax=vmax, slice_axis=0, slice_axis2=0, slice_label='FDK', slice_label2='MBIR', title='Coronal Slice')
+    mbirjax.slice_viewer(fdk_recon, data2=mbir_recon, vmin=0, vmax=vmax, slice_axis=1, slice_axis2=1, slice_label='FDK', slice_label2='MBIR', title='Sagittal Slice')
