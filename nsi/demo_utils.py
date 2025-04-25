@@ -27,7 +27,7 @@ def download_and_extract_tar(download_url, save_dir):
     
     # If the tarball already exists, then prompt user whether to download and overwrite the existing file.
     if os.path.exists(tarball_path):
-        is_download = query_yes_no(f"{tarball_path} already exists. Do you still want to download and overwrite the file?")
+        is_download = query_yes_no(f"\nData named {tarball_path} already exists.\nDo you still want to download and overwrite the file?")
     
     ################### Download and extract tarball file
     if is_download:
