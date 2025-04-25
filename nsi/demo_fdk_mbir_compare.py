@@ -35,7 +35,7 @@ if __name__ == "__main__":
 
     # #### preprocessing parameters
     downsample_factor = [4, 4]  # downsample factor of scan images along detector rows and detector columns.
-    subsample_view_factor = 4  # view subsample factor.
+    subsample_view_factor = 8  # view subsample factor.
 
     # #### recon parameters
     sharpness = 1.0
@@ -100,8 +100,13 @@ if __name__ == "__main__":
                                             alu_description="1 ALU = 0.508 mm")
 
     # Display results
+    # change the image data shape to (slices, rows, cols), so that the rotation axis points up when viewing the
+    # coronal/sagittal slices with slice_viewer
+    fdk_recon = np.transpose(fdk_recon, (2, 0, 1))
+    mbir_recon = np.transpose(mbir_recon, (2, 0, 1))
+
     vmin = 0
     vmax = downsample_factor[0] * 0.008
-    mbirjax.slice_viewer(fdk_recon, data2=mbir_recon, vmin=0, vmax=vmax, slice_axis=2, slice_axis2=2, slice_label='FDK', slice_label2='MBIR', title='Axial Slice')
-    mbirjax.slice_viewer(fdk_recon, data2=mbir_recon, vmin=0, vmax=vmax, slice_axis=0, slice_axis2=0, slice_label='FDK', slice_label2='MBIR', title='Coronal Slice')
-    mbirjax.slice_viewer(fdk_recon, data2=mbir_recon, vmin=0, vmax=vmax, slice_axis=1, slice_axis2=1, slice_label='FDK', slice_label2='MBIR', title='Sagittal Slice')
+    mbirjax.slice_viewer(fdk_recon, data2=mbir_recon, vmin=0, vmax=vmax, slice_axis=0, slice_axis2=0, slice_label='FDK', slice_label2='MBIR', title='Axial Slice')
+    mbirjax.slice_viewer(fdk_recon, data2=mbir_recon, vmin=0, vmax=vmax, slice_axis=1, slice_axis2=1, slice_label='FDK', slice_label2='MBIR', title='Coronal Slice')
+    mbirjax.slice_viewer(fdk_recon, data2=mbir_recon, vmin=0, vmax=vmax, slice_axis=2, slice_axis2=2, slice_label='FDK', slice_label2='MBIR', title='Sagittal Slice')
