@@ -21,20 +21,24 @@ if __name__ == "__main__":
     output_path = './output/nsi_demo/'  # path to store output recon images
     os.makedirs(output_path, exist_ok=True)  # mkdir if directory does not exist
 
-    # ##### params for dataset downloading. User may change these parameters for their own datasets.
-    # An example NSI dataset (tarball) will be downloaded from `dataset_url`, and saved to `download_dir`.
-    # url to NSI dataset.
-    # dataset_url = 'https://www.datadepot.rcac.purdue.edu/bouman/data/demo_data_nsi.tgz'
-    dataset_url = 'https://www.datadepot.rcac.purdue.edu/bouman/data/demo_nsi_vert_no_metal_all_views.tgz'
+    # ###################### Prompt the user for dataset choice
+    choice = input("Download dataset with metal? (Y/n): ").strip().lower()
+    if choice == 'n':
+        # URL to test phantom without metal
+        dataset_url = 'https://www.datadepot.rcac.purdue.edu/bouman/data/demo_nsi_vert_no_metal_all_views.tgz'
+    else:
+        # URL to test phantom with metal
+        dataset_url = 'https://www.datadepot.rcac.purdue.edu/bouman/data/demo_nsi_vert_metal_all_views.tgz'
+    print(f"Selected dataset URL: {dataset_url}")
+
     # destination path to download and extract the NSI data and metadata.
     download_dir = './demo_data/'
+
     # Path to NSI scan directory.
     dataset_dir = demo_utils.download_and_extract_tar(dataset_url, download_dir)
-    # for testing user prompt in NSI preprocessing function
-    # dataset_dir = "/depot/bouman/data/share_conebeam_data/Autoinjection-Full-LowRes/Vertical-0.5mmTin"
 
     # #### preprocessing parameters
-    downsample_factor = [4, 4]  # downsample factor of scan images along detector rows and detector columns.
+    downsample_factor = [4, 4]  # downsample factor of scan view images along detector rows and detector columns.
     subsample_view_factor = 8  # view subsample factor.
 
     # #### recon parameters
