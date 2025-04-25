@@ -55,28 +55,56 @@ def download_and_extract_tar(download_url, save_dir):
         
         # download is successful if no exceptions occur
         print(f"Download successful! Tarball file saved to {tarball_path}")
-        
+
         ###### Extract to save_dir.
         print(f"Extracting tarball file to {save_dir} ...")
-        try:
-            tar_file = tarfile.open(tarball_path)
-            extracted_file_name = os.path.join(save_dir, os.path.commonprefix(tar_file.getnames()))
+        with tarfile.open(tarball_path, 'r') as tar_file:
             tar_file.extractall(save_dir)
-            tar_file.close
-            print(f"Extraction successful! File extracted to {extracted_file_name}")
-        except:
-            warnings.warn(f"Extraction failed. Please make sure {tarball_path} is a tarball file.")
-            return tarball_path
+        print(f"Extraction successful!")
 
-
-    ################### Skip download and extraction steps
-    else:
-        print("Skipped data download and extraction step.")
-        # Get top level file names without extracting the tarball
-        tar_file =  tarfile.open(tarball_path, mode='r')
-        extracted_file_name = os.path.join(save_dir, os.path.commonprefix(tar_file.getnames()))
+    # Get top level file names without extracting the tarball
+    top_level_dir = get_top_level_tar_dir(tarball_path)
+    extracted_file_name = os.path.join(save_dir, top_level_dir)
     
-    return tar_file, extracted_file_name
+    return extracted_file_name
+
+
+def get_top_level_tar_dir(tar_path, max_entries=10):
+    """
+    Determine the top level directory of the tarball file by getting up to max_entries files and finding
+    a common prefix.
+
+    Args:
+        tar_path: Path to the tarball file.
+        max_entries: Max number of entries to interrogate.
+
+    Returns:
+        The top level directory of the tarball file.
+    """
+    top_levels = set()
+
+    with tarfile.open(tar_path, 'r') as tar:
+        for i, member in enumerate(tar):
+            if not member.name.strip():
+                continue
+            top_dir = member.name.split('/')[0]
+            top_levels.add(top_dir)
+
+            if len(top_levels) > 1 or i + 1 >= max_entries:
+                break
+    if len(top_levels) == 1:
+        dir_name = top_levels.pop()
+    else:
+        raise ValueError("No top level directory found in {}".format(tar_path))
+    return dir_name
+
+# # Example usage
+# tar_path = 'your_archive.tar'
+# top_level = get_top_level_dir_sampled(tar_path)
+# if top_level:
+#     print(f"Top-level directory (consistent across first 10): {top_level}")
+# else:
+#     print("Multiple top-level entries or insufficient data to determine.")
 
 
 def query_yes_no(question, default="n"):

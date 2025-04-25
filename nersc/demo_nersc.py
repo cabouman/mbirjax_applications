@@ -15,7 +15,7 @@ import h5py
 # An example NERSC dataset (tarball) will be downloaded from `dataset_url`, and saved to `download_dir`.
 dataset_url = 'https://engineering.purdue.edu/~bouman/data_repository/data/nersc-sand.tgz'
 download_dir = './demo_data/'
-_, dataset_path = nersc_utils.download_and_extract_tar(dataset_url, download_dir)
+dataset_path = nersc_utils.download_and_extract_tar(dataset_url, download_dir)
 
 # Get parameters from data. 
 with h5py.File(dataset_path, "r") as data: 

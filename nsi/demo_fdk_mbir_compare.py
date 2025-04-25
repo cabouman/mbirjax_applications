@@ -29,7 +29,7 @@ if __name__ == "__main__":
     # destination path to download and extract the NSI data and metadata.
     download_dir = './demo_data/'
     # Path to NSI scan directory.
-    _, dataset_dir = demo_utils.download_and_extract_tar(dataset_url, download_dir)
+    dataset_dir = demo_utils.download_and_extract_tar(dataset_url, download_dir)
     # for testing user prompt in NSI preprocessing function
     # dataset_dir = "/depot/bouman/data/share_conebeam_data/Autoinjection-Full-LowRes/Vertical-0.5mmTin"
 
