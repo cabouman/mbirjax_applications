@@ -10,31 +10,29 @@ import pprint
 pp = pprint.PrettyPrinter(indent=4)
 
 if __name__ == "__main__":
-    print('This script is a demonstration of the preprocessing module of NSI dataset. Demo functionality includes:\
-    \n\t * downloading NSI dataset from specified urls;\
-    \n\t * Loading object scans, blank scan, dark scan, view angles, and MBIRJAX geometry parameters;\
-    \n\t * Computing sinogram from object scan, blank scan, and dark scan images;\
-    \n\t * Computing a 3D reconstruction from the sinogram using MBIRJAX;\
-    \n\t * Displaying the results.\n')
+    print('This script is demonstrates the preprocessing and reconstruction of NSI an dataset\
+    \n\t using both FDK and MBIR reconstruction.\n')
 
-    # ###################### User defined params. Change the parameters below for your own use case.
+    # #### User defined params
     output_path = './output/nsi_demo/'  # path to store output recon images
     os.makedirs(output_path, exist_ok=True)  # mkdir if directory does not exist
 
-    # ###################### Prompt the user for dataset choice
+    # path to store and extract the NSI data and metadata.
+    download_dir = './demo_data/'
+
+    # #### Prompt the user for dataset choice
     choice = input("Download dataset with metal? (Y/n): ").strip().lower()
     if choice == 'n':
         # URL to test phantom without metal
         dataset_url = 'https://www.datadepot.rcac.purdue.edu/bouman/data/demo_nsi_vert_no_metal_all_views.tgz'
+        metal = False
     else:
         # URL to test phantom with metal
         dataset_url = 'https://www.datadepot.rcac.purdue.edu/bouman/data/demo_nsi_vert_metal_all_views.tgz'
+        metal = True
     print(f"Selected dataset URL: {dataset_url}")
 
-    # destination path to download and extract the NSI data and metadata.
-    download_dir = './demo_data/'
-
-    # Path to NSI scan directory.
+    # #### Download and extract data. Then set path to NSI scan directory.
     dataset_dir = demo_utils.download_and_extract_tar(dataset_url, download_dir)
 
     # #### preprocessing parameters
@@ -44,7 +42,8 @@ if __name__ == "__main__":
     # #### recon parameters
     sharpness = 1.0
     snr_db = 30.0
-    # ###################### End of parameters
+    bh_coefficient = 0.2  # beam_hardening_correction coefficient
+
 
     print("\n*******************************************************",
           "\n************** NSI dataset preprocessing **************",
@@ -53,17 +52,20 @@ if __name__ == "__main__":
         mbirjax.preprocess.nsi.compute_sino_and_params(dataset_dir,
                                                        downsample_factor=downsample_factor,
                                                        subsample_view_factor=subsample_view_factor)
+    # #### beam hardening correction
+    if metal:
+        sino = sino + bh_coefficient*jnp.power(sino, 2)
 
     print("\n*******************************************************",
           "\n***************** Set up MBIRJAX model ****************",
           "\n*******************************************************")
-    # ConeBeamModel constructor
+    # Construct cone beam object using NSI parameters
     ct_model = mbirjax.ConeBeamModel(**cone_beam_params)
 
-    # Set additional geometry arguments
+    # Set optional NSI geometry parameters
     ct_model.set_params(**optional_params)
 
-    # Set reconstruction parameter values
+    # Set user determined parameter values
     ct_model.set_params(sharpness=sharpness, snr_db=snr_db, verbose=1)
 
     # Print out model parameters
@@ -87,30 +89,58 @@ if __name__ == "__main__":
           "\n************** Perform MBIR reconstruction ************",
           "\n*******************************************************")
 
-    # ##########################
-    # Perform MBIR reconstruction
+    # #### Perform MBIR reconstruction
     time0 = time.time()
     mbir_recon, mbir_recon_params = ct_model.recon(sino, weights=weights)
     mbir_recon.block_until_ready()
     elapsed = time.time() - time0
     print('Elapsed time for recon is {:.3f} seconds'.format(elapsed))
-    # ##########################
 
-    # Print out parameters used in recon
+    # #### Print out parameters used in recon
     pprint.pprint(mbir_recon_params._asdict())
 
+    # #### Save MBIR reconstruction to HDF5 file output
     mbirjax.preprocess.export_recon_to_hdf5(mbir_recon, os.path.join(output_path, "recon.h5"),
                                             recon_description="MBIRJAX recon of phantom",
                                             alu_description="1 ALU = 0.508 mm")
 
-    # Display results
-    # change the image data shape to (slices, rows, cols), so that the rotation axis points up when viewing the
-    # coronal/sagittal slices with slice_viewer
-    fdk_recon = np.transpose(fdk_recon, (2, 0, 1))
-    mbir_recon = np.transpose(mbir_recon, (2, 0, 1))
+    # #### Display results
+    # change the image data shape to (slices, rows, cols)
+    fdk_recon = np.transpose(fdk_recon, axes=(2, 0, 1))
+    mbir_recon = np.transpose(mbir_recon, axes=(2, 0, 1))
 
     vmin = 0
     vmax = downsample_factor[0] * 0.008
     mbirjax.slice_viewer(fdk_recon, data2=mbir_recon, vmin=0, vmax=vmax, slice_axis=0, slice_axis2=0, slice_label='FDK', slice_label2='MBIR', title='Axial Slice')
     mbirjax.slice_viewer(fdk_recon, data2=mbir_recon, vmin=0, vmax=vmax, slice_axis=1, slice_axis2=1, slice_label='FDK', slice_label2='MBIR', title='Coronal Slice')
     mbirjax.slice_viewer(fdk_recon, data2=mbir_recon, vmin=0, vmax=vmax, slice_axis=2, slice_axis2=2, slice_label='FDK', slice_label2='MBIR', title='Sagittal Slice')
+
+
+    print("\n*******************************************************",
+          "\n************ Calculate MAR sinogram weights ***********",
+          "\n*******************************************************")
+    # #### Put image back in original order and compute MAR weights
+    init_recon = np.transpose(mbir_recon, axes=(1, 2, 0))
+    weights_mar = ct_model.gen_weights_mar(sino, init_recon=init_recon, beta=1.0, gamma=3.0)
+
+    # #### Perform MBIR reconstruction with MAR weights
+    time0 = time.time()
+    mbir_mar_recon, mbir_mar_recon_params = ct_model.recon(sino, init_recon=init_recon, weights=weights_mar)
+    mbir_mar_recon.block_until_ready()
+    elapsed = time.time() - time0
+    print('Elapsed time for recon is {:.3f} seconds'.format(elapsed))
+
+    # #### Print out parameters used in recon
+    pprint.pprint(mbir_mar_recon_params._asdict())
+
+
+    # #### Display results
+    # change the image data shape to (slices, rows, cols)
+    mbir_mar_recon = np.transpose(mbir_mar_recon, axes=(2, 0, 1))
+
+    vmin = 0
+    vmax = downsample_factor[0] * 0.008
+    mbirjax.slice_viewer(mbir_recon, data2=mbir_mar_recon, vmin=0, vmax=vmax, slice_axis=0, slice_axis2=0, slice_label='MBIR', slice_label2='MBIR MAR', title='Axial Slice')
+    mbirjax.slice_viewer(mbir_recon, data2=mbir_mar_recon, vmin=0, vmax=vmax, slice_axis=1, slice_axis2=1, slice_label='MBIR', slice_label2='MBIR MAR', title='Coronal Slice')
+    mbirjax.slice_viewer(mbir_recon, data2=mbir_mar_recon, vmin=0, vmax=vmax, slice_axis=2, slice_axis2=2, slice_label='MBIR', slice_label2='MBIR MAR', title='Sagittal Slice')
+
