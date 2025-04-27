@@ -2,12 +2,94 @@ import numpy as np
 import os
 import time
 import pprint
+import jax
 import jax.numpy as jnp
+import jax.lax as lax
+
+
 import mbirjax
 import demo_utils
 import pprint
 
 pp = pprint.PrettyPrinter(indent=4)
+
+
+
+def make_gaussian_kernel(sigma, size=None):
+    if size is None:
+        size = int(2 * 3 * sigma + 1)  # Cover approximately +/- 3 sigma
+    coords = jnp.arange(size) - (size - 1) / 2
+    gauss_1d = jnp.exp(-(coords ** 2) / (2 * sigma ** 2))
+    gauss_1d /= gauss_1d.sum()
+    kernel_2d = jnp.outer(gauss_1d, gauss_1d)
+    kernel_2d /= jnp.sum(kernel_2d)  # Normalize to sum to 1.0
+    return kernel_2d
+
+
+def gaussian_blur(image, sigma):
+    kernel = make_gaussian_kernel(sigma)
+    kernel = kernel[:, :, None, None]  # Shape (H, W, in_channels=1, out_channels=1)
+    image = image[None, :, :, None]    # Shape (batch=1, H, W, channels=1)
+    blurred = lax.conv_general_dilated(
+        image,
+        kernel,
+        window_strides=(1, 1),
+        padding='SAME',
+        dimension_numbers=('NHWC', 'HWIO', 'NHWC')
+    )
+    return blurred[0, :, :, 0]  # Remove batch and channel dims
+
+
+def bhs_correction(sino, alpha, beta, sigma, batch_size=16, atten_factor=4):
+    """
+    Apply BHS correction to the input sinogram.
+
+    Args:
+        sino: jnp.ndarray of shape (views, rows, cols)
+        alpha: float, beam hardening correction parameter
+        beta: float, scatter correction parameter
+        sigma: float, standard deviation for gaussian blur
+        batch_size: int, number of views to process at a time
+        atten_factor: float, factor to divide min attenuation, default is 4
+
+    Returns:
+        corrected_sino: jnp.ndarray of shape (views, rows, cols)
+    """
+    views, rows, cols = sino.shape
+
+    # Step 1: Beam hardening correction
+    sino = sino + alpha * jnp.power(sino, 2)
+
+    # Step 2: Compute global min attenuation
+    max_sino = jnp.max(sino)
+    min_attenuation = jnp.exp(-max_sino) / atten_factor
+
+    corrected = []
+
+    for i in range(0, views, batch_size):
+        sino_batch = sino[i:i+batch_size]
+
+        # Step 3: Scatter correction
+        attenuation = jnp.exp(-sino_batch)
+
+        one_minus_attenuation = 1.0 - attenuation
+        blurred = jax.vmap(lambda img: gaussian_blur(img, sigma))(one_minus_attenuation)
+
+        scatter = beta * blurred
+
+        corrected_attenuation = attenuation - scatter
+
+        # Clip corrected attenuation to minimum attenuation value
+        corrected_attenuation = jnp.maximum(corrected_attenuation, min_attenuation)
+
+        corrected_batch = -jnp.log(corrected_attenuation)
+
+        corrected.append(corrected_batch)
+
+    corrected_sino = jnp.concatenate(corrected, axis=0)
+
+    return corrected_sino
+
 
 if __name__ == "__main__":
     print('This script is demonstrates the preprocessing and reconstruction of NSI an dataset\
@@ -40,7 +122,7 @@ if __name__ == "__main__":
     subsample_view_factor = 8  # view subsample factor.
 
     # #### recon parameters
-    sharpness = 1.0
+    sharpness = 5.0
     snr_db = 30.0
     bh_coefficient = 0.2  # beam_hardening_correction coefficient
 
@@ -54,7 +136,7 @@ if __name__ == "__main__":
                                                        subsample_view_factor=subsample_view_factor)
     # #### beam hardening correction
     if metal:
-        sino = sino + bh_coefficient*jnp.power(sino, 2)
+        sino = bhs_correction(sino, alpha=0.2, beta=0.00, sigma=2)
 
     print("\n*******************************************************",
           "\n***************** Set up MBIRJAX model ****************",
