@@ -6,22 +6,44 @@ def gen_ghuber_weights(weights, sino_error, T=1.0, delta=1.0, batch_size=16, eps
     """
     Generate generalized Huber weights.
 
+    This function computes generalized Huber weights based on the method described in the referenced notes.
+    It adds robustness by treating any element where |sino_error / weights| > T as an outlier,
+    down-weighting it according to the generalized Huber function.
+
+    The function returns new `ghuber_weights`.
+
+    Typically, to obtain the final robust weights, the `ghuber_weights` should be multiplied by the original `weights`:
+
+        final_weights = weights * ghuber_weights
+
     Args:
-        weights: jnp.ndarray of shape (views, rows, cols)
-        sino_error: jnp.ndarray of shape (views, rows, cols)
-        T: float, threshold parameter where values > T are treated as outliers (default 1.0)
-        delta: float, controls strength of generalized Huber function (delta=1 corresponds to conventional Huber) (default 1.0, must be between 0 and 1)
-        batch_size: int, batch size for memory efficiency
-        epsilon: float, small number to avoid division by zero
+        weights: jnp.ndarray or np.ndarray of shape (views, rows, cols)
+            Initial weights, typically derived from inverse variance estimates.
+        sino_error: jnp.ndarray or np.ndarray of shape (views, rows, cols)
+            Sinogram error array representing deviations from the model.
+        T: float, optional (default=1.0)
+            Threshold parameter; values greater than T are treated as outliers.
+        delta: float, optional (default=1.0)
+            Controls the strength of the generalized Huber function (delta=1 corresponds to the conventional Huber).
+        batch_size: int, optional (default=16)
+            Batch size used to process views for memory efficiency.
+        epsilon: float, optional (default=1e-6)
+            Small number to avoid division by zero.
 
     Returns:
         ghuber_weights: jnp.ndarray of shape (views, rows, cols)
+            The computed generalized Huber weights.
 
     Notes:
         The generalized Huber function used in this function is based on:
         Venkatakrishnan, S. V., Drummy, L. F., Jackson, M., De Graef, M., Simmons, J. P., and Bouman, C. A.,
         "Model-Based Iterative Reconstruction for Bright-Field Electron Tomography,"
         IEEE Transactions on Computational Imaging, vol. 1, no. 1, pp. 1–15, 2015. DOI: 10.1109/TCI.2014.2371751
+
+    Example:
+        >>> from charlie_utils import gen_ghuber_weights
+        >>> ghuber_weights = gen_ghuber_weights(weights, sino_error, T=1.0)
+        >>> final_weights = weights * ghuber_weights
     """
     if not (0.0 <= delta <= 1.0):
         raise ValueError("delta must be between 0 and 1.")
@@ -64,20 +86,56 @@ def gen_ghuber_weights(weights, sino_error, T=1.0, delta=1.0, batch_size=16, eps
     return ghuber_weights
 
 
-# Basic test to verify functionality
-if __name__ == "__main__":
-    key = jax.random.PRNGKey(0)
-    views, rows, cols = 4, 8, 8
+def beam_hardening_correction(sino, alpha, batch_size=16):
+    """
+    Apply a polynomial beam hardening correction to a sinogram.
 
-    weights = jax.random.uniform(key, (views, rows, cols)) + 0.1
-    key, subkey = jax.random.split(key)
-    sino_error = 0.1 * jax.random.normal(subkey, (views, rows, cols))
+    This function applies a polynomial correction to each view of the sinogram
+    by evaluating powers of the sinogram values and weighting them by the coefficients in `alpha`,
+    while also including the original linear term (the sinogram itself).
 
-    ghuber_weights = gen_ghuber_weights(weights, sino_error)
+    The corrected sinogram is computed as:
 
-    assert ghuber_weights.shape == (views, rows, cols), "Output shape mismatch!"
-    assert jnp.all(ghuber_weights > 0), "Found non-positive weights!"
+        corrected_sino = sino + alpha[0] * sino**2 + alpha[1] * sino**3 + ...
 
-    print("Sample ghuber_weights slice [view 0]:")
-    print(ghuber_weights[0])
-    print("\nTest passed! ✅")
+    It processes the sinogram in batches of views for memory efficiency.
+
+    Args:
+        sino: jnp.ndarray or np.ndarray of shape (views, rows, cols)
+            Input sinogram to correct.
+        alpha: list or array of floats
+            Coefficients for the polynomial correction. The k-th term corresponds to sino^(k+2).
+        batch_size: int, optional (default=16)
+            Number of views to process in a single batch.
+
+    Returns:
+        corrected_sino: jnp.ndarray of shape (views, rows, cols)
+            Beam hardening corrected sinogram.
+
+    Example:
+        >>> from charlie_utils import beam_hardening_correction
+        >>> alpha = [0.2, 0.1]  # Correction: sino + 0.2 * sino^2 + 0.1 * sino^3
+        >>> corrected_sino = beam_hardening_correction(sino, alpha)
+    """
+    # Ensure inputs are JAX arrays
+    sino = jnp.asarray(sino)
+    alpha = jnp.asarray(alpha)
+
+    views, rows, cols = sino.shape
+    corrected = []
+
+    for i in range(0, views, batch_size):
+        sino_batch = sino[i:i+batch_size]
+
+        # Initialize corrected batch to the linear term (sino_batch)
+        corrected_batch = jnp.array(sino_batch)
+
+        # Apply polynomial terms
+        for k in range(len(alpha)):
+            corrected_batch += alpha[k] * jnp.power(sino_batch, k + 2)
+
+        corrected.append(corrected_batch)
+
+    corrected_sino = jnp.concatenate(corrected, axis=0)
+
+    return corrected_sino
