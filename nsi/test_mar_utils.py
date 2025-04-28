@@ -2,7 +2,7 @@ import jax
 import jax.numpy as jnp
 import numpy as np
 
-from mar_utils import gen_ghuber_weights, beam_hardening_correction
+import mar_utils
 
 def test_gen_ghuber_weights_basic():
     key = jax.random.PRNGKey(0)
@@ -12,7 +12,7 @@ def test_gen_ghuber_weights_basic():
     key, subkey = jax.random.split(key)
     sino_error = 0.1 * jax.random.normal(subkey, (views, rows, cols))
 
-    ghuber_weights = gen_ghuber_weights(weights, sino_error)
+    ghuber_weights = mar_utils.gen_ghuber_weights(weights, sino_error)
 
     assert ghuber_weights.shape == (views, rows, cols), "Output shape mismatch!"
     assert jnp.all(ghuber_weights > 0), "Found non-positive weights!"
@@ -32,7 +32,7 @@ def test_gen_ghuber_weights_outliers():
                        jax.random.randint(subkey, (5,), 0, cols))
     sino_error = sino_error.at[outlier_indices].set(5.0)
 
-    ghuber_weights = gen_ghuber_weights(weights, sino_error)
+    ghuber_weights = mar_utils.gen_ghuber_weights(weights, sino_error)
 
     outlier_weights = ghuber_weights[outlier_indices]
 
@@ -47,7 +47,7 @@ def test_beam_hardening_correction_basic():
     sino = jax.random.uniform(key, (views, rows, cols))
     alpha = [0.2, 0.1]  # 0.2 * sino^2 + 0.1 * sino^3
 
-    corrected_sino = beam_hardening_correction(sino, alpha)
+    corrected_sino = mar_utils.beam_hardening_correction(sino, alpha)
 
     assert corrected_sino.shape == (views, rows, cols), "Corrected sinogram shape mismatch!"
 
