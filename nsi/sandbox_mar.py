@@ -9,8 +9,7 @@ import jax.lax as lax
 
 import mbirjax
 import demo_utils
-from mar_utils import gen_ghuber_weights
-from mar_utils import beam_hardening_correction
+import mar_utils
 import pprint
 
 pp = pprint.PrettyPrinter(indent=4)
@@ -63,7 +62,7 @@ if __name__ == "__main__":
     # #### beam hardening correction
     if metal:
         sino = jnp.maximum(sino, 0.0)
-        sino = beam_hardening_correction(sino, alpha=alpha)
+        sino = mar_utils.beam_hardening_correction(sino, alpha=alpha)
 
     print("\n*******************************************************",
           "\n***************** Set up MBIRJAX model ****************",
@@ -112,7 +111,7 @@ if __name__ == "__main__":
     sino_error = sino - ct_model.forward_project(mbir_recon)
 
     # Compute generalized Huber weights
-    weights_ghuber = gen_ghuber_weights(weights, sino_error, T=0.8, delta=0.5)
+    weights_ghuber = mar_utils.gen_ghuber_weights(weights, sino_error, T=0.8, delta=0.5)
     mbirjax.slice_viewer(weights_ghuber, 10*jnp.abs(sino_error), vmin=0, vmax=1.0, slice_axis=0, slice_axis2=0, slice_label='GHuber Weights', slice_label2="10x(Error Sino)", title='Gen Huber Weights')
 
     print("\n*******************************************************",
