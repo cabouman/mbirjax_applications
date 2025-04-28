@@ -9,8 +9,8 @@ import jax.lax as lax
 
 import mbirjax
 import demo_utils
-from charlie_utils import gen_ghuber_weights
-from charlie_utils import beam_hardening_correction
+from mar_utils import gen_ghuber_weights
+from mar_utils import beam_hardening_correction
 import pprint
 
 pp = pprint.PrettyPrinter(indent=4)

@@ -2,7 +2,7 @@ import jax
 import jax.numpy as jnp
 import numpy as np
 
-from charlie_utils import gen_ghuber_weights, beam_hardening_correction
+from mar_utils import gen_ghuber_weights, beam_hardening_correction
 
 def test_gen_ghuber_weights_basic():
     key = jax.random.PRNGKey(0)

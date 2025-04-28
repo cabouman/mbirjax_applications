@@ -41,7 +41,7 @@ def gen_ghuber_weights(weights, sino_error, T=1.0, delta=1.0, batch_size=16, eps
         IEEE Transactions on Computational Imaging, vol. 1, no. 1, pp. 1–15, 2015. DOI: 10.1109/TCI.2014.2371751
 
     Example:
-        >>> from charlie_utils import gen_ghuber_weights
+        >>> from mar_utils import gen_ghuber_weights
         >>> ghuber_weights = gen_ghuber_weights(weights, sino_error, T=1.0)
         >>> final_weights = weights * ghuber_weights
     """
@@ -113,7 +113,7 @@ def beam_hardening_correction(sino, alpha, batch_size=16):
             Beam hardening corrected sinogram.
 
     Example:
-        >>> from charlie_utils import beam_hardening_correction
+        >>> from mar_utils import beam_hardening_correction
         >>> alpha = [0.2, 0.1]  # Correction: sino + 0.2 * sino^2 + 0.1 * sino^3
         >>> corrected_sino = beam_hardening_correction(sino, alpha)
     """
