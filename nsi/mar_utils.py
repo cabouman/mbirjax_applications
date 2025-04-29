@@ -104,7 +104,7 @@ def beam_hardening_correction(sino, alpha, batch_size=16):
         sino: jnp.ndarray or np.ndarray of shape (views, rows, cols)
             Input sinogram to correct.
         alpha: list or array of floats
-            Coefficients for the polynomial correction. The k-th term corresponds to sino^(k+2).
+            Coefficients for the polynomial correction. The k-th term corresponds to sino^(k+1).
         batch_size: int, optional (default=16)
             Number of views to process in a single batch.
 
@@ -114,7 +114,7 @@ def beam_hardening_correction(sino, alpha, batch_size=16):
 
     Example:
         >>> from mar_utils import beam_hardening_correction
-        >>> alpha = [0.2, 0.1]  # Correction: sino + 0.2 * sino^2 + 0.1 * sino^3
+        >>> alpha = [1.0, 0.2, 0.1]  # Correction: sino + 0.2 * sino^2 + 0.1 * sino^3
         >>> corrected_sino = beam_hardening_correction(sino, alpha)
     """
     # Ensure inputs are JAX arrays
@@ -132,7 +132,7 @@ def beam_hardening_correction(sino, alpha, batch_size=16):
 
         # Apply polynomial terms
         for k in range(len(alpha)):
-            corrected_batch += alpha[k] * jnp.power(sino_batch, k + 2)
+            corrected_batch += alpha[k] * jnp.power(sino_batch, k + 1)
 
         corrected.append(corrected_batch)
 

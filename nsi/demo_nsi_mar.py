@@ -41,7 +41,7 @@ if __name__ == "__main__":
     # #### recon parameters
     sharpness = 1.0
     snr_db = 30.0
-    alpha = [0.0, 0.1]  # beam_hardening_correction coefficient
+    alpha = [1.0, 0.0, 0.1]  # beam_hardening_correction coefficient
 
 
     print("\n*******************************************************",
