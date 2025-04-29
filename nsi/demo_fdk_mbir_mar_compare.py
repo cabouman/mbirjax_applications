@@ -47,7 +47,7 @@ if __name__ == "__main__":
     # #### recon parameters
     sharpness = 1.0
     snr_db = 30.0
-    alpha = [0.0, 0.2]  # beam_hardening_correction coefficient
+    alpha = [0.0, 0.1]  # beam_hardening_correction coefficient
 
 
     print("\n*******************************************************",
@@ -110,12 +110,23 @@ if __name__ == "__main__":
                                             recon_description="MBIRJAX recon of phantom",
                                             alu_description="1 ALU = 0.508 mm")
 
+    print("\n*******************************************************",
+          "\n********* Calculate GHuber sinogram weights ***********",
+          "\n*******************************************************")
+
     # Compute the error sinogram
     sino_error = sino - ct_model.forward_project(mbir_recon)
 
     # Compute generalized Huber weights
-    weights_ghuber = mar_utils.gen_ghuber_weights(weights, sino_error, T=0.9, delta=0.5)
+    weights_ghuber = mar_utils.gen_ghuber_weights(weights, sino_error, T=1.0, delta=1.0)
     mbirjax.slice_viewer(weights_ghuber, 10*jnp.abs(sino_error), vmin=0, vmax=1.0, slice_axis=0, slice_axis2=0, slice_label='GHuber Weights', slice_label2="10x(Error Sino)", title='Gen Huber Weights')
+
+    print("\n*******************************************************",
+          "\n************ Calculate MAR sinogram weights ***********",
+          "\n*******************************************************")
+    weights_mar = ct_model.gen_weights_mar(sino, init_recon=mbir_recon, beta=1.0, gamma=3.0)
+    mbirjax.slice_viewer(weights_mar, 10*jnp.abs(sino_error), vmin=0, vmax=1.0, slice_axis=0, slice_axis2=0, slice_label='MAR Weights', slice_label2="10x(Error Sino)", title='MAR Weights')
+
 
     print("\n**********************************************************",
           "\n*** Perform MBIR reconstruction with Gen Huber Weights ***",
@@ -123,7 +134,7 @@ if __name__ == "__main__":
 
     # #### Perform GHuber MBIR reconstruction
     time0 = time.time()
-    ghuber_recon, ghuber_recon_params = ct_model.recon(sino, init_recon=mbir_recon, weights=weights*weights_ghuber)
+    ghuber_recon, ghuber_recon_params = ct_model.recon(sino, init_recon=mbir_recon, weights=weights_mar*weights_ghuber)
     ghuber_recon.block_until_ready()
     elapsed = time.time() - time0
     print('Elapsed time for recon is {:.3f} seconds'.format(elapsed))
