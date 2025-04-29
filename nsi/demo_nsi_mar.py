@@ -6,6 +6,7 @@ import jax.numpy as jnp
 import scipy
 import mbirjax
 import demo_utils
+import mar_utils
 import pprint
 
 pp = pprint.PrettyPrinter(indent=4)
@@ -39,10 +40,9 @@ if __name__ == "__main__":
 
     # #### recon parameters
     sharpness = 1.0
+    snr_db = 30.0
+    alpha = [0.0, 0.1]  # beam_hardening_correction coefficient
 
-    # #### Beam-hardening correction parameter.
-    bh_coeff = 0.0 # typical choices are 0.5, 1.0, and 1.5
-    # ###################### End of parameters
 
     print("\n*******************************************************",
           "\n************** NSI dataset preprocessing **************",
@@ -52,8 +52,9 @@ if __name__ == "__main__":
                                                        downsample_factor=downsample_factor,
                                                        subsample_view_factor=subsample_view_factor)
 
-    # perform beam hardening correction to the sinogram data
-    sino = sino + bh_coeff*sino*sino
+    # #### beam hardening correction
+    sino = jnp.maximum(sino, 0.0)
+    sino = mar_utils.beam_hardening_correction(sino, alpha=alpha)
 
     print("\n*******************************************************",
           "\n***************** Set up MBIRJAX model ****************",
@@ -73,7 +74,7 @@ if __name__ == "__main__":
     print("\n*******************************************************",
           "\n***** Calculate transmission_root sinogram weights ****",
           "\n*******************************************************")
-    weights_trans = ct_model.gen_weights(sino, weight_type='transmission_root')
+    weights = ct_model.gen_weights(sino, weight_type='transmission_root')
 
     print("\n*******************************************************",
           "\n**** Perform recon with transmission_root weights. ****",
@@ -88,7 +89,7 @@ if __name__ == "__main__":
     elapsed = time.time() - time0
     print('Elapsed time for fdk is {:.3f} seconds'.format(elapsed))
     time0 = time.time()
-    init_recon, recon_params = ct_model.recon(sino, weights=weights_trans, init_recon=fdk_recon)
+    init_recon, recon_params = ct_model.recon(sino, weights=weights, init_recon=fdk_recon)
     init_recon.block_until_ready()
     elapsed = time.time() - time0
     print('Elapsed time for initial trans weight VCD recon is {:.3f} seconds'.format(elapsed))
@@ -97,8 +98,7 @@ if __name__ == "__main__":
     print("\n*******************************************************",
           "\n************ Calculate MAR sinogram weights ***********",
           "\n*******************************************************")
-    weights_mar = ct_model.gen_weights_mar(sino, init_recon=init_recon,
-                                           beta=1.0, gamma=3.0)
+    weights_mar = ct_model.gen_weights_mar(sino, init_recon=init_recon, beta=1.0, gamma=3.0)
 
     print("\n*******************************************************",
           "\n*********** Perform recon with MAR weights. ***********",
@@ -106,38 +106,28 @@ if __name__ == "__main__":
     # ##########################
     # Perform VCD reconstruction
     time0 = time.time()
-
     recon_mar, recon_params = ct_model.recon(sino, weights=weights_mar, init_recon=init_recon)
-
     recon_mar.block_until_ready()
     elapsed = time.time() - time0
     print('Elapsed time for recon with MAR weight is {:.3f} seconds'.format(elapsed))
     # ##########################
 
-    # change the image data shape to (slices, rows, cols), so that the rotation axis points up when viewing the
-    # coronal/sagittal slices with slice_viewer
-    init_recon = np.transpose(init_recon, (2, 1, 0))
-    init_recon = init_recon[:, :, ::-1]
-
-    recon_mar = np.transpose(recon_mar, (2, 1, 0))
-    recon_mar = recon_mar[:, :, ::-1]
-
-    # rotate the recon images to an upright pose for display purpose
-    rot_angle = 17.165  # rotate angle in the plane defined by axes [0,2].
-    init_recon = scipy.ndimage.rotate(init_recon, rot_angle, [0, 2], reshape=False, order=3)
-    recon_mar = scipy.ndimage.rotate(recon_mar, rot_angle, [0, 2], reshape=False, order=3)
-
     # export reconstruction data to hdf5 files.
-    mbirjax.preprocess.export_recon_to_hdf5(init_recon, os.path.join(output_path, "init_recon.h5"),
-                                            recon_description="Recon of MAR dataset with transmission_root weight",
-                                            alu_description="1 ALU = 0.508 mm")
-    mbirjax.preprocess.export_recon_to_hdf5(recon_mar, os.path.join(output_path, "recon_mar.h5"),
-                                            recon_description="Recon of MAR dataset with MAR weight",
-                                            alu_description="1 ALU = 0.508 mm")
+    #mbirjax.preprocess.export_recon_to_hdf5(init_recon, os.path.join(output_path, "init_recon.h5"),
+    #                                        recon_description="Recon of MAR dataset with transmission_root weight",
+    #                                        alu_description="1 ALU = 0.508 mm")
+    #mbirjax.preprocess.export_recon_to_hdf5(recon_mar, os.path.join(output_path, "recon_mar.h5"),
+    #                                        recon_description="Recon of MAR dataset with MAR weight",
+    #                                        alu_description="1 ALU = 0.508 mm")
 
-    # Display results
+
+    # #### Display results
+    # change the image data shape to (slices, rows, cols)
+    init_recon = np.transpose(init_recon, axes=(2, 0, 1))
+    recon_mar = np.transpose(recon_mar, axes=(2, 0, 1))
+
     vmin = 0
     vmax = downsample_factor[0] * 0.008
-
-    mbirjax.slice_viewer(init_recon, recon_mar, vmin=0, vmax=vmax, slice_axis=2, slice_label='Sagittal Slice',
-                         title='recon with transmission_root weight (left) VS recon with MAR weight (right)')
+    mbirjax.slice_viewer(init_recon, recon_mar, vmin=0, vmax=vmax, slice_axis=0, slice_label='MBIR', slice_label2='MBIR MAR', title='Axial Slice')
+    mbirjax.slice_viewer(init_recon, recon_mar, vmin=0, vmax=vmax, slice_axis=1, slice_label='MBIR', slice_label2='MBIR MAR', title='Coronal Slice')
+    mbirjax.slice_viewer(init_recon, recon_mar, vmin=0, vmax=vmax, slice_axis=2, slice_label='MBIR', slice_label2='MBIR MAR', title='Sagittal Slice')
