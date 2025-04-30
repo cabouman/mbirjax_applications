@@ -47,8 +47,6 @@ if __name__ == "__main__":
     # #### recon parameters
     sharpness = 1.0
     snr_db = 30.0
-    alpha = [1.0, 0.0, 0.1]  # beam_hardening_correction coefficient
-
 
     print("\n*******************************************************",
           "\n************** NSI dataset preprocessing **************",
@@ -57,10 +55,6 @@ if __name__ == "__main__":
         mbirjax.preprocess.nsi.compute_sino_and_params(dataset_dir,
                                                        downsample_factor=downsample_factor,
                                                        subsample_view_factor=subsample_view_factor)
-    # #### beam hardening correction
-    if metal:
-        sino = jnp.maximum(sino, 0.0)
-        sino = mar_utils.beam_hardening_correction(sino, alpha=alpha)
 
     print("\n*******************************************************",
           "\n***************** Set up MBIRJAX model ****************",
@@ -110,40 +104,11 @@ if __name__ == "__main__":
                                             recon_description="MBIRJAX recon of phantom",
                                             alu_description="1 ALU = 0.508 mm")
 
-    print("\n*******************************************************",
-          "\n********* Calculate GHuber sinogram weights ***********",
-          "\n*******************************************************")
-
-    # Compute the error sinogram
-    sino_error = sino - ct_model.forward_project(mbir_recon)
-
-    # Compute generalized Huber weights
-    weights_ghuber = mar_utils.gen_ghuber_weights(weights, sino_error, T=1.0, delta=1.0)
-    mbirjax.slice_viewer(weights_ghuber, 10*jnp.abs(sino_error), vmin=0, vmax=1.0, slice_axis=0, slice_axis2=0, slice_label='GHuber Weights', slice_label2="10x(Error Sino)", title='Gen Huber Weights')
-
-    print("\n*******************************************************",
-          "\n************ Calculate MAR sinogram weights ***********",
-          "\n*******************************************************")
-    weights_mar = ct_model.gen_weights_mar(sino, init_recon=mbir_recon, beta=1.0, gamma=3.0)
-    mbirjax.slice_viewer(weights_mar, 10*jnp.abs(sino_error), vmin=0, vmax=1.0, slice_axis=0, slice_axis2=0, slice_label='MAR Weights', slice_label2="10x(Error Sino)", title='MAR Weights')
-
-
-    print("\n**********************************************************",
-          "\n*** Perform MBIR reconstruction with Gen Huber Weights ***",
-          "\n**********************************************************")
-
-    # #### Perform GHuber MBIR reconstruction
-    time0 = time.time()
-    ghuber_recon, ghuber_recon_params = ct_model.recon(sino, init_recon=mbir_recon, weights=weights_mar*weights_ghuber)
-    ghuber_recon.block_until_ready()
-    elapsed = time.time() - time0
-    print('Elapsed time for recon is {:.3f} seconds'.format(elapsed))
 
     # #### Display results
     # change the image data shape to (slices, rows, cols)
     fdk_recon = np.transpose(fdk_recon, axes=(2, 0, 1))
     mbir_recon = np.transpose(mbir_recon, axes=(2, 0, 1))
-    ghuber_recon = np.transpose(ghuber_recon, axes=(2, 0, 1))
 
     # Display FDK versus MBIR
     vmin = 0
@@ -151,11 +116,3 @@ if __name__ == "__main__":
     mbirjax.slice_viewer(fdk_recon, data2=mbir_recon, vmin=0, vmax=vmax, slice_axis=0, slice_axis2=0, slice_label='FDK', slice_label2='MBIR', title='Axial Slice')
     mbirjax.slice_viewer(fdk_recon, data2=mbir_recon, vmin=0, vmax=vmax, slice_axis=1, slice_axis2=1, slice_label='FDK', slice_label2='MBIR', title='Coronal Slice')
     mbirjax.slice_viewer(fdk_recon, data2=mbir_recon, vmin=0, vmax=vmax, slice_axis=2, slice_axis2=2, slice_label='FDK', slice_label2='MBIR', title='Sagittal Slice')
-
-
-    # Display MBIR versus GHuber MBIR
-    vmin = 0
-    vmax = downsample_factor[0] * 0.025
-    mbirjax.slice_viewer(mbir_recon, data2=ghuber_recon, vmin=0, vmax=vmax, slice_axis=0, slice_axis2=0, slice_label='MBIR', slice_label2='GHuber MBIR', title='Axial Slice')
-    mbirjax.slice_viewer(mbir_recon, data2=ghuber_recon, vmin=0, vmax=vmax, slice_axis=1, slice_axis2=1, slice_label='MBIR', slice_label2='GHuber MBIR', title='Coronal Slice')
-    mbirjax.slice_viewer(mbir_recon, data2=ghuber_recon, vmin=0, vmax=vmax, slice_axis=2, slice_axis2=2, slice_label='MBIR', slice_label2='GHuber MBIR', title='Sagittal Slice')
