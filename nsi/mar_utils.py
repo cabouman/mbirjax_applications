@@ -209,7 +209,7 @@ def estimate_metal_sino(ct_model, sino, recon, metal_threshold=None, order=3, ve
     H = jnp.stack([m_flat**i for i in range(1, order + 1)], axis=1)  # shape: (N, order)
 
     # Regularization parameter (small to avoid singular matrix)
-    epsilon = 1e-6
+    epsilon = 1e-7
 
     # Compute normal equations
     HtH = H.T @ H
