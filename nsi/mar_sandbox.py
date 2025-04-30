@@ -7,7 +7,6 @@ import scipy
 import mbirjax
 import demo_utils
 import mar_utils
-import bh_utils
 import pprint
 
 pp = pprint.PrettyPrinter(indent=4)
@@ -42,7 +41,7 @@ if __name__ == "__main__":
     # #### recon parameters
     sharpness = 1.0
     snr_db = 30.0
-    alpha = [1.0, 0.0, 0.1]  # beam_hardening_correction coefficient
+    alpha = [1.0, 0.0, 0.0]  # beam_hardening_correction coefficient
 
 
     print("\n*******************************************************",
@@ -99,8 +98,9 @@ if __name__ == "__main__":
     print("\n*******************************************************",
           "\n*************** Estimate Metal Sinogram ***************",
           "\n*******************************************************")
-    metal_sino, theta = bh_utils.estimate_metal_sino(ct_model, sino, init_recon, metal_threshold=0.1)
-    mbirjax.slice_viewer(metal_sino, sino-metal_sino, slice_axis=0, slice_label='Metal Sino', slice_label2='Plastic Sino', title='Views')
+    metal_sino, metal_mask, theta = mar_utils.estimate_metal_sino(ct_model, sino, init_recon, metal_threshold=0.1)
+    plastic_sino = sino - metal_sino
+    mbirjax.slice_viewer(metal_sino, plastic_sino, slice_axis=0, slice_label='Metal Sino', slice_label2='Plastic Sino', title='Views')
 
     print("\n*******************************************************",
           "\n************ Calculate MAR sinogram weights ***********",
@@ -113,11 +113,14 @@ if __name__ == "__main__":
     # ##########################
     # Perform VCD reconstruction
     time0 = time.time()
-    recon_mar, recon_params = ct_model.recon(sino-metal_sino, weights=weights_mar, init_recon=init_recon)
-    recon_mar.block_until_ready()
+    recon_plastic, recon_params = ct_model.recon(plastic_sino, weights=weights_mar, init_recon=init_recon)
+    recon_plastic.block_until_ready()
     elapsed = time.time() - time0
     print('Elapsed time for recon with MAR weight is {:.3f} seconds'.format(elapsed))
     # ##########################
+
+    # #### combine metal and plastic recons
+    recon_mar = recon_plastic*(1.0-metal_mask) + init_recon*metal_mask
 
     # #### Display results
     # change the image data shape to (slices, rows, cols)
@@ -125,7 +128,7 @@ if __name__ == "__main__":
     recon_mar = np.transpose(recon_mar, axes=(2, 0, 1))
 
     vmin = 0
-    vmax = downsample_factor[0] * 0.008
+    vmax = downsample_factor[0] * 0.025
     mbirjax.slice_viewer(init_recon, recon_mar, vmin=0, vmax=vmax, slice_axis=0, slice_label='MBIR', slice_label2='MBIR MAR', title='Axial Slice')
     mbirjax.slice_viewer(init_recon, recon_mar, vmin=0, vmax=vmax, slice_axis=1, slice_label='MBIR', slice_label2='MBIR MAR', title='Coronal Slice')
     mbirjax.slice_viewer(init_recon, recon_mar, vmin=0, vmax=vmax, slice_axis=2, slice_label='MBIR', slice_label2='MBIR MAR', title='Sagittal Slice')

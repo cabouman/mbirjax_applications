@@ -147,7 +147,7 @@ if __name__ == "__main__":
 
     # Display FDK versus MBIR
     vmin = 0
-    vmax = downsample_factor[0] * 0.008
+    vmax = downsample_factor[0] * 0.025
     mbirjax.slice_viewer(fdk_recon, data2=mbir_recon, vmin=0, vmax=vmax, slice_axis=0, slice_axis2=0, slice_label='FDK', slice_label2='MBIR', title='Axial Slice')
     mbirjax.slice_viewer(fdk_recon, data2=mbir_recon, vmin=0, vmax=vmax, slice_axis=1, slice_axis2=1, slice_label='FDK', slice_label2='MBIR', title='Coronal Slice')
     mbirjax.slice_viewer(fdk_recon, data2=mbir_recon, vmin=0, vmax=vmax, slice_axis=2, slice_axis2=2, slice_label='FDK', slice_label2='MBIR', title='Sagittal Slice')
@@ -155,7 +155,7 @@ if __name__ == "__main__":
 
     # Display MBIR versus GHuber MBIR
     vmin = 0
-    vmax = downsample_factor[0] * 0.008
+    vmax = downsample_factor[0] * 0.025
     mbirjax.slice_viewer(mbir_recon, data2=ghuber_recon, vmin=0, vmax=vmax, slice_axis=0, slice_axis2=0, slice_label='MBIR', slice_label2='GHuber MBIR', title='Axial Slice')
     mbirjax.slice_viewer(mbir_recon, data2=ghuber_recon, vmin=0, vmax=vmax, slice_axis=1, slice_axis2=1, slice_label='MBIR', slice_label2='GHuber MBIR', title='Coronal Slice')
     mbirjax.slice_viewer(mbir_recon, data2=ghuber_recon, vmin=0, vmax=vmax, slice_axis=2, slice_axis2=2, slice_label='MBIR', slice_label2='GHuber MBIR', title='Sagittal Slice')
