@@ -89,7 +89,7 @@ if __name__ == "__main__":
     print("\n*******************************************************",
           "\n*************** Estimate Metal Sinogram ***************",
           "\n*******************************************************")
-    metal_sino, metal_mask, theta = mar_utils.estimate_metal_sino(ct_model, sino, fdk_recon)
+    metal_sino, metal_mask = mar_utils.estimate_metal_sino(ct_model, sino, fdk_recon)
     plastic_sino = jnp.maximum(sino - metal_sino, 0.0)  # Note: Clipping to reduces artifacts but losses some detail
 
     mbirjax.slice_viewer(metal_sino, plastic_sino, slice_axis=0, slice_label='Metal Sino', slice_label2='Plastic Sino', title='Views')

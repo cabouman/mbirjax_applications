@@ -1,5 +1,6 @@
 import jax
 import jax.numpy as jnp
+import numpy as np
 import mbirjax
 
 
@@ -199,11 +200,11 @@ def estimate_metal_sino(ct_model, sino, recon, metal_threshold=None, order=3, ve
     s_flat = sino.reshape(-1)
     m_flat = metal_sino.reshape(-1)
 
-    # Normalize vectors for numerical stability
-    s_norm = jnp.linalg.norm(s_flat)
-    m_norm = jnp.linalg.norm(m_flat)
-    s_flat = s_flat/s_norm
-    m_flat = m_flat/m_norm
+    # Normalize the values used as input to monomials for numerical stability
+    s_norm = 1  # jnp.linalg.norm(s_flat)
+    s_flat = s_flat / s_norm  # Y
+    m_flat_min, m_flat_max = m_flat.min(), m_flat.max()
+    m_flat = (m_flat - m_flat_min) / (m_flat_max - m_flat_min)  # Z
 
     # Build design matrix H = [m, m**2, ..., m**order]
     H = jnp.stack([m_flat**i for i in range(1, order + 1)], axis=1)  # shape: (N, order)
@@ -212,35 +213,50 @@ def estimate_metal_sino(ct_model, sino, recon, metal_threshold=None, order=3, ve
     epsilon = 1e-7
 
     # Compute normal equations
-    HtH = H.T @ H
-    HtH = HtH + epsilon * jnp.linalg.norm(HtH) * jnp.eye(order)
-    Hts = H.T @ s_flat
+    # HtH = H.T @ H
+    # HtH = HtH + epsilon * jnp.linalg.norm(HtH) * jnp.eye(order)
+    # Hts = H.T @ s_flat
 
-    # Solve the linear system: (HᵀH + λI) θ = Hᵀs
-    theta_scaled = jnp.linalg.solve(HtH, Hts)
-
-    if jnp.isnan(theta_scaled).any():
-        print("WARNING: NaNs detected in theta. H may be rank-deficient or poorly scaled.")
+    HtH_monomial = np.zeros((order, order))
+    Hts_monomial = np.zeros((order,))
+    for i in range(order):
+        Hts_monomial[i] = jnp.sum(H.T[i] * s_flat)
+        for j in range(order):
+            HtH_monomial[i, j] = jnp.sum(H.T[i] * H.T[j])
+            HtH_monomial[j, i] = HtH_monomial[i, j]
+    HtH_monomial = jnp.array(HtH_monomial) + epsilon * jnp.linalg.norm(HtH_monomial) * jnp.eye(order)
+    Hts_monomial = jnp.array(Hts_monomial)
+    theta_hat = jnp.linalg.solve(HtH_monomial, Hts_monomial)
 
     # Reconstruct beam-hardened metal sinogram
-    bh_metal_sino_flat = H @ (theta_scaled * s_norm)
-    bh_metal_sino = bh_metal_sino_flat.reshape(sino.shape)
+    bh_metal_sino_flat_monomial = H @ theta_hat
+    bh_metal_sino = bh_metal_sino_flat_monomial.reshape(sino.shape)
 
-    # Correct theta for normalization
-    theta = jnp.array([
-        theta_scaled[i] / (m_norm ** (i + 1)) * s_norm
-        for i in range(order)
-    ])
+    # # Solve the linear system: (HᵀH + λI) θ = Hᵀs
+    # theta_scaled = jnp.linalg.solve(HtH, Hts)
+    #
+    # if jnp.isnan(theta_scaled).any():
+    #     print("WARNING: NaNs detected in theta. H may be rank-deficient or poorly scaled.")
 
-    # Print various quantities
-    if(verbose):
-        print("s_flat norm:", s_norm)
-        print("m_flat norm:", m_norm)
-        print("H column norms:", jnp.linalg.norm(H, axis=0))
-        print("HtH =\n", HtH)
-        print("theta =", theta)
+    # # Reconstruct beam-hardened metal sinogram
+    # bh_metal_sino_flat = H @ (theta_scaled * s_norm)
+    # bh_metal_sino = bh_metal_sino_flat.reshape(sino.shape)
 
-    return bh_metal_sino, metal_mask, theta
+    # # Correct theta for normalization
+    # theta = jnp.array([
+    #     theta_scaled[i] / (m_norm ** (i + 1)) * s_norm
+    #     for i in range(order)
+    # ])
+
+    # # Print various quantities
+    # if(verbose):
+    #     print("s_flat norm:", s_norm)
+    #     print("m_flat norm:", m_norm)
+    #     print("H column norms:", jnp.linalg.norm(H, axis=0))
+    #     print("HtH =\n", HtH)
+    #     print("theta =", theta)
+
+    return bh_metal_sino, metal_mask
 
 
 def make_gaussian_kernel(sigma, size=None):

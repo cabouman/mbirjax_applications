@@ -22,6 +22,10 @@ if __name__ == "__main__":
     output_path = './output/nsi_demo/'  # path to store output recon images
     os.makedirs(output_path, exist_ok=True)  # mkdir if directory does not exist
 
+    # dataset_url = 'https://www.datadepot.rcac.purdue.edu/bouman/data/demo_data_nsi.tgz'
+    # dataset_url = 'https://www.datadepot.rcac.purdue.edu/bouman/data/demo_nsi_vert_no_metal_all_views.tgz'
+    dataset_url = 'https://www.datadepot.rcac.purdue.edu/bouman/data/mar_demo_data.tgz'
+
     # path to store and extract the NSI data and metadata.
     download_dir = './demo_data/'
 
