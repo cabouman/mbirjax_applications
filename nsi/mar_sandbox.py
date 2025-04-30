@@ -77,28 +77,15 @@ if __name__ == "__main__":
     weights = ct_model.gen_weights(sino, weight_type='transmission_root')
 
     print("\n*******************************************************",
-          "\n**** Perform recon with transmission_root weights. ****",
+          "\n********* Perform initial FDK reconstruction **********",
           "\n*******************************************************")
     print("This recon will be used to identify metal voxels and compute the MAR sinogram weight.")
-    # ##########################
-    # Perform VCD reconstruction
-    time0 = time.time()
-    # Using FDK reconstruction as initialization of VCD
-    print('Starting fdk')
-    fdk_recon = ct_model.fdk_recon(sino)
-    elapsed = time.time() - time0
-    print('Elapsed time for fdk is {:.3f} seconds'.format(elapsed))
-    time0 = time.time()
-    init_recon, recon_params = ct_model.recon(sino, weights=weights, init_recon=fdk_recon)
-    init_recon.block_until_ready()
-    elapsed = time.time() - time0
-    print('Elapsed time for initial trans weight VCD recon is {:.3f} seconds'.format(elapsed))
-    # ##########################
+    init_recon = ct_model.fdk_recon(sino)
 
     print("\n*******************************************************",
           "\n*************** Estimate Metal Sinogram ***************",
           "\n*******************************************************")
-    metal_sino, metal_mask, theta = mar_utils.estimate_metal_sino(ct_model, sino, init_recon, metal_threshold=0.1)
+    metal_sino, metal_mask = mar_utils.estimate_metal_sino(ct_model, sino, init_recon, metal_threshold=0.1)
     plastic_sino = sino - metal_sino
     mbirjax.slice_viewer(metal_sino, plastic_sino, slice_axis=0, slice_label='Metal Sino', slice_label2='Plastic Sino', title='Views')
 
@@ -113,7 +100,7 @@ if __name__ == "__main__":
     # ##########################
     # Perform VCD reconstruction
     time0 = time.time()
-    recon_plastic, recon_params = ct_model.recon(plastic_sino, weights=weights_mar, init_recon=init_recon)
+    recon_plastic, recon_params = ct_model.recon(plastic_sino, weights=weights_mar)
     recon_plastic.block_until_ready()
     elapsed = time.time() - time0
     print('Elapsed time for recon with MAR weight is {:.3f} seconds'.format(elapsed))
@@ -129,6 +116,6 @@ if __name__ == "__main__":
 
     vmin = 0
     vmax = downsample_factor[0] * 0.025
-    mbirjax.slice_viewer(init_recon, recon_mar, vmin=0, vmax=vmax, slice_axis=0, slice_label='MBIR', slice_label2='MBIR MAR', title='Axial Slice')
-    mbirjax.slice_viewer(init_recon, recon_mar, vmin=0, vmax=vmax, slice_axis=1, slice_label='MBIR', slice_label2='MBIR MAR', title='Coronal Slice')
-    mbirjax.slice_viewer(init_recon, recon_mar, vmin=0, vmax=vmax, slice_axis=2, slice_label='MBIR', slice_label2='MBIR MAR', title='Sagittal Slice')
+    mbirjax.slice_viewer(init_recon, recon_mar, vmin=0, vmax=vmax, slice_axis=0, slice_label='FDK', slice_label2='MBIR MAR', title='Axial Slice')
+    mbirjax.slice_viewer(init_recon, recon_mar, vmin=0, vmax=vmax, slice_axis=1, slice_label='FDK', slice_label2='MBIR MAR', title='Coronal Slice')
+    mbirjax.slice_viewer(init_recon, recon_mar, vmin=0, vmax=vmax, slice_axis=2, slice_label='FDK', slice_label2='MBIR MAR', title='Sagittal Slice')

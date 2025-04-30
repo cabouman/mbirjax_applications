@@ -161,8 +161,6 @@ def estimate_metal_sino(ct_model, sino, recon, metal_threshold=None, order=3):
             Beam-hardened metal sinogram approximation.
         metal_mask: jnp.ndarray
             binary mask of metal in reconstruction.
-        theta: jnp.ndarray
-            Polynomial coefficients of shape (order,)
     """
     if metal_threshold is None:
         print("Metal threshold calculated using Otsu's method.")
@@ -195,6 +193,11 @@ def estimate_metal_sino(ct_model, sino, recon, metal_threshold=None, order=3):
     s_flat = sino.reshape(-1)
     m_flat = metal_sino.reshape(-1)
 
+    # Normalize vectors for numerical stability
+    alpha = jnp.linalg.norm(s_flat)
+    s_flat = s_flat/alpha
+    m_flat = m_flat/jnp.linalg.norm(m_flat)
+
     print("s_flat norm:", jnp.linalg.norm(s_flat))
     print("m_flat norm:", jnp.linalg.norm(m_flat))
 
@@ -207,7 +210,7 @@ def estimate_metal_sino(ct_model, sino, recon, metal_threshold=None, order=3):
 
     # Compute normal equations
     HtH = H.T @ H + lambda_reg * jnp.eye(order)
-    Hts = H.T @ s_flat
+    Hts = H.T @ (alpha*s_flat)      # remove normalization of s_flat to get correct answer
 
     # Print HᵀH for inspection
     print("HtH =\n", HtH)
@@ -224,7 +227,7 @@ def estimate_metal_sino(ct_model, sino, recon, metal_threshold=None, order=3):
 
     print("theta =", theta)
 
-    return bh_metal_sino, metal_mask, theta
+    return bh_metal_sino, metal_mask
 
 
 def make_gaussian_kernel(sigma, size=None):
