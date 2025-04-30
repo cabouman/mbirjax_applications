@@ -12,12 +12,17 @@ import pprint
 pp = pprint.PrettyPrinter(indent=4)
 
 if __name__ == "__main__":
-    print('This script is a demonstration of the metal artifact reduction (MAR) functionality using MAR sinogram weight.\
+    print('This script is a demonstration of the mbirjax metal artifact reduction (MAR) capability.\
     \n Demo functionality includes:\
     \n\t * downloading NSI dataset from specified urls;\
     \n\t * Computing sinogram data;\
-    \n\t * Computing two sets of sinogram weights, one with type "transmission_root" and the other with type "MAR";\
-    \n\t * Computing two sets of MBIR reconstructions with each sinogram weight respectively;\
+    \n\t * Computing the FDK reconstruction;\
+    \n\t * Computing the estimated plastic and metal sinograms;\
+    \n\t * Computing the inital MBIR plastic reconstruction;\
+    \n\t * Computing the MAR weights;\
+    \n\t * Computing the generalized Huber weights;\
+    \n\t * Computing the final MBIR plastic reconstruction;\
+    \n\t * Blending the plastic and metal reconstructions together;\
     \n\t * Displaying the results.\n')
     # ###################### User defined params. Change the parameters below for your own use case.
     output_path = './output/nsi_demo_mar/'  # path to store output recon images
@@ -41,7 +46,7 @@ if __name__ == "__main__":
     # #### recon parameters
     sharpness = 1.0
     snr_db = 30.0
-    alpha = [0.0, 0.1]  # beam_hardening_correction coefficient
+    alpha = [1.0, 0.0, 0.0]  # beam_hardening_correction coefficient
 
 
     print("\n*******************************************************",
@@ -77,57 +82,55 @@ if __name__ == "__main__":
     weights = ct_model.gen_weights(sino, weight_type='transmission_root')
 
     print("\n*******************************************************",
-          "\n**** Perform recon with transmission_root weights. ****",
+          "\n********* Perform initial FDK reconstruction **********",
           "\n*******************************************************")
-    print("This recon will be used to identify metal voxels and compute the MAR sinogram weight.")
-    # ##########################
-    # Perform VCD reconstruction
-    time0 = time.time()
-    # Using FDK reconstruction as initialization of VCD
-    print('Starting fdk')
     fdk_recon = ct_model.fdk_recon(sino)
-    elapsed = time.time() - time0
-    print('Elapsed time for fdk is {:.3f} seconds'.format(elapsed))
-    time0 = time.time()
-    init_recon, recon_params = ct_model.recon(sino, weights=weights, init_recon=fdk_recon)
-    init_recon.block_until_ready()
-    elapsed = time.time() - time0
-    print('Elapsed time for initial trans weight VCD recon is {:.3f} seconds'.format(elapsed))
-    # ##########################
+
+    print("\n*******************************************************",
+          "\n*************** Estimate Metal Sinogram ***************",
+          "\n*******************************************************")
+    metal_sino, metal_mask, theta = mar_utils.estimate_metal_sino(ct_model, sino, fdk_recon)
+    plastic_sino = jnp.maximum(sino - metal_sino, 0.0)  # Note: Clipping to reduces artifacts but losses some detail
+
+    mbirjax.slice_viewer(metal_sino, plastic_sino, slice_axis=0, slice_label='Metal Sino', slice_label2='Plastic Sino', title='Views')
 
     print("\n*******************************************************",
           "\n************ Calculate MAR sinogram weights ***********",
           "\n*******************************************************")
-    weights_mar = ct_model.gen_weights_mar(sino, init_recon=init_recon, beta=1.0, gamma=3.0)
+    weights_mar = ct_model.gen_weights_mar(sino, init_recon=fdk_recon, beta=1.0, gamma=3.0)
 
     print("\n*******************************************************",
-          "\n*********** Perform recon with MAR weights. ***********",
+          "\n******** Perform MBIR recon with MAR weights **********",
           "\n*******************************************************")
-    # ##########################
-    # Perform VCD reconstruction
-    time0 = time.time()
-    recon_mar, recon_params = ct_model.recon(sino, weights=weights_mar, init_recon=init_recon)
-    recon_mar.block_until_ready()
-    elapsed = time.time() - time0
-    print('Elapsed time for recon with MAR weight is {:.3f} seconds'.format(elapsed))
-    # ##########################
+    recon_plastic, recon_params = ct_model.recon(plastic_sino, weights=weights_mar)
 
-    # export reconstruction data to hdf5 files.
-    #mbirjax.preprocess.export_recon_to_hdf5(init_recon, os.path.join(output_path, "init_recon.h5"),
-    #                                        recon_description="Recon of MAR dataset with transmission_root weight",
-    #                                        alu_description="1 ALU = 0.508 mm")
-    #mbirjax.preprocess.export_recon_to_hdf5(recon_mar, os.path.join(output_path, "recon_mar.h5"),
-    #                                        recon_description="Recon of MAR dataset with MAR weight",
-    #                                        alu_description="1 ALU = 0.508 mm")
+    print("\n*******************************************************",
+          "\n********* Calculate GHuber sinogram weights ***********",
+          "\n*******************************************************")
+    # Compute the error sinogram
+    sino_error = plastic_sino - ct_model.forward_project(recon_plastic)
 
+    # Compute generalized Huber weights
+    weights_ghuber = mar_utils.gen_ghuber_weights(weights, sino_error, T=1.2, delta=1.0)
+    mbirjax.slice_viewer(weights_ghuber, 10*jnp.abs(sino_error), vmin=0, vmax=1.0, slice_axis=0, slice_axis2=0, slice_label='GHuber Weights', slice_label2="10x(Error Sino)", title='Gen Huber Weights')
+
+    print("\n*********************************************************************",
+          "\n******** Perform MBIR recon with generalized huber weights **********",
+          "\n********************************************************************")
+    recon_plastic, recon_params = ct_model.recon(plastic_sino, weights=weights_mar*weights_ghuber, init_recon=recon_plastic)
+
+    print("\n*******************************************************",
+          "\n*********** Blend metal and plastic recons ************",
+          "\n*******************************************************")
+    recon_mar = recon_plastic * (1.0-metal_mask) + fdk_recon * metal_mask
 
     # #### Display results
     # change the image data shape to (slices, rows, cols)
-    init_recon = np.transpose(init_recon, axes=(2, 0, 1))
+    fdk_recon = np.transpose(fdk_recon, axes=(2, 0, 1))
     recon_mar = np.transpose(recon_mar, axes=(2, 0, 1))
 
     vmin = 0
-    vmax = downsample_factor[0] * 0.008
-    mbirjax.slice_viewer(init_recon, recon_mar, vmin=0, vmax=vmax, slice_axis=0, slice_label='MBIR', slice_label2='MBIR MAR', title='Axial Slice')
-    mbirjax.slice_viewer(init_recon, recon_mar, vmin=0, vmax=vmax, slice_axis=1, slice_label='MBIR', slice_label2='MBIR MAR', title='Coronal Slice')
-    mbirjax.slice_viewer(init_recon, recon_mar, vmin=0, vmax=vmax, slice_axis=2, slice_label='MBIR', slice_label2='MBIR MAR', title='Sagittal Slice')
+    vmax = downsample_factor[0] * 0.025
+    mbirjax.slice_viewer(fdk_recon, recon_mar, vmin=0, vmax=vmax, slice_axis=0, slice_label='FDK', slice_label2='MBIR MAR', title='Axial Slice')
+    mbirjax.slice_viewer(fdk_recon, recon_mar, vmin=0, vmax=vmax, slice_axis=1, slice_label='FDK', slice_label2='MBIR MAR', title='Coronal Slice')
+    mbirjax.slice_viewer(fdk_recon, recon_mar, vmin=0, vmax=vmax, slice_axis=2, slice_label='FDK', slice_label2='MBIR MAR', title='Sagittal Slice')
