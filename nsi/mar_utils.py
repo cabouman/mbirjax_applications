@@ -1,5 +1,6 @@
 import jax
 import jax.numpy as jnp
+import mbirjax
 
 
 def gen_ghuber_weights(weights, sino_error, T=1.0, delta=1.0, batch_size=16, epsilon=1e-6):
@@ -161,6 +162,8 @@ def estimate_metal_sino(ct_model, sino, recon, metal_threshold=None, order=3):
             Beam-hardened metal sinogram approximation.
         metal_mask: jnp.ndarray
             binary mask of metal in reconstruction.
+        theta: jnp.ndarray
+            Polynomial coefficients of shape (order,)
     """
     if metal_threshold is None:
         print("Metal threshold calculated using Otsu's method.")
@@ -194,40 +197,48 @@ def estimate_metal_sino(ct_model, sino, recon, metal_threshold=None, order=3):
     m_flat = metal_sino.reshape(-1)
 
     # Normalize vectors for numerical stability
-    alpha = jnp.linalg.norm(s_flat)
-    s_flat = s_flat/alpha
-    m_flat = m_flat/jnp.linalg.norm(m_flat)
+    s_norm = jnp.linalg.norm(s_flat)
+    m_norm = jnp.linalg.norm(m_flat)
+    s_flat = s_flat/s_norm
+    m_flat = m_flat/m_norm
 
-    print("s_flat norm:", jnp.linalg.norm(s_flat))
-    print("m_flat norm:", jnp.linalg.norm(m_flat))
+    print("s_flat norm:", s_norm)
+    print("m_flat norm:", m_norm)
 
     # Build design matrix H = [m, m**2, ..., m**order]
     H = jnp.stack([m_flat**i for i in range(1, order + 1)], axis=1)  # shape: (N, order)
     print("H column norms:", jnp.linalg.norm(H, axis=0))
 
     # Regularization parameter (small to avoid singular matrix)
-    lambda_reg = 1e-6
+    epsilon = 1e-7
 
     # Compute normal equations
-    HtH = H.T @ H + lambda_reg * jnp.eye(order)
-    Hts = H.T @ (alpha*s_flat)      # remove normalization of s_flat to get correct answer
+    HtH = H.T @ H
+    HtH = HtH + epsilon * jnp.linalg.norm(HtH) * jnp.eye(order)
+    Hts = H.T @ s_flat
 
     # Print HᵀH for inspection
     print("HtH =\n", HtH)
 
     # Solve the linear system: (HᵀH + λI) θ = Hᵀs
-    theta = jnp.linalg.solve(HtH, Hts)
+    theta_scaled = jnp.linalg.solve(HtH, Hts)
 
-    if jnp.isnan(theta).any():
+    if jnp.isnan(theta_scaled).any():
         print("WARNING: NaNs detected in theta. H may be rank-deficient or poorly scaled.")
 
     # Reconstruct beam-hardened metal sinogram
-    bh_metal_sino_flat = H @ theta
+    bh_metal_sino_flat = H @ (theta_scaled * s_norm)
     bh_metal_sino = bh_metal_sino_flat.reshape(sino.shape)
+
+    # Correct theta for normalization
+    theta = jnp.array([
+        theta_scaled[i] / (m_norm ** (i + 1)) * s_norm
+        for i in range(order)
+    ])
 
     print("theta =", theta)
 
-    return bh_metal_sino, metal_mask
+    return bh_metal_sino, metal_mask, theta
 
 
 def make_gaussian_kernel(sigma, size=None):

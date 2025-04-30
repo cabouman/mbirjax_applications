@@ -85,7 +85,7 @@ if __name__ == "__main__":
     print("\n*******************************************************",
           "\n*************** Estimate Metal Sinogram ***************",
           "\n*******************************************************")
-    metal_sino, metal_mask = mar_utils.estimate_metal_sino(ct_model, sino, init_recon, metal_threshold=0.1)
+    metal_sino, metal_mask, theta = mar_utils.estimate_metal_sino(ct_model, sino, init_recon)
     plastic_sino = sino - metal_sino
     mbirjax.slice_viewer(metal_sino, plastic_sino, slice_axis=0, slice_label='Metal Sino', slice_label2='Plastic Sino', title='Views')
 
