@@ -141,15 +141,10 @@ def beam_hardening_correction(sino, alpha, batch_size=16):
 
     return corrected_sino
 
-
 def estimate_metal_sino(ct_model, sino, recon, metal_threshold=None, order=3, verbose=False):
     """
-    Estimate the component of the sinogram due to metal using a polynomial beam hardening model
-    fitted via regularized least squares.
-
-    This function segments metal from the reconstruction, forward-projects it into sinogram space,
-    and fits a polynomial model to the metal-induced artifact using normalized least squares.
-    The resulting beam-hardening artifact is then estimated and returned as a separate sinogram.
+    Estimate the component of the sinogram due to metal using a polynomial beam hardening model,
+    optimized to avoid large memory usage by computing HᵀH and Hᵀs incrementally.
 
     Args:
         ct_model: MBIR CT model object with a `forward_project` method.
@@ -158,90 +153,83 @@ def estimate_metal_sino(ct_model, sino, recon, metal_threshold=None, order=3, ve
         recon: jnp.ndarray of shape (slices, rows, cols)
             Reconstructed image used to segment metal.
         metal_threshold: float, optional
-            Intensity threshold to segment metal. If None, the brightest class from a 3-class
-            Otsu threshold is used automatically.
+            Intensity threshold to segment metal. If None, computed using 3-class Otsu threshold.
         order: int, default=3
             Order of the polynomial used to model beam hardening effects.
         verbose: bool, default=False
-            If True, displays diagnostic visualizations and intermediate printouts.
+            If True, displays diagnostics and prints internal quantities.
 
     Returns:
         bh_metal_sino: jnp.ndarray
-            Estimated beam-hardened metal sinogram component of shape (views, rows, cols).
+            Estimated beam-hardened metal sinogram component.
         metal_mask: jnp.ndarray
-            Binary mask identifying metal regions in the reconstruction, shape (slices, rows, cols).
+            Binary mask of metal regions in the reconstruction.
         theta: jnp.ndarray
-            Polynomial coefficients in physical units (not normalized), of shape (order,).
+            Polynomial coefficients in physical (unnormalized) units.
     """
     if metal_threshold is None:
-        print("Metal threshold calculated using Otsu's method.")
+        if verbose:
+            print("Metal threshold calculated using Otsu's method.")
         _, metal_threshold = mbirjax.multi_threshold_otsu(recon, classes=3)
 
-    print("metal_threshold =", metal_threshold)
+    if verbose:
+        print("metal_threshold =", metal_threshold)
 
-    # Segment the metal in the reconstruction
     metal_mask = jnp.where(recon > metal_threshold, 1.0, 0.0).astype(jnp.float32)
     metal_mask = jax.device_put(metal_mask, device=ct_model.main_device)
-
-    # Forward project the metal to sinogram space
     metal_sino = ct_model.forward_project(metal_mask)
 
-    print("metal_mask sum =", jnp.sum(metal_mask))
-    print("metal_sino max =", jnp.max(metal_sino))
+    if verbose:
+        print("metal_mask sum =", jnp.sum(metal_mask))
+        print("metal_sino max =", jnp.max(metal_sino))
 
-    if(verbose):
-        try:
-            mbirjax.slice_viewer(recon, metal_mask, slice_axis=2, slice_label='Recon Slices', slice_label2='Metal Slices', title='Metal Mask Slices')
-        except Exception as e:
-            print("Viewer failed for masks/sinograms:", e)
-
-    # Flatten for least squares over all pixels
     s_flat = sino.reshape(-1)
     m_flat = metal_sino.reshape(-1)
 
-    # Normalize vectors for numerical stability
     s_norm = jnp.linalg.norm(s_flat)
     m_norm = jnp.linalg.norm(m_flat)
-    s_flat = s_flat/s_norm
-    m_flat = m_flat/m_norm
+    s_flat = s_flat / s_norm
+    m_flat = m_flat / m_norm
 
-    # Build design matrix H = [m, m**2, ..., m**order]
-    H = jnp.stack([m_flat**i for i in range(1, order + 1)], axis=1)  # shape: (N, order)
+    # Precompute powers of metal sinogram
+    powers = [jnp.ones_like(m_flat)]
+    for i in range(1, 2 * order + 1):
+        powers.append(powers[-1] * m_flat)
 
-    # Regularization parameter (small to avoid singular matrix)
+    # Incremental computation of HᵀH and Hᵀs
+    HtH = jnp.zeros((order, order), dtype=jnp.float32)
+    Hts = jnp.zeros((order,), dtype=jnp.float32)
+
+    for i in range(order):
+        for j in range(i, order):
+            val = jnp.sum(powers[i + 1] * powers[j + 1])
+            HtH = HtH.at[i, j].set(val)
+            HtH = HtH.at[j, i].set(val)
+        Hts = Hts.at[i].set(jnp.sum(powers[i + 1] * s_flat))
+
+    # Add regularization
     epsilon = 1e-7
+    HtH += epsilon * jnp.linalg.norm(HtH) * jnp.eye(order)
 
-    # Compute normal equations
-    HtH = H.T @ H
-    HtH = HtH + epsilon * jnp.linalg.norm(HtH) * jnp.eye(order)
-    Hts = H.T @ s_flat
-
-    # Solve the linear system: (HᵀH + λI) θ = Hᵀs
     theta_scaled = jnp.linalg.solve(HtH, Hts)
 
-    if jnp.isnan(theta_scaled).any():
-        print("WARNING: NaNs detected in theta. H may be rank-deficient or poorly scaled.")
-
     # Reconstruct beam-hardened metal sinogram
-    bh_metal_sino_flat = H @ (theta_scaled * s_norm)
+    bh_metal_sino_flat = sum(theta_scaled[i] * powers[i + 1] for i in range(order)) * s_norm
     bh_metal_sino = bh_metal_sino_flat.reshape(sino.shape)
 
-    # Correct theta for normalization
+    # De-normalize theta to make physically interpretable
     theta = jnp.array([
         theta_scaled[i] / (m_norm ** (i + 1)) * s_norm
         for i in range(order)
     ])
 
-    # Print various quantities
-    if(verbose):
+    if verbose:
         print("s_flat norm:", s_norm)
         print("m_flat norm:", m_norm)
-        print("H column norms:", jnp.linalg.norm(H, axis=0))
         print("HtH =\n", HtH)
         print("theta =", theta)
 
     return bh_metal_sino, metal_mask, theta
-
 
 def make_gaussian_kernel(sigma, size=None):
     if size is None:
