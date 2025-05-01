@@ -119,7 +119,7 @@ def beam_hardening_correction(sino, alpha, batch_size=16):
 
     return corrected_sino
 
-def estimate_metal_sino(ct_model, sino, recon, metal_threshold=None, order=3, verbose=False):
+def estimate_metal_sino(ct_model, sino, recon, metal_threshold=None, order=3, verbose=0):
     """
     Estimate the component of the sinogram due to metal using a polynomial beam hardening model,
     optimized to avoid large memory usage by computing HᵀH and Hᵀs incrementally.
@@ -134,8 +134,8 @@ def estimate_metal_sino(ct_model, sino, recon, metal_threshold=None, order=3, ve
             Intensity threshold to segment metal. If None, computed using 3-class Otsu threshold.
         order: int, default=3
             Order of the polynomial used to model beam hardening effects.
-        verbose: bool, default=False
-            If True, displays diagnostics and prints internal quantities.
+        verbose: int, default=1
+            0 => silent, 1 => verbose.
 
     Returns:
         bh_metal_sino: jnp.ndarray
@@ -146,18 +146,18 @@ def estimate_metal_sino(ct_model, sino, recon, metal_threshold=None, order=3, ve
             Polynomial coefficients in physical (unnormalized) units.
     """
     if metal_threshold is None:
-        if verbose:
+        if verbose == 1:
             print("Metal threshold calculated using Otsu's method.")
         _, metal_threshold = mbirjax.multi_threshold_otsu(recon, classes=3)
 
-    if verbose:
+    if verbose == 1:
         print("metal_threshold =", metal_threshold)
 
     metal_mask = jnp.where(recon > metal_threshold, 1.0, 0.0).astype(jnp.float32)
     metal_mask = jax.device_put(metal_mask, device=ct_model.main_device)
     metal_sino = ct_model.forward_project(metal_mask)
 
-    if verbose:
+    if verbose == 1:
         print("metal_mask sum =", jnp.sum(metal_mask))
         print("metal_sino max =", jnp.max(metal_sino))
 
@@ -201,7 +201,7 @@ def estimate_metal_sino(ct_model, sino, recon, metal_threshold=None, order=3, ve
         for i in range(order)
     ])
 
-    if verbose:
+    if verbose == 1:
         print("s_flat norm:", s_norm)
         print("m_flat norm:", m_norm)
         print("HtH =\n", HtH)
