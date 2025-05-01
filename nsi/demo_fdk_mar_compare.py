@@ -89,9 +89,9 @@ if __name__ == "__main__":
     print("\n*******************************************************",
           "\n*************** Estimate Metal Sinogram ***************",
           "\n*******************************************************")
-    metal_sino, metal_mask, theta = mar_utils.estimate_metal_sino(ct_model, sino, fdk_recon)
-    #plastic_sino = jnp.maximum(sino - metal_sino, 0.0)  # Note: Clipping to reduces artifacts but losses some detail
+    metal_sino, metal_mask = mar_utils.estimate_metal_sino(ct_model, sino, fdk_recon, verbose=1)
     plastic_sino = sino - metal_sino
+    mbirjax.slice_viewer(plastic_sino, metal_sino, vmin=0, vmax=2.0, slice_axis=0, slice_axis2=0, slice_label='Plastic Sino', slice_label2="Metal Sino", title='Decomposed Sinogram')
 
     print("\n*******************************************************",
           "\n************ Calculate MAR sinogram weights ***********",

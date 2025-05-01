@@ -142,8 +142,6 @@ def estimate_metal_sino(ct_model, sino, recon, metal_threshold=None, order=3, ve
             Estimated beam-hardened metal sinogram component.
         metal_mask: jnp.ndarray
             Binary mask of metal regions in the reconstruction.
-        theta: jnp.ndarray
-            Polynomial coefficients in physical (unnormalized) units.
     """
     if metal_threshold is None:
         if verbose == 1:
@@ -164,15 +162,8 @@ def estimate_metal_sino(ct_model, sino, recon, metal_threshold=None, order=3, ve
     s_flat = sino.reshape(-1)
     m_flat = metal_sino.reshape(-1)
 
-    s_norm = jnp.linalg.norm(s_flat)
-    m_norm = jnp.linalg.norm(m_flat)
-    s_flat = s_flat / s_norm
-    m_flat = m_flat / m_norm
-
-    # Precompute powers of metal sinogram
-    powers = [jnp.ones_like(m_flat)]
-    for i in range(1, 2 * order + 1):
-        powers.append(powers[-1] * m_flat)
+    # Normalize m_flat to be in the range [0,1]
+    m_flat = m_flat / jnp.max(jnp.abs(m_flat))
 
     # Incremental computation of HᵀH and Hᵀs
     HtH = jnp.zeros((order, order), dtype=jnp.float32)
@@ -180,34 +171,28 @@ def estimate_metal_sino(ct_model, sino, recon, metal_threshold=None, order=3, ve
 
     for i in range(order):
         for j in range(i, order):
-            val = jnp.sum(powers[i + 1] * powers[j + 1])
+            val = jnp.sum(m_flat ** (i + 1 + j + 1))
             HtH = HtH.at[i, j].set(val)
             HtH = HtH.at[j, i].set(val)
-        Hts = Hts.at[i].set(jnp.sum(powers[i + 1] * s_flat))
+        val = jnp.sum(m_flat ** (i +1) * s_flat)
+        Hts = Hts.at[i].set(val)
 
     # Add regularization
     epsilon = 1e-7
     HtH += epsilon * jnp.linalg.norm(HtH) * jnp.eye(order)
 
-    theta_scaled = jnp.linalg.solve(HtH, Hts)
+    # compute theta
+    theta = jnp.linalg.solve(HtH, Hts)
 
     # Reconstruct beam-hardened metal sinogram
-    bh_metal_sino_flat = sum(theta_scaled[i] * powers[i + 1] for i in range(order)) * s_norm
+    bh_metal_sino_flat = sum(theta[i] * m_flat ** (i + 1) for i in range(order))
     bh_metal_sino = bh_metal_sino_flat.reshape(sino.shape)
 
-    # De-normalize theta to make physically interpretable
-    theta = jnp.array([
-        theta_scaled[i] / (m_norm ** (i + 1)) * s_norm
-        for i in range(order)
-    ])
-
     if verbose == 1:
-        print("s_flat norm:", s_norm)
-        print("m_flat norm:", m_norm)
         print("HtH =\n", HtH)
         print("theta =", theta)
 
-    return bh_metal_sino, metal_mask, theta
+    return bh_metal_sino, metal_mask
 
 
 def make_gaussian_kernel(sigma, size=None):
