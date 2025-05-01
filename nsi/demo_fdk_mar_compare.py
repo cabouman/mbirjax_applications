@@ -90,34 +90,19 @@ if __name__ == "__main__":
           "\n*************** Estimate Metal Sinogram ***************",
           "\n*******************************************************")
     metal_sino, metal_mask, theta = mar_utils.estimate_metal_sino(ct_model, sino, fdk_recon)
-    plastic_sino = jnp.maximum(sino - metal_sino, 0.0)  # Note: Clipping to reduces artifacts but losses some detail
-
-    mbirjax.slice_viewer(metal_sino, plastic_sino, slice_axis=0, slice_label='Metal Sino', slice_label2='Plastic Sino', title='Views')
+    #plastic_sino = jnp.maximum(sino - metal_sino, 0.0)  # Note: Clipping to reduces artifacts but losses some detail
+    plastic_sino = sino - metal_sino
 
     print("\n*******************************************************",
           "\n************ Calculate MAR sinogram weights ***********",
           "\n*******************************************************")
     weights_mar = ct_model.gen_weights_mar(sino, init_recon=fdk_recon, beta=1.0, gamma=3.0)
+    mbirjax.slice_viewer(weights_mar, jnp.abs(sino), vmin=0, vmax=2.0, slice_axis=0, slice_axis2=0, slice_label='Weights', slice_label2="Sinogram", title='Sino and Weights')
 
     print("\n*******************************************************",
           "\n******** Perform MBIR recon with MAR weights **********",
           "\n*******************************************************")
     recon_plastic, recon_params = ct_model.recon(plastic_sino, weights=weights_mar)
-
-    print("\n*******************************************************",
-          "\n********* Calculate GHuber sinogram weights ***********",
-          "\n*******************************************************")
-    # Compute the error sinogram
-    sino_error = plastic_sino - ct_model.forward_project(recon_plastic)
-
-    # Compute generalized Huber weights
-    weights_ghuber = mar_utils.gen_ghuber_weights(weights, sino_error, T=1.2, delta=1.0)
-    mbirjax.slice_viewer(weights_ghuber, 10*jnp.abs(sino_error), vmin=0, vmax=1.0, slice_axis=0, slice_axis2=0, slice_label='GHuber Weights', slice_label2="10x(Error Sino)", title='Gen Huber Weights')
-
-    print("\n*********************************************************************",
-          "\n******** Perform MBIR recon with generalized huber weights **********",
-          "\n********************************************************************")
-    recon_plastic, recon_params = ct_model.recon(plastic_sino, weights=weights_mar*weights_ghuber, init_recon=recon_plastic)
 
     print("\n*******************************************************",
           "\n*********** Blend metal and plastic recons ************",

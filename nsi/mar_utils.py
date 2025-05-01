@@ -3,7 +3,7 @@ import jax.numpy as jnp
 import mbirjax
 
 
-def gen_ghuber_weights(weights, sino_error, T=1.0, delta=1.0, batch_size=16, epsilon=1e-6):
+def gen_ghuber_weights(weights, sino_error, T=1.0, delta=1.0, epsilon=1e-6):
     """
     Generate generalized Huber weights.
 
@@ -18,16 +18,14 @@ def gen_ghuber_weights(weights, sino_error, T=1.0, delta=1.0, batch_size=16, eps
         final_weights = weights * ghuber_weights
 
     Args:
-        weights: jnp.ndarray or np.ndarray of shape (views, rows, cols)
+        weights: jnp.ndarray of shape (views, rows, cols)
             Initial weights, typically derived from inverse variance estimates.
-        sino_error: jnp.ndarray or np.ndarray of shape (views, rows, cols)
+        sino_error: jnp.ndarray of shape (views, rows, cols)
             Sinogram error array representing deviations from the model.
         T: float, optional (default=1.0)
             Threshold parameter; values greater than T are treated as outliers.
         delta: float, optional (default=1.0)
             Controls the strength of the generalized Huber function (delta=1 corresponds to the conventional Huber).
-        batch_size: int, optional (default=16)
-            Batch size used to process views for memory efficiency.
         epsilon: float, optional (default=1e-6)
             Small number to avoid division by zero.
 
@@ -49,40 +47,20 @@ def gen_ghuber_weights(weights, sino_error, T=1.0, delta=1.0, batch_size=16, eps
     if not (0.0 <= delta <= 1.0):
         raise ValueError("delta must be between 0 and 1.")
 
-    # Ensure inputs are JAX arrays
     weights = jnp.asarray(weights)
     sino_error = jnp.asarray(sino_error)
 
-    views, rows, cols = weights.shape
+    # Compute std and global alpha
+    std = 1.0 / jnp.maximum(jnp.sqrt(weights), epsilon)
+    alpha = jnp.linalg.norm(sino_error) / (jnp.linalg.norm(std) + epsilon)
+    std_norm = alpha * std
 
-    def process_single_view(weight_slice, error_slice):
-        # Compute standard deviation
-        std = 1.0 / jnp.maximum(jnp.sqrt(weight_slice), epsilon)
+    # Compute normalized error
+    normalized_error = sino_error / std_norm
+    abs_norm_error = jnp.abs(normalized_error)
 
-        # Normalize the standard deviation
-        numerator = jnp.sum(std * error_slice, axis=(0, 1), keepdims=True)
-        denominator = jnp.linalg.norm(error_slice, axis=(0, 1), keepdims=True) + epsilon
-        alpha = numerator / denominator
-        std = std / alpha
-
-        # Compute generalized Huber weights
-        normalized_error = error_slice / std
-        abs_normalized_error = jnp.abs(normalized_error)
-        ghuber = jnp.where(abs_normalized_error <= T, 1.0, (delta * T) / abs_normalized_error)
-
-        return ghuber
-
-    ghuber_list = []
-
-    for i in range(0, views, batch_size):
-        weights_batch = weights[i:i+batch_size]
-        error_batch = sino_error[i:i+batch_size]
-
-        ghuber_batch = jax.vmap(process_single_view)(weights_batch, error_batch)
-
-        ghuber_list.append(ghuber_batch)
-
-    ghuber_weights = jnp.concatenate(ghuber_list, axis=0)
+    # Apply generalized Huber function
+    ghuber_weights = jnp.where(abs_norm_error <= T, 1.0, (delta * T) / (abs_norm_error + epsilon))
 
     return ghuber_weights
 
@@ -230,6 +208,7 @@ def estimate_metal_sino(ct_model, sino, recon, metal_threshold=None, order=3, ve
         print("theta =", theta)
 
     return bh_metal_sino, metal_mask, theta
+
 
 def make_gaussian_kernel(sigma, size=None):
     if size is None:
