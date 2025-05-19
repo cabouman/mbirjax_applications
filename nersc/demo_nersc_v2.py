@@ -36,7 +36,7 @@ if dataset == 'fuelcell':
     dataset_url = '/depot/bouman/data/nersc/demo_nersc_fuelcell.tgz'
 else:
     dataset_url = '/depot/bouman/data/nersc/demo_nersc_permafrost.tgz'
-download_dir = './demo_data/demo_data_nersc/'
+download_dir = './demo_data/'
 dataset_path = nersc_utils_v2.extract_tar(dataset_url, download_dir)
 
 # Get parameters from data.
