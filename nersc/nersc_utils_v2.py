@@ -9,6 +9,7 @@ import importlib.util
 required_packages = ['gdown', 'pywavelets']
 
 def check_and_install_packages():
+    """ Check if required packages are installed; install them if missing. """
     for package in required_packages:
         if importlib.util.find_spec(package) is None:
             print(f"{package} not found. Installing...")
