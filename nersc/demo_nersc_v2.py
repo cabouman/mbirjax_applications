@@ -1,7 +1,8 @@
 """
 NERSC Fuel Cell and Simulated Permafrost Demo.
 
-This script demonstrates a basic workflow for running MBIRJAX reconstructions on NERSC datasets stored on Google Drive
+This script demonstrates a basic workflow for running MBIR reconstructions on NERSC datasets.
+It also provides option to run MBIR reconstructions on NERSC datasets stored on Google Drive.
 
 """
 
@@ -23,19 +24,19 @@ os.environ['XLA_PYTHON_CLIENT_MEM_FRACTION'] = '0.98'
 # dataset_url = ""  # Choose your own dataset
 
 # Data download and extraction
-# A NERSC dataset will be downloaded from Google drive share link, and saved to `download_dir`.
+# A NERSC dataset will be downloaded from Google Drive share link, and saved to `download_dir`.
 # download_dir = './demo_data/'
 # dataset_path = nersc_utils_v2.download_file(dataset_url, download_dir)
 
 # Choose example dataset
 # Data download and extraction
-# A selected example NERSC dataset (fuelcell or permafrost) will be downloaded from 'dataset_url', and saved to 'download_dir'
+# A selected example NERSC dataset (fuelcell or permafrost) will be extracted from 'dataset_url', and saved to 'download_dir'
 dataset = 'fuelcell' # 'fuelcell' or 'permafrost'
 if dataset == 'fuelcell':
     dataset_url = '/depot/bouman/data/nersc/demo_nersc_fuelcell.tgz'
 else:
     dataset_url = '/depot/bouman/data/nersc/demo_nersc_permafrost.tgz'
-download_dir = './demo_data_nersc/'
+download_dir = './demo_data/demo_data_nersc/'
 dataset_path = nersc_utils_v2.extract_tar(dataset_url, download_dir)
 
 # Get parameters from data.
