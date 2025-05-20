@@ -7,7 +7,8 @@ import jax.numpy as jnp
 import jax.lax as lax
 
 
-import mbirjax
+import mbirjax as mj
+import mbirjax.preprocess as mjp
 import demo_utils
 import mar_utils
 import pprint
@@ -52,7 +53,7 @@ if __name__ == "__main__":
           "\n************** NSI dataset preprocessing **************",
           "\n*******************************************************")
     sino, cone_beam_params, optional_params = \
-        mbirjax.preprocess.nsi.compute_sino_and_params(dataset_dir,
+        mjp.nsi.compute_sino_and_params(dataset_dir,
                                                        downsample_factor=downsample_factor,
                                                        subsample_view_factor=subsample_view_factor)
 
@@ -60,7 +61,7 @@ if __name__ == "__main__":
           "\n***************** Set up MBIRJAX model ****************",
           "\n*******************************************************")
     # Construct cone beam object using NSI parameters
-    ct_model = mbirjax.ConeBeamModel(**cone_beam_params)
+    ct_model = mj.ConeBeamModel(**cone_beam_params)
 
     # Set optional NSI geometry parameters
     ct_model.set_params(**optional_params)
@@ -83,7 +84,7 @@ if __name__ == "__main__":
     # ##########################
     # Perform FDK reconstruction
     fdk_recon = ct_model.direct_recon(sino)
-    #mbirjax.slice_viewer(fdk_recon)
+    #mj.slice_viewer(fdk_recon)
 
     print("\n*******************************************************",
           "\n************** Perform MBIR reconstruction ************",
@@ -100,7 +101,7 @@ if __name__ == "__main__":
     pprint.pprint(mbir_recon_params._asdict())
 
     # #### Save MBIR reconstruction to HDF5 file output
-    mbirjax.preprocess.export_recon_to_hdf5(mbir_recon, os.path.join(output_path, "recon.h5"),
+    mj.export_recon_to_hdf5(os.path.join(output_path, "recon.h5"), mbir_recon,
                                             recon_description="MBIRJAX recon of phantom",
                                             alu_description="1 ALU = 0.508 mm")
 
@@ -113,6 +114,4 @@ if __name__ == "__main__":
     # Display FDK versus MBIR
     vmin = 0
     vmax = downsample_factor[0] * 0.025
-    mbirjax.slice_viewer(fdk_recon, data2=mbir_recon, vmin=0, vmax=vmax, slice_axis=0, slice_axis2=0, slice_label='FDK', slice_label2='MBIR', title='Axial Slice')
-    mbirjax.slice_viewer(fdk_recon, data2=mbir_recon, vmin=0, vmax=vmax, slice_axis=1, slice_axis2=1, slice_label='FDK', slice_label2='MBIR', title='Coronal Slice')
-    mbirjax.slice_viewer(fdk_recon, data2=mbir_recon, vmin=0, vmax=vmax, slice_axis=2, slice_axis2=2, slice_label='FDK', slice_label2='MBIR', title='Sagittal Slice')
+    mj.slice_viewer(fdk_recon, mbir_recon, vmin=0, vmax=vmax, slice_label= ["FDK Recon", "MBIR Recon"], title='Axial Slice')
