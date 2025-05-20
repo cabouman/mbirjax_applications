@@ -6,7 +6,6 @@ import jax.numpy as jnp
 import scipy
 import mbirjax as mj
 import mbirjax.preprocess as mjp
-import demo_utils
 import mar_utils
 import pprint
 
@@ -37,7 +36,7 @@ if __name__ == "__main__":
     # destination path to download and extract the NSI data and metadata.
     download_dir = './demo_data/'
     # Path to NSI scan directory.
-    dataset_dir = demo_utils.download_and_extract_tar(dataset_url, download_dir)
+    dataset_dir = mj.download_and_extract_tar(dataset_url, download_dir)
     # for testing user prompt in NSI preprocessing function
     # dataset_dir = "/depot/bouman/data/share_conebeam_data/Autoinjection-Full-LowRes/Vertical-0.5mmTin"
 

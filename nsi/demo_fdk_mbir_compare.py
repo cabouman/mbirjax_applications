@@ -9,7 +9,6 @@ import jax.lax as lax
 
 import mbirjax as mj
 import mbirjax.preprocess as mjp
-import demo_utils
 import mar_utils
 import pprint
 
@@ -39,7 +38,7 @@ if __name__ == "__main__":
     print(f"Selected dataset URL: {dataset_url}")
 
     # #### Download and extract data. Then set path to NSI scan directory.
-    dataset_dir = demo_utils.download_and_extract_tar(dataset_url, download_dir)
+    dataset_dir = mj.download_and_extract_tar(dataset_url, download_dir)
 
     # #### preprocessing parameters
     downsample_factor = [4, 4]  # downsample factor of scan view images along detector rows and detector columns.
