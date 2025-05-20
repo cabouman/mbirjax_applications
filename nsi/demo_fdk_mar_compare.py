@@ -4,7 +4,7 @@ import time
 import pprint
 import jax.numpy as jnp
 import scipy
-import mbirjax
+import mbirjax as mj
 import demo_utils
 import mar_utils
 import pprint
@@ -53,7 +53,7 @@ if __name__ == "__main__":
           "\n************** NSI dataset preprocessing **************",
           "\n*******************************************************")
     sino, cone_beam_params, optional_params = \
-        mbirjax.preprocess.nsi.compute_sino_and_params(dataset_dir,
+        mj.preprocess.nsi.compute_sino_and_params(dataset_dir,
                                                        downsample_factor=downsample_factor,
                                                        subsample_view_factor=subsample_view_factor)
 
@@ -65,7 +65,7 @@ if __name__ == "__main__":
           "\n***************** Set up MBIRJAX model ****************",
           "\n*******************************************************")
     # ConeBeamModel constructor
-    ct_model = mbirjax.ConeBeamModel(**cone_beam_params)
+    ct_model = mj.ConeBeamModel(**cone_beam_params)
 
     # Set additional geometry arguments
     ct_model.set_params(**optional_params)
@@ -91,13 +91,14 @@ if __name__ == "__main__":
           "\n*******************************************************")
     metal_sino, metal_mask = mar_utils.estimate_metal_sino(ct_model, sino, fdk_recon, verbose=1)
     plastic_sino = sino - metal_sino
-    mbirjax.slice_viewer(plastic_sino, metal_sino, vmin=0, vmax=2.0, slice_axis=0, slice_axis2=0, slice_label='Plastic Sino', slice_label2="Metal Sino", title='Decomposed Sinogram')
+    mj.slice_viewer(plastic_sino, metal_sino, vmin=0, vmax=2.0, slice_axis=[0, 0], slice_label= ["Plastic Sino", "Metal Sino"])
 
     print("\n*******************************************************",
           "\n************ Calculate MAR sinogram weights ***********",
           "\n*******************************************************")
     weights_mar = ct_model.gen_weights_mar(sino, init_recon=fdk_recon, beta=1.0, gamma=3.0)
-    mbirjax.slice_viewer(weights_mar, jnp.abs(sino), vmin=0, vmax=2.0, slice_axis=0, slice_axis2=0, slice_label='Weights', slice_label2="Sinogram", title='Sino and Weights')
+    mj.slice_viewer(weights_mar, jnp.abs(sino), vmin=0, vmax=2.0, slice_axis=[0, 0], slice_label= ["Weights", "Sinogram"])
+
 
     print("\n*******************************************************",
           "\n******** Perform MBIR recon with MAR weights **********",
@@ -116,6 +117,5 @@ if __name__ == "__main__":
 
     vmin = 0
     vmax = downsample_factor[0] * 0.025
-    mbirjax.slice_viewer(fdk_recon, recon_mar, vmin=0, vmax=vmax, slice_axis=0, slice_label='FDK', slice_label2='MBIR MAR', title='Axial Slice')
-    mbirjax.slice_viewer(fdk_recon, recon_mar, vmin=0, vmax=vmax, slice_axis=1, slice_label='FDK', slice_label2='MBIR MAR', title='Coronal Slice')
-    mbirjax.slice_viewer(fdk_recon, recon_mar, vmin=0, vmax=vmax, slice_axis=2, slice_label='FDK', slice_label2='MBIR MAR', title='Sagittal Slice')
+    mj.slice_viewer(fdk_recon, recon_mar, vmin=0, vmax=vmax, slice_label= ["FDK", "MBIR MAR"], title='Comparison')
+
