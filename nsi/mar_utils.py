@@ -203,3 +203,80 @@ def scatter_correction(sino, alpha, beta, sigma, batch_size=16, atten_factor=4):
     corrected_sino = jnp.concatenate(corrected, axis=0)
 
     return corrected_sino
+
+def estimate_metal_sino_multi_material_cross(ct_model, sino, recon, verbose=0):
+    """
+    Estimate the beam-hardened sinogram components using a polynomial model
+    with interaction terms and memory-efficient computation of HᵀH and Hᵀs.
+    Modified to use 5-class Otsu.
+
+    Returns:
+        bh_metal_sino, bh_combined_sino, metal_mask, plastic_mask
+    """
+
+    # --- Thresholding ---
+
+    if verbose == 1:
+        print("Thresholds calculated using Otsu's method.")
+    thresholds = mbirjax.multi_threshold_otsu(recon, classes=5)
+    mr_low_threshold = thresholds[0]
+    plastic_threshold = thresholds[1]
+    mr_high_threshold = thresholds[2]
+    metal_threshold = thresholds[3]
+
+
+    # Create masks based on the 5-class segmentation
+    metal_mask = jnp.where(recon > metal_threshold, 1.0, 0.0)
+    plastic_mask = jnp.where((recon > plastic_threshold) & (recon <= mr_high_threshold), 1.0, 0.0)
+    artifact_mask_low = jnp.where((recon > mr_low_threshold) & (recon <= plastic_threshold), 1.0, 0.0)
+    artifact_mask_high = jnp.where((recon > mr_high_threshold) & (recon <= metal_threshold), 1.0, 0.0)
+
+    # Combine artifact masks
+    artifact_mask = artifact_mask_low + artifact_mask_high
+
+    metal_mask = jax.device_put(metal_mask, device=ct_model.main_device)
+    plastic_mask = jax.device_put(plastic_mask, device=ct_model.main_device)
+
+    m = ct_model.forward_project(metal_mask).reshape(-1)
+    p = ct_model.forward_project(plastic_mask).reshape(-1)
+    s = sino.reshape(-1)
+
+    # Normalize m, p, and a
+    m = m / jnp.max(jnp.abs(m)) if jnp.max(jnp.abs(m)) > 0 else m
+    p = p / jnp.max(jnp.abs(p)) if jnp.max(jnp.abs(p)) > 0 else p
+
+    # Construct H matrix: [p, p^2, p*m, p*m^2, m, m^2, m^3]
+    H_cols = [p, p**2, p*m, p*(m**2), m, m**2, m**3]
+    n_cols = len(H_cols)
+
+    # --- Memory-efficient HᵀH and Hᵀs computation ---
+    HtH = jnp.zeros((n_cols, n_cols))
+    Hts = jnp.zeros(n_cols)
+    for i in range(n_cols):
+        col_i = H_cols[i]
+        Hts = Hts.at[i].set(jnp.sum(col_i * s))
+        for j in range(n_cols):
+            col_j = H_cols[j]
+            HtH = HtH.at[i, j].set(jnp.sum(col_i * col_j))
+
+    # --- Regularization and Solve ---
+    lambda_reg = 1e-7
+    HtH += lambda_reg * jnp.linalg.norm(HtH) * jnp.eye(n_cols)
+    theta_star = jnp.linalg.solve(HtH, Hts)
+
+    theta_p = jnp.array([theta_star[0], theta_star[1], 0.0, 0.0, 0.0, 0.0, 0.0])
+
+    # --- Compute Hθ and Hθ_p without forming H ---
+    s_pm_hat = sum(theta_star[k] * H_cols[k] for k in range(n_cols))
+    s_p_hat = sum(theta_p[k] * H_cols[k] for k in range(n_cols))
+
+    # Final metal-corrected sinogram
+    bh_combined_sino = s_pm_hat.reshape(sino.shape)
+    bh_metal_sino = (s_pm_hat - s_p_hat).reshape(sino.shape)
+
+    if verbose:
+        print("theta =", theta_star)
+        print("Plastic mask sum:", jnp.sum(plastic_mask))
+        print("Metal mask sum:", jnp.sum(metal_mask))
+
+    return bh_metal_sino, bh_combined_sino, metal_mask, plastic_mask, artifact_mask

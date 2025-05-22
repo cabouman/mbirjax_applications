@@ -25,24 +25,21 @@ if __name__ == "__main__":
     \n\t * Blending the plastic and metal reconstructions together;\
     \n\t * Displaying the results.\n')
     # ###################### User defined params. Change the parameters below for your own use case.
-    output_path = './output/nsi_demo_mar/'  # path to store output recon images
+
+    # output_path = './results'
+    output_path = './output/nsi_demo_mar/'   # path to store output recon images
     os.makedirs(output_path, exist_ok=True)  # mkdir if directory does not exist
 
-    # ##### params for dataset downloading. User may change these parameters for their own datasets.
-    # An example NSI dataset (tarball) will be downloaded from `dataset_url`, and saved to `download_dir`.
-    # url to NSI dataset.
-    #dataset_url = 'https://www.datadepot.rcac.purdue.edu/bouman/data/mar_demo_data.tgz'
+    # NSI file path
     dataset_url = '/depot/bouman/data/Lilly/Autoinjector_HighRes_Horizontal.tgz'
     # destination path to download and extract the NSI data and metadata.
     download_dir = './demo_data/'
     # Path to NSI scan directory.
     dataset_dir = mj.download_and_extract_tar(dataset_url, download_dir)
-    # for testing user prompt in NSI preprocessing function
-    # dataset_dir = "/depot/bouman/data/share_conebeam_data/Autoinjection-Full-LowRes/Vertical-0.5mmTin"
 
     # #### preprocessing parameters
-    downsample_factor = [4, 4]  # downsample factor of scan images along detector rows and detector columns.
-    subsample_view_factor = 1  # view subsample factor.
+    downsample_factor = [2, 2]  # downsample factor of scan images along detector rows and detector columns.
+    subsample_view_factor = 8  # view subsample factor.
 
     # #### recon parameters
     sharpness = 1.0
@@ -78,43 +75,106 @@ if __name__ == "__main__":
     ct_model.print_params()
 
     print("\n*******************************************************",
-          "\n***** Calculate transmission_root sinogram weights ****",
-          "\n*******************************************************")
-    weights = ct_model.gen_weights(sino, weight_type='transmission_root')
-
-    print("\n*******************************************************",
           "\n********* Perform initial FDK reconstruction **********",
           "\n*******************************************************")
-    fdk_recon = ct_model.fdk_recon(sino)
+    recon_fdk = ct_model.fdk_recon(sino)
 
     print("\n*******************************************************",
           "\n*************** Estimate Metal Sinogram ***************",
           "\n*******************************************************")
-    metal_sino, metal_mask = mar_utils.estimate_metal_sino(ct_model, sino, fdk_recon, verbose=1)
+
+    metal_sino, full_sino_estimate, metal_mask,  plastic_mask, artifact_mask = mar_utils.estimate_metal_sino_multi_material_cross(ct_model, sino, recon_fdk, verbose=1)
+
+
+    mj.slice_viewer(plastic_mask, artifact_mask,
+                slice_axis=0,
+                slice_label='Plastic Mask',
+                slice_label2='Artifact Mask',
+                title='Plastic vs Artifact Mask Comparison')
+
+
+    del artifact_mask, plastic_mask
+
+    # Material Decomposition
     plastic_sino = sino - metal_sino
-    mj.slice_viewer(plastic_sino, metal_sino, vmin=0, vmax=2.0, slice_axis=[0, 0], slice_label= ["Plastic Sino", "Metal Sino"])
+    plastic_sino = np.maximum(plastic_sino, 0.0)
+
+    mj.slice_viewer(metal_sino, plastic_sino, slice_axis=0, title='The estimated metal sinogram and extracted plastic sinogram', slice_label='Metal Sinogram', slice_label2='Plastic Sinogram')
 
     print("\n*******************************************************",
-          "\n************ Calculate MAR sinogram weights ***********",
+          "\n************* Perform MBIR Reconstruction *************",
           "\n*******************************************************")
-    weights_mar = ct_model.gen_weights_mar(sino, init_recon=fdk_recon, beta=1.0, gamma=3.0)
-    mj.slice_viewer(weights_mar, jnp.abs(sino), vmin=0, vmax=2.0, slice_axis=[0, 0], slice_label=["Weights", "Sinogram"])
+
+    weights_trans = ct_model.gen_weights(sino, weight_type='transmission_root')
+    recon1,_ = ct_model.recon(plastic_sino, weights=weights_trans, max_iterations=20)
+
+    # Fuse the metal and plastic reconstructions
+    recon_mar1 = recon1 * (1.0-metal_mask) + recon_fdk * metal_mask
 
     print("\n*******************************************************",
-          "\n******** Perform MBIR recon with MAR weights **********",
+          "\n*************** Estimate Metal Sinogram ***************",
           "\n*******************************************************")
-    recon_plastic, recon_params = ct_model.recon(plastic_sino, weights=weights_mar)
+    metal_sino2, full_sino_estimate2, metal_mask2, plastic_mask2, artifact_mask2 = mar_utils.estimate_metal_sino_multi_material_cross(ct_model, sino, recon_mar1, verbose=1)
+
+    # Material Decomposition
+    plastic_sino2 = sino - metal_sino2
+    plastic_sino2 = np.maximum(plastic_sino2, 0.0)
+
+    del artifact_mask2, plastic_mask2, metal_mask
+
+    mj.slice_viewer(metal_sino2, plastic_sino2, slice_axis=0, title='The estimated metal sinogram and extracted plastic sinogram', slice_label='Metal Sinogram', slice_label2='Plastic Sinogram')
+
+
+    mj.slice_viewer(plastic_sino, plastic_sino2, slice_axis=0, title='Comparison between the estimated plastic sinogram from the 1st and 2nd iterations', slice_label='Plastic Sinogram', slice_label2='Plastic Sinogram2')
 
     print("\n*******************************************************",
-          "\n*********** Blend metal and plastic recons ************",
+          "\n************** Second MBIR Iteration ******************",
           "\n*******************************************************")
-    recon_mar = recon_plastic * (1.0-metal_mask) + fdk_recon * metal_mask
+    recon2, _ = ct_model.recon(plastic_sino2, weights=weights_trans, max_iterations=20, init_recon=recon1)
 
-    # #### Display results
-    # change the image data shape to (slices, rows, cols)
-    fdk_recon = np.transpose(fdk_recon, axes=(2, 0, 1))
-    recon_mar = np.transpose(recon_mar, axes=(2, 0, 1))
+    # Fuse the metal and plastic reconstructions
+    recon_mar2 = recon2 * (1.0 - metal_mask2) + recon_fdk * metal_mask2
+
+    recon_fdk = np.transpose(recon_fdk, axes=(2, 0, 1))
+    recon_mar1 = np.transpose(recon_mar1, axes=(2, 0, 1))
+    recon_mar2 = np.transpose(recon_mar2, axes=(2, 0, 1))
 
     vmin = 0
     vmax = downsample_factor[0] * 0.025
-    mj.slice_viewer(fdk_recon, recon_mar, vmin=0, vmax=vmax, slice_axis=[0, 0], slice_label=["FDK", "MBIR MAR"])
+    mj.slice_viewer(recon_mar1, recon_mar2, vmin=0, vmax=vmax, slice_axis=0, slice_label='MBIR MAR1', slice_label2='MBIR MAR2', title='Comparison between the first and second MBIR - Axial Slice')
+    mj.slice_viewer(recon_mar1, recon_mar2, vmin=0, vmax=vmax, slice_axis=1, slice_label='MBIR MAR1', slice_label2='MBIR MAR2', title='Comparison between the first and second MBIR - Coronal Slice')
+    mj.slice_viewer(recon_mar1, recon_mar2, vmin=0, vmax=vmax, slice_axis=2, slice_label='MBIR MAR1', slice_label2='MBIR MAR2', title='Comparison between the first and second MBIR - Sagittal Slice')
+
+    mj.slice_viewer(recon_fdk, recon_mar2, vmin=0, vmax=vmax, slice_axis=0, slice_label='MBIR MAR1', slice_label2='MBIR MAR2', title='Comparison between FDK and the second MBIR - Axial Slice')
+    mj.slice_viewer(recon_fdk, recon_mar2, vmin=0, vmax=vmax, slice_axis=1, slice_label='MBIR MAR1', slice_label2='MBIR MAR2', title='Comparison between FDK and the second MBIR - Coronal Slice')
+    mj.slice_viewer(recon_fdk, recon_mar2, vmin=0, vmax=vmax, slice_axis=2, slice_label='MBIR MAR1', slice_label2='MBIR MAR2', title='Comparison between FDK and the second MBIR - Sagittal Slice')
+
+
+    # Compare the plastic region
+    thresholds_fdk = mj.multi_threshold_otsu(recon_fdk, classes=3)
+    thresholds_mbir = mj.multi_threshold_otsu(recon_mar2, classes=3)
+
+    # Assign thresholds
+    plastic_thresh_fdk = thresholds_fdk[0]
+    metal_thresh_fdk = thresholds_fdk[1]
+
+    plastic_thresh_mbir = thresholds_mbir[0]
+    metal_thresh_mbir = thresholds_mbir[1]
+
+    # Segment plastic masks
+    plastic_mask_fdk = jnp.where((recon_fdk > plastic_thresh_fdk) & (recon_fdk <= metal_thresh_fdk), 1.0, 0.0)
+    plastic_mask_mbir = jnp.where((recon_mar2 > plastic_thresh_mbir) & (recon_mar2 <= metal_thresh_mbir), 1.0, 0.0)
+
+    # Visualize
+    mj.slice_viewer(plastic_mask_fdk, plastic_mask_mbir,
+                        slice_axis=0,
+                        slice_label='FDK Plastic',
+                        slice_label2='MBIR Plastic',
+                        title='Plastic Region Comparison (FDK vs MBIR) - Axial Slice')
+
+    mj.slice_viewer(plastic_mask_fdk, plastic_mask_mbir,
+                        slice_axis=1,
+                        slice_label='FDK Plastic',
+                        slice_label2='MBIR Plastic',
+                        title='Plastic Region Comparison (FDK vs MBIR) - Coronal Slice')
+
