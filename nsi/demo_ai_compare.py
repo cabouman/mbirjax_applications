@@ -88,8 +88,7 @@ if __name__ == "__main__":
 
     mj.slice_viewer(plastic_mask, artifact_mask,
                 slice_axis=0,
-                slice_label='Plastic Mask',
-                slice_label2='Artifact Mask',
+                slice_label=['Plastic Mask', 'Artifact Mask'],
                 title='Plastic vs Artifact Mask Comparison')
 
 
@@ -99,14 +98,14 @@ if __name__ == "__main__":
     plastic_sino = sino - metal_sino
     plastic_sino = np.maximum(plastic_sino, 0.0)
 
-    mj.slice_viewer(metal_sino, plastic_sino, slice_axis=0, title='The estimated metal sinogram and extracted plastic sinogram', slice_label='Metal Sinogram', slice_label2='Plastic Sinogram')
+    mj.slice_viewer(metal_sino, plastic_sino, slice_axis=0, title='The estimated metal sinogram and extracted plastic sinogram', slice_label=['Metal Sinogram', 'Plastic Sinogram'])
 
     print("\n*******************************************************",
           "\n************* Perform MBIR Reconstruction *************",
           "\n*******************************************************")
 
     weights_trans = ct_model.gen_weights(sino, weight_type='transmission_root')
-    recon1,_ = ct_model.recon(plastic_sino, weights=weights_trans, max_iterations=20)
+    recon1,_ = ct_model.recon(plastic_sino, weights=weights_trans, max_iterations=15, init_recon=recon_fdk)
 
     # Fuse the metal and plastic reconstructions
     recon_mar1 = recon1 * (1.0-metal_mask) + recon_fdk * metal_mask
@@ -122,15 +121,12 @@ if __name__ == "__main__":
 
     del artifact_mask2, plastic_mask2, metal_mask
 
-    mj.slice_viewer(metal_sino2, plastic_sino2, slice_axis=0, title='The estimated metal sinogram and extracted plastic sinogram', slice_label='Metal Sinogram', slice_label2='Plastic Sinogram')
-
-
-    mj.slice_viewer(plastic_sino, plastic_sino2, slice_axis=0, title='Comparison between the estimated plastic sinogram from the 1st and 2nd iterations', slice_label='Plastic Sinogram', slice_label2='Plastic Sinogram2')
+    mj.slice_viewer(plastic_sino, plastic_sino2, slice_axis=0, title='Comparison between the estimated plastic sinogram from the 1st and 2nd iterations', slice_label=['Plastic Sinogram', 'Plastic Sinogram2'])
 
     print("\n*******************************************************",
           "\n************** Second MBIR Iteration ******************",
           "\n*******************************************************")
-    recon2, _ = ct_model.recon(plastic_sino2, weights=weights_trans, max_iterations=20, init_recon=recon1)
+    recon2, _ = ct_model.recon(plastic_sino2, weights=weights_trans, max_iterations=15, init_recon=recon1)
 
     # Fuse the metal and plastic reconstructions
     recon_mar2 = recon2 * (1.0 - metal_mask2) + recon_fdk * metal_mask2
@@ -141,13 +137,13 @@ if __name__ == "__main__":
 
     vmin = 0
     vmax = downsample_factor[0] * 0.025
-    mj.slice_viewer(recon_mar1, recon_mar2, vmin=0, vmax=vmax, slice_axis=0, slice_label='MBIR MAR1', slice_label2='MBIR MAR2', title='Comparison between the first and second MBIR - Axial Slice')
-    mj.slice_viewer(recon_mar1, recon_mar2, vmin=0, vmax=vmax, slice_axis=1, slice_label='MBIR MAR1', slice_label2='MBIR MAR2', title='Comparison between the first and second MBIR - Coronal Slice')
-    mj.slice_viewer(recon_mar1, recon_mar2, vmin=0, vmax=vmax, slice_axis=2, slice_label='MBIR MAR1', slice_label2='MBIR MAR2', title='Comparison between the first and second MBIR - Sagittal Slice')
+    mj.slice_viewer(recon_mar1, recon_mar2, vmin=0, vmax=vmax, slice_axis=0, slice_label=['MBIR MAR1', 'MBIR MAR2'], title='Comparison between the first and second MBIR - Axial Slice')
+    mj.slice_viewer(recon_mar1, recon_mar2, vmin=0, vmax=vmax, slice_axis=1, slice_label=['MBIR MAR1', 'MBIR MAR2'], title='Comparison between the first and second MBIR - Coronal Slice')
+    mj.slice_viewer(recon_mar1, recon_mar2, vmin=0, vmax=vmax, slice_axis=2, slice_label=['MBIR MAR1', 'MBIR MAR2'], title='Comparison between the first and second MBIR - Sagittal Slice')
 
-    mj.slice_viewer(recon_fdk, recon_mar2, vmin=0, vmax=vmax, slice_axis=0, slice_label='MBIR MAR1', slice_label2='MBIR MAR2', title='Comparison between FDK and the second MBIR - Axial Slice')
-    mj.slice_viewer(recon_fdk, recon_mar2, vmin=0, vmax=vmax, slice_axis=1, slice_label='MBIR MAR1', slice_label2='MBIR MAR2', title='Comparison between FDK and the second MBIR - Coronal Slice')
-    mj.slice_viewer(recon_fdk, recon_mar2, vmin=0, vmax=vmax, slice_axis=2, slice_label='MBIR MAR1', slice_label2='MBIR MAR2', title='Comparison between FDK and the second MBIR - Sagittal Slice')
+    mj.slice_viewer(recon_fdk, recon_mar2, vmin=0, vmax=vmax, slice_axis=0, slice_label=['FDK', 'MBIR MAR2'], title='Comparison between FDK and the second MBIR - Axial Slice')
+    mj.slice_viewer(recon_fdk, recon_mar2, vmin=0, vmax=vmax, slice_axis=1, slice_label=['FDK', 'MBIR MAR2'], title='Comparison between FDK and the second MBIR - Coronal Slice')
+    mj.slice_viewer(recon_fdk, recon_mar2, vmin=0, vmax=vmax, slice_axis=2, slice_label=['FDK', 'MBIR MAR2'], title='Comparison between FDK and the second MBIR - Sagittal Slice')
 
 
     # Compare the plastic region
@@ -168,13 +164,11 @@ if __name__ == "__main__":
     # Visualize
     mj.slice_viewer(plastic_mask_fdk, plastic_mask_mbir,
                         slice_axis=0,
-                        slice_label='FDK Plastic',
-                        slice_label2='MBIR Plastic',
+                        slice_label=['FDK Plastic', 'MBIR Plastic'],
                         title='Plastic Region Comparison (FDK vs MBIR) - Axial Slice')
 
     mj.slice_viewer(plastic_mask_fdk, plastic_mask_mbir,
                         slice_axis=1,
-                        slice_label='FDK Plastic',
-                        slice_label2='MBIR Plastic',
+                        slice_label=['FDK Plastic', 'MBIR Plastic'],
                         title='Plastic Region Comparison (FDK vs MBIR) - Coronal Slice')
 
