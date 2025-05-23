@@ -63,9 +63,6 @@ if __name__ == "__main__":
         num_det_channels = int(data['/measurement/instrument/detector/dimension_x'][0])
         num_views = int(data['/process/acquisition/rotation/num_angles'][0])
         pixel_size = data['/measurement/instrument/detector/pixel_size'][0] / 10.0
-        propagation_dist = data['/measurement/instrument/camera_motor_stack/setup/camera_distance'][1]
-        kev = data['/measurement/instrument/monochromator/energy'][0] / 1000
-        angular_range = data['/process/acquisition/rotation/range'][0]
         angles = -np.deg2rad(data['exchange/theta'])
         obj_scan = data['exchange/data'][:]
         blank_scan = data['exchange/data_white'][:]
