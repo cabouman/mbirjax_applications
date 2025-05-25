@@ -38,7 +38,7 @@ if __name__ == "__main__":
     dataset_dir = mj.download_and_extract_tar(dataset_url, download_dir)
 
     # #### preprocessing parameters
-    downsample_factor = [2, 2]  # downsample factor of scan images along detector rows and detector columns.
+    downsample_rate = [4, 4]  # downsample factor of scan images along detector rows and detector columns.
     subsample_view_factor = 8  # view subsample factor.
 
     # #### recon parameters
@@ -51,13 +51,12 @@ if __name__ == "__main__":
           "\n************** NSI dataset preprocessing **************",
           "\n*******************************************************")
     sino, cone_beam_params, optional_params = \
-        mjp.nsi.compute_sino_and_params(dataset_dir,
-                                                       downsample_factor=downsample_factor,
-                                                       subsample_view_factor=subsample_view_factor)
+        mjp.nsi.compute_sino_and_params(dataset_dir, downsample_factor=downsample_rate,
+                                        subsample_view_factor=subsample_view_factor)
 
     # #### beam hardening correction
     sino = jnp.maximum(sino, 0.0)
-    sino = mar_utils.beam_hardening_correction(sino, alpha=alpha)
+    sino = mjp.beam_hardening_correction(sino, alpha=alpha)
 
     print("\n*******************************************************",
           "\n***************** Set up MBIRJAX model ****************",
@@ -136,7 +135,7 @@ if __name__ == "__main__":
     recon_mar2 = np.transpose(recon_mar2, axes=(2, 0, 1))
 
     vmin = 0
-    vmax = downsample_factor[0] * 0.025
+    vmax = downsample_rate[0] * 0.025
     mj.slice_viewer(recon_mar1, recon_mar2, vmin=0, vmax=vmax, slice_axis=0, slice_label=['MBIR MAR1', 'MBIR MAR2'], title='Comparison between the first and second MBIR - Axial Slice')
     mj.slice_viewer(recon_mar1, recon_mar2, vmin=0, vmax=vmax, slice_axis=1, slice_label=['MBIR MAR1', 'MBIR MAR2'], title='Comparison between the first and second MBIR - Coronal Slice')
     mj.slice_viewer(recon_mar1, recon_mar2, vmin=0, vmax=vmax, slice_axis=2, slice_label=['MBIR MAR1', 'MBIR MAR2'], title='Comparison between the first and second MBIR - Sagittal Slice')

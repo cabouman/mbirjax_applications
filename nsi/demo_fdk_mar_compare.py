@@ -5,6 +5,8 @@ import pprint
 import jax.numpy as jnp
 import scipy
 import mbirjax as mj
+import mbirjax.preprocess as mjp
+
 import mar_utils
 import pprint
 
@@ -58,7 +60,7 @@ if __name__ == "__main__":
 
     # #### beam hardening correction
     sino = jnp.maximum(sino, 0.0)
-    sino = mar_utils.beam_hardening_correction(sino, alpha=alpha)
+    sino = mjp.beam_hardening_correction(sino, alpha=alpha)
 
     print("\n*******************************************************",
           "\n***************** Set up MBIRJAX model ****************",
