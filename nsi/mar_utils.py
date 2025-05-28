@@ -67,12 +67,15 @@ def correct_sino_for_metal(ct_model, measured_sino, recon, epsilon=2e-4):
     Example:
         >>> corrected, metal_m, plastic_m = correct_sino_for_metal(ct_model, measured_sino, recon)
     """
-    # Segment into classes
+    # Determine class thresholds based on the 5-classes
     thresholds = mj.multi_threshold_otsu(recon, classes=5)
-    p_th, pm_th, mh_th, m_th = thresholds[1], thresholds[2], thresholds[3], thresholds[4]
+    plastic_low_threshold = thresholds[1]
+    plastic_high_threshold = thresholds[2]
+    metal_threshold = thresholds[3]
 
-    plastic_mask = jnp.where((recon > p_th) & (recon <= mh_th), 1.0, 0.0)
-    metal_mask = jnp.where(recon > m_th, 1.0, 0.0)
+    # Create masks
+    plastic_mask = jnp.where((recon > plastic_low_threshold) & (recon <= plastic_high_threshold), 1.0, 0.0)
+    metal_mask = jnp.where(recon > metal_threshold, 1.0, 0.0)
 
     # Scale factors
     plastic_scale = _compute_scaling_factor(recon, plastic_mask)
@@ -116,7 +119,8 @@ def correct_sino_for_metal(ct_model, measured_sino, recon, epsilon=2e-4):
     H_m = theta_m[0]*H[3] + theta_m[1]*H[4] + theta_m[2]*H[5]
 
     denom = theta_p[0] + theta_p[1]*m_norm + theta_p[2]*m_norm**2
-    denom = jnp.where(jnp.abs(denom) > 1e-6, denom, 1e-6)
+    denom_floor = 1e-6 * jnp.linalg.norm(denom)
+    denom = jnp.where(jnp.abs(denom) > denom_floor, denom, denom_floor)
 
     p_hat = p_scaled * (y - H_m) / denom
 
