@@ -3,6 +3,38 @@ import jax.numpy as jnp
 import mbirjax as mj
 
 
+@jax.jit
+def _compute_scaling_factor(v: jnp.ndarray, u: jnp.ndarray) -> jnp.ndarray:
+    """
+    Compute the optimal scalar α that minimizes the squared error ‖v – α u‖².
+
+    Args:
+        v (jnp.ndarray):
+            Target vector of shape (N,).
+        u (jnp.ndarray):
+            Basis vector of shape (N,).
+
+    Returns:
+        jnp.ndarray:
+            Scalar α that minimizes ‖v – α u‖². If u is the zero vector, returns 0.
+
+    Example:
+        >>> v = jnp.array([1.0, 2.0, 3.0])
+        >>> u = jnp.array([0.5, 1.0, 1.5])
+        >>> α = _compute_scaling_factor(v, u)
+    """
+    v = jnp.asarray(v)
+    u = jnp.asarray(u)
+
+    # numerator = uᵀ v, denominator = uᵀ u
+    numerator = jnp.sum(u * v)
+    denominator = jnp.sum(u * u)
+
+    # If u is zero, denominator == 0 → return 0
+    return jnp.where(denominator == 0, 0.0, numerator / denominator)
+
+
+
 def estimate_metal_sino(ct_model, sino, recon, metal_threshold=None, order=3, verbose=0):
     """
     Estimate the component of the sinogram due to metal using a polynomial beam hardening model,
@@ -227,3 +259,81 @@ def estimate_metal_sino_multi_material_cross(ct_model, sino, recon, verbose=0):
         print("Metal mask sum:", jnp.sum(metal_mask))
 
     return bh_metal_sino, bh_combined_sino, metal_mask, plastic_mask, artifact_mask
+
+
+def correct_sino_for_metal(ct_model, measured_sino, recon, verbose=0):
+    """
+    Estimate the sinogram corrected for beam-hardening artifacts caused by a metal objects formed from a single material.
+    This function models the beam-hardening effects as a polynomial function of the metal and plastic components of the
+    sinogram. In order to do this, it segments that provided reconstruction into metal and plastic components
+    and then forward projects them to estimate the components of the polynomial function of the metal and plastic.
+    It then uses the idealized metal sinogram to estimate the corrected plastic sinogram.
+    Finally, it combines the metal and plastic sinograms into a single corrected sinogram that it returns.
+
+    The function is written to be memory-efficient by exploiting the structure of HᵀH and Hᵀs, and it generates the
+    plastic and metal segmentations using a 5-class Otsu segmentation.
+
+    Returns:
+        corrected_sino, metal_mask, plastic_mask
+    """
+
+    # --- Thresholding ---
+
+    if verbose == 1:
+        print("Thresholds calculated using Otsu's method.")
+    thresholds = mj.multi_threshold_otsu(recon, classes=5)
+    mr_low_threshold = thresholds[0]
+    plastic_threshold = thresholds[1]
+    mr_high_threshold = thresholds[2]
+    metal_threshold = thresholds[3]
+
+    # Create masks based on the 5-class segmentation
+    plastic_mask = jnp.where((recon > plastic_threshold) & (recon <= mr_high_threshold), 1.0, 0.0)
+    metal_mask = jnp.where(recon > metal_threshold, 1.0, 0.0)
+
+    # Compute metal scaling factor
+    plastic_scale = _compute_scaling_factor(v=recon, u=plastic_mask)
+    metal_scale = _compute_scaling_factor(v=recon, u=metal_mask)
+
+    # Forward project metal and plastic segmentations
+    plastic_mask = jax.device_put(plastic_mask, device=ct_model.main_device)    # Make sure it is in the correct memory
+    metal_mask = jax.device_put(metal_mask, device=ct_model.main_device)        # Make sure it is in the correct memory
+    p = plastic_scale * ct_model.forward_project(plastic_mask).reshape(-1)
+    m = metal_scale * ct_model.forward_project(metal_mask).reshape(-1)
+    y = measured_sino.reshape(-1)
+
+    # Normalize m and p for a maximum value of 1
+    # Remember that p_true = p_scale * p
+    #               m_true = m_scale * m
+    m_scale = jnp.max(jnp.abs(m))
+    p_scale = jnp.max(jnp.abs(p))
+    m = m / m_scale if m_scale > 0 else m
+    p = p / p_scale if p_scale > 0 else p
+
+    # Construct the matrix H = [p, p*m, p*m^2, m, m^2, m^3]
+    H = [p, p*m, p*(m**2), m, m**2, m**3]
+    n_cols = len(H)
+
+    # --- Memory-efficient HᵀH and Hᵀs computation ---
+    HtH = jnp.zeros((n_cols, n_cols))
+    Hty = jnp.zeros(n_cols)
+    for i in range(n_cols):
+        col_i = H[i]
+        Hty = Hty.at[i].set(jnp.sum(col_i * y))
+        for j in range(n_cols):
+            col_j = H[j]
+            HtH = HtH.at[i, j].set(jnp.sum(col_i * col_j))
+
+    # Regularize HtH and then solve for least squares parameter, theta_star
+    lambda_reg = 2e-4
+    # Use spectral norm (largest singular value) for regularization
+    sigma_max = jnp.linalg.norm(HtH, ord=2)
+    HtH = HtH + (lambda_reg ** 2) * sigma_max * jnp.eye(n_cols)
+    theta_star = jnp.linalg.solve(HtH, Hty)
+
+
+    #####################################
+    # Chat, the new code should go here.
+    #####################################
+
+    return corrected_sino, metal_mask, plastic_mask
