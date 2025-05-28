@@ -55,18 +55,28 @@ if __name__ == "__main__":
 
     print("\n********* Perform initial FDK reconstruction **********")
     recon = ct_model.direct_recon(sino)
+    recon_orig = recon
 
-    print("\n************ Estimate Corrected Sinogram **************")
-    corrected_sinogram, plastic_mask, metal_mask = mar_utils.correct_sino_for_metal(ct_model, sino, recon)
+    num_iterations = 3
+    for i in range(num_iterations):
+        print(f"\n************ Iteration {i + 1}: Estimate Corrected Sinogram **************")
+        corrected_sinogram, plastic_mask, metal_mask = mar_utils.correct_sino_for_metal(ct_model, sino, recon)
 
-    print("\n************ Display plastic and metal mask **************")
-    mj.slice_viewer(plastic_mask, metal_mask, vmin=0, vmax=1.0, slice_axis=0, slice_label=['Plastic Mask', 'Metal Mask'], title='Comparison of Plastic and Metal Masks')
+        print(f"\n************ Iteration {i + 1}: Display plastic and metal mask **************")
+        mj.slice_viewer(
+            plastic_mask, metal_mask,
+            vmin=0, vmax=1.0,
+            slice_axis=0,
+            slice_label=['Plastic Mask', 'Metal Mask'],
+            title=f'Iteration {i + 1}: Comparison of Plastic and Metal Masks'
+        )
 
-    print("\n********** Reconstruct Corrected Sinogram *************")
-    recon_corrected = ct_model.direct_recon(corrected_sinogram)
+        if i < num_iterations - 1:
+            print(f"\n********** Iteration {i + 1}: Reconstruct Corrected Sinogram *************")
+            recon = ct_model.direct_recon(corrected_sinogram)
 
     print("\n*********** view original and corrected reconstruction *************")
     vmin = 0
     vmax = downsample_rate[0] * 0.025
-    mj.slice_viewer(recon, recon_corrected, vmin=0, vmax=vmax, slice_axis=0, slice_label=['FDK', 'FDK MAR'], title='Comparison between the original and corrected reconstruction')
+    mj.slice_viewer(recon_orig, recon, vmin=0, vmax=vmax, slice_axis=0, slice_label=['FDK', 'FDK MAR'], title='Comparison between the original and corrected reconstruction')
 
