@@ -59,6 +59,9 @@ if __name__ == "__main__":
     print("\n************ Estimate Corrected Sinogram **************")
     corrected_sinogram, plastic_mask, metal_mask = mar_utils.correct_sino_for_metal(ct_model, sino, recon)
 
+    print("\n************ Display plastic and metal mask **************")
+    mj.slice_viewer(plastic_mask, metal_mask, vmin=0, vmax=1.0, slice_axis=0, slice_label=['Plastic Mask', 'Metal Mask'], title='Comparison of Plastic and Metal Masks')
+
     print("\n********** Reconstruct Corrected Sinogram *************")
     recon_corrected = ct_model.direct_recon(corrected_sinogram)
 

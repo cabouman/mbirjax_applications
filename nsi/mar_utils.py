@@ -59,10 +59,10 @@ def correct_sino_for_metal(ct_model, measured_sino, recon, epsilon=2e-4):
     Returns:
         corrected_sino (jnp.ndarray):
             Beam-hardening corrected sinogram, same shape as `measured_sino`.
-        metal_mask (jnp.ndarray):
-            Binary mask array for metal regions in `recon`.
         plastic_mask (jnp.ndarray):
             Binary mask array for plastic regions in `recon`.
+        metal_mask (jnp.ndarray):
+            Binary mask array for metal regions in `recon`.
 
     Example:
         >>> corrected, metal_m, plastic_m = correct_sino_for_metal(ct_model, measured_sino, recon)
@@ -132,4 +132,4 @@ def correct_sino_for_metal(ct_model, measured_sino, recon, epsilon=2e-4):
     corrected_sino_flat = corrected_plastic_sino + ideal_metal_sino
     corrected_sino = corrected_sino_flat.reshape(measured_sino.shape)
 
-    return corrected_sino, metal_mask, plastic_mask
+    return corrected_sino, plastic_mask, metal_mask
