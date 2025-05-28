@@ -65,7 +65,7 @@ def correct_sino_for_metal(ct_model, measured_sino, recon, epsilon=2e-4):
             Binary mask array for metal regions in `recon`.
 
     Example:
-        >>> corrected, metal_m, plastic_m = correct_sino_for_metal(ct_model, measured_sino, recon)
+        >>> corrected, plastic_m, metal_m = correct_sino_for_metal(ct_model, measured_sino, recon)
     """
     # Determine class thresholds based on the 5-classes
     thresholds = mj.multi_threshold_otsu(recon, classes=5)
@@ -77,56 +77,56 @@ def correct_sino_for_metal(ct_model, measured_sino, recon, epsilon=2e-4):
     plastic_mask = jnp.where((recon > plastic_low_threshold) & (recon <= plastic_high_threshold), 1.0, 0.0)
     metal_mask = jnp.where(recon > metal_threshold, 1.0, 0.0)
 
-    # Scale factors
+    # Scale factors that match the unitary masks to the reconstruction
     plastic_scale = _compute_scaling_factor(recon, plastic_mask)
     metal_scale = _compute_scaling_factor(recon, metal_mask)
 
     # Forward projection
     device = ct_model.main_device
-    plastic_mask_sino = ct_model.forward_project(jax.device_put(plastic_mask, device)).reshape(-1)
-    metal_mask_sino = ct_model.forward_project(jax.device_put(metal_mask, device)).reshape(-1)
+    ideal_plastic_sino = plastic_scale * ct_model.forward_project(jax.device_put(plastic_mask, device)).reshape(-1)
+    ideal_metal_sino = metal_scale * ct_model.forward_project(jax.device_put(metal_mask, device)).reshape(-1)
     y = measured_sino.reshape(-1)
 
     # Compute normalized plastic and metal sinograms with max amplitude = 1
-    ideal_plastic_sino = plastic_scale * plastic_mask_sino
-    ideal_metal_sino = metal_scale * metal_mask_sino
-    p_norm = ideal_plastic_sino / jnp.maximum(jnp.max(jnp.abs(ideal_plastic_sino)), 1e-8)
-    m_norm = ideal_metal_sino / jnp.maximum(jnp.max(jnp.abs(ideal_metal_sino)), 1e-8)
+    p_normalization = jnp.max(jnp.abs(ideal_plastic_sino))
+    m_normalization = jnp.max(jnp.abs(ideal_metal_sino))
+    p = ideal_plastic_sino / p_normalization
+    m = ideal_metal_sino / m_normalization
 
     # Form NxP matrix, H, as list of columns
     H = [
-        p_norm,                 # H[0]
-        p_norm * m_norm,        # H[1]
-        p_norm * m_norm ** 2,   # H[2]
-        m_norm,                 # H[3]
-        m_norm ** 2,            # H[4]
-        m_norm ** 3             # H[5]
+        p,            # H[0]
+        p * m,        # H[1]
+        p * m ** 2,   # H[2]
+        m,            # H[3]
+        m ** 2,       # H[4]
+        m ** 3        # H[5]
     ]
-    P = len(H)
+    order = len(H)
 
     # Compute HtH and H^t y
-    HtH = jnp.zeros((P, P))
-    Hty = jnp.zeros(P)
-    for i in range(P):
+    HtH = jnp.zeros((order, order))
+    Hty = jnp.zeros(order)
+    for i in range(order):
         Hty = Hty.at[i].set(jnp.dot(H[i], y))
-        for j in range(P):
+        for j in range(order):
             HtH = HtH.at[i, j].set(jnp.dot(H[i], H[j]))
 
     # Regularize and solve for least square value of theta that minimizes || y - H theta ||^2
     sigma_max = jnp.linalg.norm(HtH, ord=2)
-    HtH_reg = HtH + (epsilon**2) * sigma_max * jnp.eye(P)
+    HtH_reg = HtH + (epsilon**2) * sigma_max * jnp.eye(order)
     theta = jnp.linalg.solve(HtH_reg, Hty)
 
     # Separate components and recover plastic sinogram
-    theta_p, theta_m = theta[:3], theta[3:]
-    ideal_BH_metal_sinogram = theta_m[0]*H[3] + theta_m[1]*H[4] + theta_m[2]*H[5]
+    only_metal_BH_sinogram = theta[3]*H[3] + theta[4]*H[4] + theta[5]*H[5]
 
-    denom = theta_p[0] + theta_p[1]*m_norm + theta_p[2]*m_norm**2
-    denom_floor = 1e-6 * jnp.linalg.norm(denom)
-    denom = jnp.where(jnp.abs(denom) > denom_floor, denom, denom_floor)
+    # Compute the linear coefficient for plastic with the assumed ideal metal
+    linear_plastic_coef = theta[0] + theta[1]*m + theta[2]*m**2
+    denom_floor = 1e-6 * jnp.linalg.norm(linear_plastic_coef)
+    linear_plastic_coef = jnp.where(jnp.abs(linear_plastic_coef) > denom_floor, linear_plastic_coef, denom_floor)
 
     # Compute BH corrected version of plastic sinogram with metal removed
-    corrected_plastic_sino = plastic_scale * (y - ideal_BH_metal_sinogram) / denom
+    corrected_plastic_sino = p_normalization * (y - only_metal_BH_sinogram) / linear_plastic_coef
 
     # Combine corrected plastic and metal sinogram and reshape
     corrected_sino_flat = corrected_plastic_sino + ideal_metal_sino
