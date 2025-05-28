@@ -83,49 +83,53 @@ def correct_sino_for_metal(ct_model, measured_sino, recon, epsilon=2e-4):
 
     # Forward projection
     device = ct_model.main_device
-    p_raw = ct_model.forward_project(jax.device_put(plastic_mask, device)).reshape(-1)
-    m_raw = ct_model.forward_project(jax.device_put(metal_mask, device)).reshape(-1)
+    plastic_mask_sino = ct_model.forward_project(jax.device_put(plastic_mask, device)).reshape(-1)
+    metal_mask_sino = ct_model.forward_project(jax.device_put(metal_mask, device)).reshape(-1)
     y = measured_sino.reshape(-1)
 
-    # Normalize to max amplitude = 1
-    p_scaled = plastic_scale * p_raw
-    m_scaled = metal_scale * m_raw
-    p_norm = p_scaled / jnp.maximum(jnp.max(jnp.abs(p_scaled)), 1e-8)
-    m_norm = m_scaled / jnp.maximum(jnp.max(jnp.abs(m_scaled)), 1e-8)
+    # Compute normalized plastic and metal sinograms with max amplitude = 1
+    ideal_plastic_sino = plastic_scale * plastic_mask_sino
+    ideal_metal_sino = metal_scale * metal_mask_sino
+    p_norm = ideal_plastic_sino / jnp.maximum(jnp.max(jnp.abs(ideal_plastic_sino)), 1e-8)
+    m_norm = ideal_metal_sino / jnp.maximum(jnp.max(jnp.abs(ideal_metal_sino)), 1e-8)
 
-    # Build H and compute H^T H, H^T y
-    H = [p_norm,
-         p_norm * m_norm,
-         p_norm * m_norm**2,
-         m_norm,
-         m_norm**2,
-         m_norm**3]
-    n = len(H)
+    # Form NxP matrix, H, as list of columns
+    H = [
+        p_norm,                 # H[0]
+        p_norm * m_norm,        # H[1]
+        p_norm * m_norm ** 2,   # H[2]
+        m_norm,                 # H[3]
+        m_norm ** 2,            # H[4]
+        m_norm ** 3             # H[5]
+    ]
+    P = len(H)
 
-    HtH = jnp.zeros((n, n))
-    Hty = jnp.zeros(n)
-    for i in range(n):
+    # Compute HtH and H^t y
+    HtH = jnp.zeros((P, P))
+    Hty = jnp.zeros(P)
+    for i in range(P):
         Hty = Hty.at[i].set(jnp.dot(H[i], y))
-        for j in range(n):
+        for j in range(P):
             HtH = HtH.at[i, j].set(jnp.dot(H[i], H[j]))
 
-    # Regularize and solve
+    # Regularize and solve for least square value of theta that minimizes || y - H theta ||^2
     sigma_max = jnp.linalg.norm(HtH, ord=2)
-    HtH_reg = HtH + (epsilon**2) * sigma_max * jnp.eye(n)
+    HtH_reg = HtH + (epsilon**2) * sigma_max * jnp.eye(P)
     theta = jnp.linalg.solve(HtH_reg, Hty)
 
     # Separate components and recover plastic sinogram
     theta_p, theta_m = theta[:3], theta[3:]
-    H_m = theta_m[0]*H[3] + theta_m[1]*H[4] + theta_m[2]*H[5]
+    ideal_BH_metal_sinogram = theta_m[0]*H[3] + theta_m[1]*H[4] + theta_m[2]*H[5]
 
     denom = theta_p[0] + theta_p[1]*m_norm + theta_p[2]*m_norm**2
     denom_floor = 1e-6 * jnp.linalg.norm(denom)
     denom = jnp.where(jnp.abs(denom) > denom_floor, denom, denom_floor)
 
-    p_hat = p_scaled * (y - H_m) / denom
+    # Compute BH corrected version of plastic sinogram with metal removed
+    corrected_plastic_sino = plastic_scale * (y - ideal_BH_metal_sinogram) / denom
 
-    # Recombine and reshape
-    corrected_flat = p_hat + m_scaled
-    corrected_sino = corrected_flat.reshape(measured_sino.shape)
+    # Combine corrected plastic and metal sinogram and reshape
+    corrected_sino_flat = corrected_plastic_sino + ideal_metal_sino
+    corrected_sino = corrected_sino_flat.reshape(measured_sino.shape)
 
     return corrected_sino, metal_mask, plastic_mask
