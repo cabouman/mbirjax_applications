@@ -68,10 +68,10 @@ def correct_sino_for_metal(ct_model, measured_sino, recon, epsilon=2e-4):
         >>> corrected, plastic_m, metal_m = correct_sino_for_metal(ct_model, measured_sino, recon)
     """
     # Determine class thresholds based on the 5-classes
-    thresholds = mj.multi_threshold_otsu(recon, classes=5)
-    plastic_low_threshold = thresholds[1]
-    plastic_high_threshold = thresholds[2]
-    metal_threshold = thresholds[3]
+    thresholds = mj.multi_threshold_otsu(recon, classes=3)
+    plastic_low_threshold = thresholds[0]
+    plastic_high_threshold = thresholds[1]
+    metal_threshold = thresholds[1]
 
     # Create masks
     plastic_mask = jnp.where((recon > plastic_low_threshold) & (recon <= plastic_high_threshold), 1.0, 0.0)

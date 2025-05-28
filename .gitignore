@@ -12,6 +12,7 @@ nersc/output
 
 # Mac OSX files
 .DS_Store
+.*DS_Store
 *.png
 *.jpg
 *.pdf

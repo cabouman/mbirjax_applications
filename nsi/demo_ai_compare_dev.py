@@ -49,6 +49,7 @@ if __name__ == "__main__":
 
     # Set reconstruction parameter values
     ct_model.set_params(sharpness=sharpness, verbose=1, positivity_flag=True)
+    weights_trans = ct_model.gen_weights(sino, weight_type='transmission_root')
 
     # Print out model parameters
     ct_model.print_params()
@@ -57,7 +58,7 @@ if __name__ == "__main__":
     recon = ct_model.direct_recon(sino)
     recon_orig = recon
 
-    num_iterations = 3
+    num_iterations = 4
     for i in range(num_iterations):
         print(f"\n************ Iteration {i + 1}: Estimate Corrected Sinogram **************")
         corrected_sinogram, plastic_mask, metal_mask = mar_utils.correct_sino_for_metal(ct_model, sino, recon)
@@ -73,10 +74,10 @@ if __name__ == "__main__":
 
         if i < num_iterations - 1:
             print(f"\n********** Iteration {i + 1}: Reconstruct Corrected Sinogram *************")
-            recon = ct_model.direct_recon(corrected_sinogram)
+            recon, _ = ct_model.recon(corrected_sinogram, weights=weights_trans, init_recon=recon)
 
     print("\n*********** view original and corrected reconstruction *************")
     vmin = 0
     vmax = downsample_rate[0] * 0.025
-    mj.slice_viewer(recon_orig, recon, vmin=0, vmax=vmax, slice_axis=0, slice_label=['FDK', 'FDK MAR'], title='Comparison between the original and corrected reconstruction')
+    mj.slice_viewer(recon_orig, recon, vmin=0, vmax=vmax, slice_axis=0, slice_label=['FDK', 'MBIR MAR'], title='Comparison between the original and corrected reconstruction')
 
