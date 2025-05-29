@@ -1,6 +1,9 @@
+
 import jax
 import jax.numpy as jnp
 import mbirjax as mj
+
+__all__ = ["BHC_plastic_metal", "recon_BH_plastic_metal"]
 
 
 @jax.jit
@@ -77,12 +80,11 @@ def BHC_plastic_metal(ct_model, measured_sino, recon, epsilon=2e-4):
     # Determine class thresholds based on the 5-classes
     thresholds = mj.multi_threshold_otsu(recon, classes=3)
     plastic_low_threshold = thresholds[0]
-    plastic_high_threshold = thresholds[1]
-    metal_threshold = thresholds[1]
+    plastic_metal_threshold = thresholds[1]
 
     # Create masks
-    plastic_mask = jnp.where((recon > plastic_low_threshold) & (recon <= plastic_high_threshold), 1.0, 0.0)
-    metal_mask = jnp.where(recon > metal_threshold, 1.0, 0.0)
+    plastic_mask = jnp.where((recon > plastic_low_threshold) & (recon <= plastic_metal_threshold), 1.0, 0.0)
+    metal_mask = jnp.where(recon > plastic_metal_threshold, 1.0, 0.0)
 
     # Scale factors that match the unitary masks to the reconstruction
     plastic_scale = _compute_scaling_factor(recon, plastic_mask)
@@ -140,3 +142,42 @@ def BHC_plastic_metal(ct_model, measured_sino, recon, epsilon=2e-4):
     corrected_sino = corrected_sino_flat.reshape(measured_sino.shape)
 
     return corrected_sino, plastic_mask, metal_mask
+
+
+def recon_BH_plastic_metal(ct_model, sino, weights, num_BH_iterations=4, max_mbir_iterations=10):
+    """
+    Perform iterative metal artifact reduction using plastic-metal beam hardening correction.
+
+    This function repeatedly applies `BHC_plastic_metal()` and reconstructs from the corrected
+    sinogram to iteratively refine the reconstruction and reduce metal artifacts.
+
+    Args:
+        ct_model: MBIRJAX cone beam model instance.
+        sino (jnp.ndarray): Input sinogram.
+        weights (jnp.ndarray): Transmission weights for reconstruction.
+        num_BH_iterations (int, optional): Number of correction-reconstruction iterations. Defaults to 4.
+
+    Returns:
+        jnp.ndarray: Final corrected reconstruction.
+    """
+    print("\n********* Perform initial FDK reconstruction **********")
+    recon = ct_model.direct_recon(sino)
+
+    for i in range(num_BH_iterations):
+        print(f"\n************ BH Iteration {i + 1}: Estimate Corrected Sinogram **************")
+        corrected_sinogram, plastic_mask, metal_mask = BHC_plastic_metal(ct_model, sino, recon)
+
+        print(f"\n************ BH Iteration {i + 1}: Display plastic and metal mask **************")
+        mj.slice_viewer(
+            plastic_mask, metal_mask,
+            vmin=0, vmax=1.0,
+            slice_axis=0,
+            slice_label=['Plastic Mask', 'Metal Mask'],
+            title=f'Iteration {i + 1}: Comparison of Plastic and Metal Masks'
+        )
+
+        if i < num_BH_iterations - 1:
+            print(f"\n********** BH Iteration {i + 1}: Reconstruct Corrected Sinogram *************")
+            recon, _ = ct_model.recon(corrected_sinogram, weights=weights, init_recon=recon, max_iterations=max_mbir_iterations)
+
+    return recon
