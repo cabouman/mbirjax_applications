@@ -59,7 +59,7 @@ if __name__ == "__main__":
     plastic_mask, metal_mask, plastic_scale, metal_scale = mar_utils.seg_plastic_metal(recon)
 
     print("\n*********** view plastic and metal masks *************")
-    mj.slice_viewer(plastic_mask, metal_mask, vmin=0, vmax=1.0, slice_label=['Plastic Mask', 'Metal Mask'], title="Final Plastic and Metal Masks")
+    mj.slice_viewer(plastic_mask, metal_mask, vmin=0, vmax=1.0, slice_axis=0, slice_label=['Plastic Mask', 'Metal Mask'], title="Final Plastic and Metal Masks")
 
     # Compute FDK reconstruction
     recon_fdk = ct_model.direct_recon(sino)
