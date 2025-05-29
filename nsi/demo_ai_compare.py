@@ -37,7 +37,7 @@ if __name__ == "__main__":
         mjp.nsi.compute_sino_and_params(dataset_dir, downsample_factor=downsample_rate, subsample_view_factor=subsample_view_factor)
 
     # #### beam hardening correction
-    sino = mjp.beam_hardening_correction(sino, alpha=alpha)
+    sino = mjp.BH_correction(sino, alpha=alpha)
     sino = jnp.maximum(sino, 0.0)   # Clip sinogram to be non-negative
 
     print("\n***************** Set up MBIRJAX model ****************")

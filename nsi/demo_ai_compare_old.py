@@ -44,7 +44,7 @@ if __name__ == "__main__":
     # #### recon parameters
     sharpness = 1.0
     snr_db = 30.0
-    alpha = [1.0, 0.0, 0.0]  # beam_hardening_correction coefficient
+    alpha = [1.0, 0.0, 0.0]  # BH_correction coefficient
 
 
     print("\n*******************************************************",
@@ -55,7 +55,7 @@ if __name__ == "__main__":
 
     # #### beam hardening correction
     sino = jnp.maximum(sino, 0.0)   # Clip sinogram to be non-negative
-    sino = mjp.beam_hardening_correction(sino, alpha=alpha)
+    sino = mjp.BH_correction(sino, alpha=alpha)
 
     print("\n*******************************************************",
           "\n***************** Set up MBIRJAX model ****************",
