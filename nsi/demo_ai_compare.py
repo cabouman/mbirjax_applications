@@ -53,10 +53,18 @@ if __name__ == "__main__":
     # Print out model parameters
     ct_model.print_params()
 
-    recon = mar_utils.recon_BH_plastic_metal(ct_model, sino, weights_trans)
-    recon_orig = ct_model.direct_recon(sino)
+    print("\n*************** Compute MAR reconstruction ***************")
+    # Compute MAR reconstructions and plastic/metal segmentations
+    recon = mar_utils.recon_BH_plastic_metal(ct_model, sino, weights_trans, verbose=1)
+    plastic_mask, metal_mask, plastic_scale, metal_scale = mar_utils.seg_plastic_metal(recon)
+
+    print("\n*********** view plastic and metal masks *************")
+    mj.slice_viewer(plastic_mask, metal_mask, vmin=0, vmax=1.0, slice_label=['Plastic Mask', 'Metal Mask'], title="Final Plastic and Metal Masks")
+
+    # Compute FDK reconstruction
+    recon_fdk = ct_model.direct_recon(sino)
 
     print("\n*********** view original and corrected reconstruction *************")
     vmin = 0
     vmax = downsample_rate[0] * 0.025
-    mj.slice_viewer(recon_orig, recon, vmin=0, vmax=vmax, slice_axis=0, slice_label=['FDK', 'MBIR MAR'], title='Comparison between the original and corrected reconstruction')
+    mj.slice_viewer(recon_fdk, recon, vmin=0, vmax=vmax, slice_axis=0, slice_label=['FDK', 'MBIR MAR'], title='Comparison between the original and corrected reconstruction')
