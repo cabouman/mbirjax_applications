@@ -5,6 +5,9 @@ nsi/output
 nersc/demo_data
 nersc/output
 
+vcls/recon_bases_data
+vcls/recon_bases_data/polygon_data
+
 
 # ignore jupyter notebook files
 .ipynb_checkpoints/
