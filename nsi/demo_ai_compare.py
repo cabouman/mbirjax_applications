@@ -53,7 +53,7 @@ if __name__ == "__main__":
     # Print out model parameters
     ct_model.print_params()
 
-    recon = mar_utils.recon_BH_plastic_metal(ct_model, sino, weights_trans, num_iterations=4)
+    recon = mar_utils.recon_BH_plastic_metal(ct_model, sino, weights_trans)
     recon_orig = ct_model.direct_recon(sino)
 
     print("\n*********** view original and corrected reconstruction *************")

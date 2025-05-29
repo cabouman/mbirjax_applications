@@ -144,7 +144,7 @@ def BHC_plastic_metal(ct_model, measured_sino, recon, epsilon=2e-4):
     return corrected_sino, plastic_mask, metal_mask
 
 
-def recon_BH_plastic_metal(ct_model, sino, weights, num_BH_iterations=4, max_mbir_iterations=10):
+def recon_BH_plastic_metal(ct_model, sino, weights, num_BH_iterations=4, stop_threshold=0.5):
     """
     Perform iterative metal artifact reduction using plastic-metal beam hardening correction.
 
@@ -178,6 +178,6 @@ def recon_BH_plastic_metal(ct_model, sino, weights, num_BH_iterations=4, max_mbi
 
         if i < num_BH_iterations - 1:
             print(f"\n********** BH Iteration {i + 1}: Reconstruct Corrected Sinogram *************")
-            recon, _ = ct_model.recon(corrected_sinogram, weights=weights, init_recon=recon, max_iterations=max_mbir_iterations)
+            recon, _ = ct_model.recon(corrected_sinogram, weights=weights, init_recon=recon, stop_threshold_change_pct=stop_threshold)
 
     return recon
