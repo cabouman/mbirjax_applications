@@ -1,7 +1,7 @@
-
 import jax
 import jax.numpy as jnp
 import mbirjax as mj
+import mbirjax.preprocess as mjp
 
 __all__ = ["BHC_plastic_metal", "recon_BH_plastic_metal"]
 
@@ -135,27 +135,49 @@ def recon_BH_plastic_metal(ct_model, sino, weights, num_BH_iterations=3, stop_th
     sinogram to iteratively refine the reconstruction and reduce metal artifacts.
 
     Args:
-        ct_model: MBIRJAX cone beam model instance.
-        sino (jnp.ndarray): Input sinogram.
-        weights (jnp.ndarray): Transmission weights for reconstruction.
-        num_BH_iterations (int, optional): Number of correction-reconstruction iterations. Defaults to 4.
+        ct_model: MBIRJAX cone beam model instance used for reconstruction.
+        sino (jnp.ndarray): Input sinogram data to be corrected.
+        weights (jnp.ndarray): Transmission weights used in the reconstruction algorithm.
+        num_BH_iterations (int, optional): Number of beam hardening correction and reconstruction iterations to perform. Defaults to 3.
+        stop_threshold_pct (float, optional): Threshold for stopping reconstruction iterations based on relative change in reconstruction. Defaults to 0.5.
+        mask_change_threshold_pct (float, optional): Threshold in percent for early stopping based on change in the plastic mask between iterations. Defaults to 0.01.
+        verbose (int, optional): Verbosity level for printing intermediate information. Defaults to 0.
 
     Returns:
-        jnp.ndarray: Final corrected reconstruction.
+        jnp.ndarray: The final corrected reconstruction after iterative beam hardening correction.
+
+    Example:
+        >>> recon = recon_BH_plastic_metal(ct_model, sino, weights, num_BH_iterations=3, verbose=1)
+        >>> mj.slice_viewer(recon)
     """
     print("\n********* Perform initial FDK reconstruction **********")
     recon = ct_model.direct_recon(sino)
+
+    plastic_mask_prev = None
 
     for i in range(num_BH_iterations):
         print(f"\n************ BH Iteration {i + 1}: Estimate Corrected Sinogram **************")
         corrected_sinogram = BHC_plastic_metal(ct_model, sino, recon)
 
+        print(f"\n********** BH Iteration {i + 1}: Reconstruct Corrected Sinogram *************")
+        recon, _ = ct_model.recon(corrected_sinogram, weights=weights, init_recon=recon, stop_threshold_change_pct=stop_threshold_pct)
+
+        plastic_mask, metal_mask, plastic_scale, metal_scale = mjp.seg_plastic_metal(recon)
+
         if verbose > 0:
             print(f"\n************ BH Iteration {i + 1}: Display plastic and metal mask **************")
-            plastic_mask, metal_mask, plastic_scale, metal_scale = seg_plastic_metal(recon)
-            mj.slice_viewer(plastic_mask, metal_mask, vmin=0, vmax=1.0, slice_label=['Plastic Mask', 'Metal Mask'], title=f'Iteration {i + 1}: Comparison of Plastic and Metal Masks')
+            mj.slice_viewer(plastic_mask, metal_mask, vmin=0, vmax=1.0,
+                            slice_label=['Plastic Mask', 'Metal Mask'],
+                            title=f'Iteration {i + 1}: Comparison of Plastic and Metal Masks')
 
-        print(f"\n********** BH Iteration {i + 1}: Reconstruct Corrected Sinogram *************")
-        recon, _ = ct_model.recon(corrected_sinogram, weights=weights, init_recon=recon, stop_threshold_change_pct=stop_threshold)
+        if plastic_mask_prev is not None:
+            denom = jnp.sum(jnp.abs(plastic_mask_prev))
+            denom = jnp.where(denom > 1e-6, denom, 1.0)
+            mask_change_pct = 100 * jnp.sum(jnp.abs(plastic_mask - plastic_mask_prev)) / denom
+            if mask_change_pct < mask_change_threshold_pct:
+                print(f"\nStopping early: Plastic mask change {mask_change_pct:.4e} < threshold {mask_change_threshold_pct}")
+                break
+
+        plastic_mask_prev = plastic_mask
 
     return recon
