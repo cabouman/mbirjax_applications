@@ -35,36 +35,6 @@ def _compute_scaling_factor(v: jnp.ndarray, u: jnp.ndarray) -> jnp.ndarray:
     return jnp.where(denominator == 0, 0.0, numerator / denominator)
 
 
-def seg_plastic_metal(recon: jnp.ndarray) -> tuple[jnp.ndarray, jnp.ndarray, float, float]:
-    """
-    Segment a reconstruction into plastic and metal masks using multi-threshold Otsu,
-    and compute scale factors to match these masks to the input reconstruction.
-
-    Args:
-        recon (jnp.ndarray): Input reconstruction volume.
-
-    Returns:
-        plastic_mask (jnp.ndarray): Binary mask identifying plastic regions.
-        metal_mask (jnp.ndarray): Binary mask identifying metal regions.
-        plastic_scale (float): Optimal scaling factor for plastic_mask to match recon.
-        metal_scale (float): Optimal scaling factor for metal_mask to match recon.
-    """
-    # Determine class thresholds based on the 3-classes
-    thresholds = mj.multi_threshold_otsu(recon, classes=3)
-    plastic_low_threshold = thresholds[0]
-    plastic_metal_threshold = thresholds[1]
-
-    # Create masks
-    plastic_mask = jnp.where((recon > plastic_low_threshold) & (recon <= plastic_metal_threshold), 1.0, 0.0)
-    metal_mask = jnp.where(recon > plastic_metal_threshold, 1.0, 0.0)
-
-    # Scale factors that match the unitary masks to the reconstruction
-    plastic_scale = _compute_scaling_factor(recon, plastic_mask)
-    metal_scale = _compute_scaling_factor(recon, metal_mask)
-
-    return plastic_mask, metal_mask, plastic_scale, metal_scale
-
-
 def BHC_plastic_metal(ct_model, measured_sino, recon, epsilon=2e-4):
     """
     Beam-hardening correction for objects containing a combination of plastic and metal.
