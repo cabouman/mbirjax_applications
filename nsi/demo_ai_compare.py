@@ -56,7 +56,7 @@ if __name__ == "__main__":
     print("\n*************** Compute MAR reconstruction ***************")
     # Compute MAR reconstructions and plastic/metal segmentations
     recon = mar_utils.recon_BH_plastic_metal(ct_model, sino, weights_trans, verbose=1)
-    plastic_mask, metal_mask, plastic_scale, metal_scale = mar_utils.seg_plastic_metal(recon)
+    plastic_mask, metal_mask, plastic_scale, metal_scale = mjp.segment_plastic_metal(recon)
 
     print("\n*********** view plastic and metal masks *************")
     mj.slice_viewer(plastic_mask, metal_mask, vmin=0, vmax=1.0, slice_axis=0, slice_label=['Plastic Mask', 'Metal Mask'], title="Final Plastic and Metal Masks")

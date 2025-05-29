@@ -38,18 +38,11 @@ def _compute_scaling_factor(v: jnp.ndarray, u: jnp.ndarray) -> jnp.ndarray:
 def BHC_plastic_metal(ct_model, measured_sino, recon, epsilon=2e-4):
     """
     Beam-hardening correction for objects containing a combination of plastic and metal.
-    The function takes the measured sinogram and initial reconstruction as input, and it returns a corrected sinogram.
 
-    This function is designed to reduce metal artifacts for scans of objects made from a combination of plastic and metal material.
+    The function takes the measured sinogram and initial reconstruction as input, and it returns a corrected sinogram.
+    It is designed to reduce metal artifacts for scans of objects made from a combination of plastic and metal material.
     The metal and plastic materials are each assumed to be composed of a single material.
     However, it should work fine for a combination of different plastics as long as their optical density properites do not vary too much.
-
-
-    The function first segments the reconstruction into approximate homogeneous plastic and metal components using the Otsu algorithm.
-    Next, it forward projects the plastic and metal segmentations to form idealized plastic and metal sinogram.
-    It then estimates the parameters of a polynomial beam-hardening function by fitting the beam-hardened idealized plastic and metal
-    sinogram to the measured sinogram.
-    Once the BH parameters are estimated, it then estimates the corrected sinogram from the measured sinogram, and returns it.
 
     Note:
         The corrected sinogram should result in a more accurate reconstruction of the plastic, but may not accurately reconstruct the metal portion.
@@ -71,7 +64,7 @@ def BHC_plastic_metal(ct_model, measured_sino, recon, epsilon=2e-4):
     Example:
         >>> corrected = BHC_plastic_metal(ct_model, measured_sino, recon)
     """
-    plastic_mask, metal_mask, plastic_scale, metal_scale = seg_plastic_metal(recon)
+    plastic_mask, metal_mask, plastic_scale, metal_scale = mjp.segment_plastic_metal(recon)
 
     # Forward projection
     device = ct_model.main_device
