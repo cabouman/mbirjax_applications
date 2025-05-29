@@ -8,15 +8,15 @@ import multiprocessing as mp
 import time
 import random
 
-def vcls(reference_object,angles_candidates,ct_params,vcls_parms,data_store_dir):
+def vcls(reference_object, angle_candidates, ct_params, vcls_parms, data_store_dir):
 
     # Compute recon bases
     time0 = time.time()
 
-    gamma = ComputeReconBases(reference_object,angles_candidates,ct_params,vcls_parms,data_store_dir)
+    gamma = ComputeReconBases(reference_object, angle_candidates, ct_params, vcls_parms, data_store_dir)
 
     elapsed = time.time() - time0
-    print('Elapsed time for compute recon bases is {:.3f} seconds'.format(elapsed))
+    print('Elapsed time to compute recon bases is {:.3f} seconds'.format(elapsed))
 
     # Compute inner product between recon bases
     time0 = time.time()
@@ -24,21 +24,21 @@ def vcls(reference_object,angles_candidates,ct_params,vcls_parms,data_store_dir)
     R = parallel_cov_matrix_computation(ct_params['num_views'], vcls_parms['num_cpus'], data_store_dir)
 
     elapsed = time.time() - time0
-    print('Elapsed time for compute inner product is {:.3f} seconds'.format(elapsed))
+    print('Elapsed time to compute inner product is {:.3f} seconds'.format(elapsed))
 
     # Find optimal view angles
     time0 = time.time()
 
     optimal_indices = view_subset_selection(R, gamma, ct_params['num_views'], vcls_parms['K'], vcls_parms['r_2'])
-    optimal_angles = angles_candidates[optimal_indices]
+    optimal_angles = angle_candidates[optimal_indices]
 
     elapsed = time.time() - time0
-    print('Elapsed time for compute optimal subset of views is {:.3f} seconds'.format(elapsed))
+    print('Elapsed time to compute optimal subset of views is {:.3f} seconds'.format(elapsed))
 
     return optimal_angles
 
 
-def ComputeReconBases(reference_object,angles_candidates,ct_params,vcls_parms,data_store_dir):
+def ComputeReconBases(reference_object, angles_candidates, ct_params, vcls_parms, data_store_dir):
 
     # Initialize sinogram
 
@@ -72,7 +72,7 @@ def ComputeReconBases(reference_object,angles_candidates,ct_params,vcls_parms,da
 
     # subsampling voxel indices in ROI
     if vcls_parms['3d_subsample']:
-        sub_indices = ut.Subsampling3DIndices(mask,vcls_parms['r_1'])
+        sub_indices = ut.Subsampling3DIndices(mask, vcls_parms['r_1'])
         phantom_sub_values = reference_object[sub_indices]
     else:
         sub_indices_3d, random_indices_2d, row_col_indices = ut.Subsampling2DIndices(mask, reference_object.shape[2], vcls_parms['r_1'])
@@ -96,7 +96,7 @@ def ComputeReconBases(reference_object,angles_candidates,ct_params,vcls_parms,da
 
         else:
             filtered_sinogram = cone_model.fdk_filter(sinogram_temp, filter_name="ramp", view_batch_size=None)
-            recon_cylinder = cone_model.sparse_back_project(filtered_sinogram,random_indices_2d)
+            recon_cylinder = cone_model.sparse_back_project(filtered_sinogram, random_indices_2d)
             rec_sub_values = recon_cylinder.flatten()
             # #To-do: recon_cylinder does not require to put back to recon_3d after ensure the order is corrsponded
             # recon_3d = jnp.zeros(reference_object.shape)
@@ -125,7 +125,7 @@ def compute_cov_matrix_part(i, num_views, data_store_dir):
 
     return i, row
 
-def parallel_cov_matrix_computation(num_views, num_cpus,data_store_dir):
+def parallel_cov_matrix_computation(num_views, num_cpus, data_store_dir):
 
     cov_matrix = np.zeros((num_views, num_views))
 
@@ -141,7 +141,7 @@ def parallel_cov_matrix_computation(num_views, num_cpus,data_store_dir):
 
     return cov_matrix
 
-def compute_vcl(sub_R,sub_gamma):
+def compute_vcl(sub_R, sub_gamma):
 
     # beta_transpose = np.transpose(sub_gamma)
     # R_inverse = np.linalg.inv(sub_R)
@@ -151,7 +151,7 @@ def compute_vcl(sub_R,sub_gamma):
     loss_value = - sub_gamma.T @ np.linalg.solve(sub_R, sub_gamma)
     return loss_value
 
-def view_subset_selection(R,gamma,num_candidate_views,K,r_2):
+def view_subset_selection(R,gamma, num_candidate_views, K, r_2):
 
     max_num_iteration = 100
     num_candidates = int(r_2 * (num_candidate_views - K))

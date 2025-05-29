@@ -90,7 +90,7 @@ if __name__ == '__main__':
 
     start_angle = 0
     end_angle = 2 * np.pi
-    angles_candidates = jnp.linspace(start_angle, end_angle, ct_params['num_views'], endpoint=False)
+    angle_candidates = jnp.linspace(start_angle, end_angle, ct_params['num_views'], endpoint=False)
 
     # vcls parameters
     vcls_parms = {}
@@ -105,7 +105,7 @@ if __name__ == '__main__':
     time0 = time.time()
 
     # #### run vcls to select views ####
-    optimal_angles = vut.vcls(reference_object, angles_candidates, ct_params, vcls_parms, data_store_dir)
+    optimal_angles = vut.vcls(reference_object, angle_candidates, ct_params, vcls_parms, data_store_dir)
 
     # Record elapsed time
     elapsed = time.time() - time0
