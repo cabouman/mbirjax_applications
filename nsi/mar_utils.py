@@ -31,20 +31,27 @@ def _compute_scaling_factor(v: jnp.ndarray, u: jnp.ndarray) -> jnp.ndarray:
     return jnp.where(denominator == 0, 0.0, numerator / denominator)
 
 
-def correct_sino_for_metal(ct_model, measured_sino, recon, epsilon=2e-4):
+def BHC_plastic_metal(ct_model, measured_sino, recon, epsilon=2e-4):
     """
-    Correct a measured sinogram for beam-hardening artifacts due to metal objects.
+    Beam-hardening correction for objects containing a combination of plastic and metal.
+    The function takes the measured sinogram and initial reconstruction as input, and it returns a corrected sinogram.
 
-    This function first estimates the parameters of a beam-hardening forward model by segmenting the reconstruction
-    into approximate plastic and metal components. Then using that model, it estimates the beam-harden corrected
-    plastic component of the sinogram, and adds it to the beam-harden corrected metal component to produce
-    a total beam-harden corrected sinogram.
+    This function is designed to reduce metal artifacts for scan of object made from a combination of plastic and metal material.
+    The metal and plastic materials are each assumed to be composed of a single material.
+    However, it should work fine for a combination of different plastics as long as their optical density properites do not vary too much.
+
+
+    The function first segments the reconstruction into approximate homogeneous plastic and metal components using the Otsu algorithm.
+    Next, it forward projects the plastic and metal segmentations to form idealized plastic and metal sinogram.
+    It then estimates the parameters of a polynomial beam-hardening function by fitting the beam-hardened idealized plastic and metal
+    sinogram to the measured sinogram.
+    Once the BH parameters are estimated, it then estimates the corrected sinogram from the measured sinogram, and returns it.
 
     The corrected sinogram should result in a more accurate reconstruction of the plastic,
     but may not accurately reconstruct the metal portion.
 
     Note:
-        This function can be applied repeatedly for improved reconstruction quality.
+        The corrected sinogram should result in a more accurate reconstruction of the plastic, but may not accurately reconstruct the metal portion.
 
     Args:
         ct_model:
@@ -65,7 +72,7 @@ def correct_sino_for_metal(ct_model, measured_sino, recon, epsilon=2e-4):
             Binary mask array for metal regions in `recon`.
 
     Example:
-        >>> corrected, plastic_m, metal_m = correct_sino_for_metal(ct_model, measured_sino, recon)
+        >>> corrected, plastic_m, metal_m = BHC_plastic_metal(ct_model, measured_sino, recon)
     """
     # Determine class thresholds based on the 5-classes
     thresholds = mj.multi_threshold_otsu(recon, classes=3)

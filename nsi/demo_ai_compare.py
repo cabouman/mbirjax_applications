@@ -61,7 +61,7 @@ if __name__ == "__main__":
     num_iterations = 4
     for i in range(num_iterations):
         print(f"\n************ Iteration {i + 1}: Estimate Corrected Sinogram **************")
-        corrected_sinogram, plastic_mask, metal_mask = mar_utils.correct_sino_for_metal(ct_model, sino, recon)
+        corrected_sinogram, plastic_mask, metal_mask = mar_utils.BHC_plastic_metal(ct_model, sino, recon)
 
         print(f"\n************ Iteration {i + 1}: Display plastic and metal mask **************")
         mj.slice_viewer(
