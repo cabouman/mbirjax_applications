@@ -13,10 +13,14 @@ import numpy as np
 
 if __name__ == '__main__':
 
-    # Define path to vcls temporary scratch space
+    ##############################################
+    # Sets user selectable parameters
+    ##############################################
+
+    # Set path to vcls temporary scratch space
     data_store_dir = f'./recon_bases_data/polygon_data'
 
-    # Define primary parameters
+    # Set geometry parameters
     num_object_rows = 128
     num_object_slices = 64
     num_candidate_views = 128
@@ -29,6 +33,14 @@ if __name__ == '__main__':
     # Set vcls algorithm parameters
     voxel_sampling_rate = 0.01      # r_1 in paper
     view_sampling_rate = 0.1        # r_2 in paper
+
+    # Set view angle limits
+    start_angle = 0
+    end_angle = 2 * np.pi
+
+    ####################################################
+    # Calculate function parameters from user parameters
+    ####################################################
 
     # Create reference object
     multiprocessing.freeze_support()
@@ -55,8 +67,7 @@ if __name__ == '__main__':
     ct_params['source_detector_dist'] = (1.0/np.tan(cone_angle/2.0)) * (ct_params['num_det_channels']/2)
     ct_params['source_iso_dist'] = ct_params['source_detector_dist'] / magnification
 
-    start_angle = 0
-    end_angle = 2 * np.pi
+    # Compute view angles
     angle_candidates = jnp.linspace(start_angle, end_angle, ct_params['num_views'], endpoint=False)
 
     # Set vcls parameters
@@ -71,6 +82,10 @@ if __name__ == '__main__':
     os.makedirs(data_store_dir, exist_ok=True)
     time0 = time.time()
 
+    ##############################################
+    # Run VCLS to Select Views and Display Results
+    ##############################################
+
     # #### run vcls to select views ####
     optimal_angles = vut.vcls(reference_object, angle_candidates, ct_params, vcls_params, data_store_dir)
 
@@ -84,4 +99,5 @@ if __name__ == '__main__':
     formatted = np.array2string(angles_arr, precision=3, suppress_small=True, separator=', ')
     print('chosen angles: ' + formatted)
 
+    # Display selected angles
     dut.show_image_with_angles(reference_object[:, :, 0], angles_arr)
