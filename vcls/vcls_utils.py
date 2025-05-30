@@ -8,12 +8,12 @@ import multiprocessing as mp
 import time
 import random
 
-def vcls(reference_object, angle_candidates, ct_params, vcls_parms, data_store_dir):
+def vcls(reference_object, angle_candidates, ct_params, vcls_params, data_store_dir):
 
     # Compute recon bases
     time0 = time.time()
 
-    gamma = ComputeReconBases(reference_object, angle_candidates, ct_params, vcls_parms, data_store_dir)
+    gamma = ComputeReconBases(reference_object, angle_candidates, ct_params, vcls_params, data_store_dir)
 
     elapsed = time.time() - time0
     print('Elapsed time to compute recon bases is {:.3f} seconds'.format(elapsed))
@@ -21,7 +21,7 @@ def vcls(reference_object, angle_candidates, ct_params, vcls_parms, data_store_d
     # Compute inner product between recon bases
     time0 = time.time()
 
-    R = parallel_cov_matrix_computation(ct_params['num_views'], vcls_parms['num_cpus'], data_store_dir)
+    R = parallel_cov_matrix_computation(ct_params['num_views'], vcls_params['num_cpus'], data_store_dir)
 
     elapsed = time.time() - time0
     print('Elapsed time to compute inner product is {:.3f} seconds'.format(elapsed))
@@ -29,7 +29,7 @@ def vcls(reference_object, angle_candidates, ct_params, vcls_parms, data_store_d
     # Find optimal view angles
     time0 = time.time()
 
-    optimal_indices = view_subset_selection(R, gamma, ct_params['num_views'], vcls_parms['K'], vcls_parms['r_2'])
+    optimal_indices = view_subset_selection(R, gamma, ct_params['num_views'], vcls_params['K'], vcls_params['r_2'])
     optimal_angles = angle_candidates[optimal_indices]
 
     elapsed = time.time() - time0
