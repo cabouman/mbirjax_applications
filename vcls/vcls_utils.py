@@ -1,60 +1,58 @@
 import numpy as np
-import jax.numpy as jnp
 import mbirjax as mj
+import jax.numpy as jnp
 import tqdm  # Included in mbirjax
-import demo_utils as ut
 import os
 import multiprocessing as mp
-import time
 import random
+import tempfile
 
-def vcls(reference_object, angle_candidates, ct_params, vcls_params, data_store_dir):
 
-    # Compute recon bases
-    time0 = time.time()
+def get_ct_model(geometry_type, sinogram_shape, angles, source_detector_dist=None, source_iso_dist=None):
+    if geometry_type == 'cone':
+        model = mj.ConeBeamModel(sinogram_shape, angles, source_detector_dist=source_detector_dist,
+                                 source_iso_dist=source_iso_dist)
+    elif geometry_type == 'parallel':
+        model = mj.ParallelBeamModel(sinogram_shape, angles)
+    else:
+        raise ValueError('Invalid geometry type.  Expected cone or parallel, got {}'.format(geometry_type))
 
-    gamma = ComputeReconBases(reference_object, angle_candidates, ct_params, vcls_params, data_store_dir)
+    return model
 
-    elapsed = time.time() - time0
-    print('Elapsed time to compute recon bases is {:.3f} seconds'.format(elapsed))
 
-    # Compute inner product between recon bases
-    time0 = time.time()
+def copy_ct_model(ct_model, new_sinogram_shape, new_angles):
+    if 'parallel' in str(type(ct_model)):
+        geometry_type = 'parallel'
+        new_model = get_ct_model(geometry_type, new_sinogram_shape, new_angles)
 
-    R = parallel_cov_matrix_computation(ct_params['num_views'], vcls_params['num_cpus'], data_store_dir)
+    elif 'cone' in str(type(ct_model)):
+        geometry_type = 'cone'
+        source_detector_dist, source_iso_dist = ct_model.get_params(['source_detector_dist', 'source_iso_dist'])
+        new_model = get_ct_model(geometry_type, new_sinogram_shape, new_angles, source_detector_dist, source_iso_dist)
 
-    elapsed = time.time() - time0
-    print('Elapsed time to compute inner product is {:.3f} seconds'.format(elapsed))
+    return new_model
+
+
+def vcls(reference_object, ct_model, vcls_params):
+    num_views = ct_model.get_params('sinogram_shape')[0]
+    angle_candidates = np.asarray(ct_model.get_params('view_params_array'))
+    with tempfile.TemporaryDirectory() as data_store_dir:
+        # Compute recon bases
+        gamma = compute_recon_bases(reference_object, ct_model, vcls_params, data_store_dir)
+
+        # Compute inner product between recon bases
+        R = parallel_cov_matrix_computation(num_views, vcls_params['num_cpus'], data_store_dir)
 
     # Find optimal view angles
-    time0 = time.time()
-
-    optimal_indices = view_subset_selection(R, gamma, ct_params['num_views'], vcls_params['K'], vcls_params['r_2'])
-    optimal_angles = angle_candidates[optimal_indices]
-
-    elapsed = time.time() - time0
-    print('Elapsed time to compute optimal subset of views is {:.3f} seconds'.format(elapsed))
+    optimal_angles = angle_subset_selection(R, gamma, angle_candidates, vcls_params['K'], vcls_params['r_2'])
 
     return optimal_angles
 
 
-def ComputeReconBases(reference_object, angles_candidates, ct_params, vcls_parms, data_store_dir):
-
-    # Initialize sinogram
-
-    # TODO: Add all necessary parameters to define the CT geometry correctly (e.g., offset, etc.)
-    if ct_params['geometry_type'] == 'cone':
-        ct_model_for_generation = mj.ConeBeamModel(ct_params['sinogram_shape'], angles_candidates,
-                                                   source_detector_dist=ct_params['source_detector_dist'],
-                                                   source_iso_dist=ct_params['source_iso_dist'])
-    elif ct_params['geometry_type'] == 'parallel':
-        ct_model_for_generation = mj.ParallelBeamModel(ct_params['sinogram_shape'], angles_candidates)
-    else:
-        raise ValueError('Invalid geometry type.  Expected cone or parallel, got {}'.format(ct_params['geometry_type']))
-
+def compute_recon_bases(reference_object, ct_model, vcls_params, data_store_dir):
     # Generate synthetic sinogram data
     print('Creating sinogram')
-    sinogram = ct_model_for_generation.forward_project(reference_object)
+    sinogram = ct_model.forward_project(reference_object)
     sinogram = np.asarray(sinogram)
 
     # View sinogram
@@ -62,47 +60,43 @@ def ComputeReconBases(reference_object, angles_candidates, ct_params, vcls_parms
     # mj.slice_viewer(sinogram, slice_axis=0, title=title, slice_label='View')
 
     # define ROI
-    if vcls_parms['3d_subsample']:
-        mask = ut.Create3DMask(reference_object)
+    if vcls_params['3d_subsample']:
+        mask = create3d_mask(reference_object)
     else:
-        mask = ut.Create2DMask(reference_object[:,:,0])
+        mask = create2d_mask(reference_object[:, :, 0])
 
     # View ROI
     # mj.slice_viewer(reference_object, mask, slice_axis=2, slice_label='View')
 
     # subsampling voxel indices in ROI
-    if vcls_parms['3d_subsample']:
-        sub_indices = ut.Subsampling3DIndices(mask, vcls_parms['r_1'])
+    if vcls_params['3d_subsample']:
+        sub_indices = subsampling3d_indices(mask, vcls_params['r_1'])
         phantom_sub_values = reference_object[sub_indices]
     else:
-        sub_indices_3d, random_indices_2d, row_col_indices = ut.Subsampling2DIndices(mask, reference_object.shape[2], vcls_parms['r_1'])
+        sub_indices_3d, random_indices_2d, row_col_indices = subsampling2d_indices(mask, reference_object.shape[2],
+                                                                                   vcls_params['r_1'])
         phantom_sub_values = reference_object[sub_indices_3d]
 
-    gamma = np.zeros((ct_params['num_views'], 1))
+    num_views = ct_model.get_params('sinogram_shape')[0]
+    angle_candidates = np.asarray(ct_model.get_params('view_params_array'))
+    gamma = np.zeros((num_views, 1))  # Inner product between reference object and recon from a single angle
 
-    # Compute recon bases
+    # Compute recon bases - choose one view at a time and do an fbp/fdk from that.
     print('Creating recon bases')
-    for i in tqdm.tqdm(range(ct_params['num_views'])):
-        sinogram_temp = sinogram[[i], :, :]
-        angle_temp = angles_candidates[i : i+1]
-        cone_model = mj.ConeBeamModel(sinogram_temp.shape, angle_temp,
-                                      source_detector_dist=ct_params['source_detector_dist'],
-                                      source_iso_dist=ct_params['source_iso_dist'])
+    for i in tqdm.tqdm(range(num_views)):
+        one_angle_sinogram = sinogram[[i], :, :]
+        one_angle = angle_candidates[i: i + 1]
+        one_angle_model = copy_ct_model(ct_model, one_angle_sinogram.shape, one_angle)
 
-        if vcls_parms['3d_subsample']:
-            recon_3d = cone_model.fdk_recon(sinogram_temp)
-            #recon_3d.block_until_ready()
+        if vcls_params['3d_subsample']:
+            recon_3d = one_angle_model.direct_recon(one_angle_sinogram)
             rec_sub_values = recon_3d[sub_indices]
 
         else:
-            filtered_sinogram = cone_model.fdk_filter(sinogram_temp, filter_name="ramp", view_batch_size=None)
-            recon_cylinder = cone_model.sparse_back_project(filtered_sinogram, random_indices_2d)
+            filtered_sinogram = one_angle_model.direct_filter(one_angle_sinogram, filter_name="ramp",
+                                                              view_batch_size=None)
+            recon_cylinder = one_angle_model.sparse_back_project(filtered_sinogram, random_indices_2d)
             rec_sub_values = recon_cylinder.flatten()
-            # #To-do: recon_cylinder does not require to put back to recon_3d after ensure the order is corrsponded
-            # recon_3d = jnp.zeros(reference_object.shape)
-            # recon_3d = recon_3d.at[row_col_indices].set(recon_cylinder)
-            # rec_sub_values = recon_3d[sub_indices_3d]
-
 
         #view recon bases
         #mj.slice_viewer(reference_object, recon_3d, slice_axis=2, slice_label='View')
@@ -114,8 +108,8 @@ def ComputeReconBases(reference_object, angles_candidates, ct_params, vcls_parms
 
     return gamma
 
-def compute_cov_matrix_part(i, num_views, data_store_dir):
 
+def compute_cov_matrix_part(i, num_views, data_store_dir):
     row = np.zeros(num_views)
     recon_i = np.load(os.path.join(data_store_dir, f'recon_view{i}.npy'))
     for j in range(i, num_views):
@@ -125,8 +119,8 @@ def compute_cov_matrix_part(i, num_views, data_store_dir):
 
     return i, row
 
-def parallel_cov_matrix_computation(num_views, num_cpus, data_store_dir):
 
+def parallel_cov_matrix_computation(num_views, num_cpus, data_store_dir):
     cov_matrix = np.zeros((num_views, num_views))
 
     # Create a pool of workers
@@ -141,8 +135,8 @@ def parallel_cov_matrix_computation(num_views, num_cpus, data_store_dir):
 
     return cov_matrix
 
-def compute_vcl(sub_R, sub_gamma):
 
+def compute_vcl(sub_R, sub_gamma):
     # beta_transpose = np.transpose(sub_gamma)
     # R_inverse = np.linalg.inv(sub_R)
     # matrix_temp = beta_transpose @ R_inverse
@@ -151,9 +145,10 @@ def compute_vcl(sub_R, sub_gamma):
     loss_value = - sub_gamma.T @ np.linalg.solve(sub_R, sub_gamma)
     return loss_value
 
-def view_subset_selection(R,gamma, num_candidate_views, K, r_2):
 
+def angle_subset_selection(R, gamma, angle_candidates, K, r_2):
     max_num_iteration = 100
+    num_candidate_views = len(angle_candidates)
     num_candidates = int(r_2 * (num_candidate_views - K))
     if num_candidates < 5:
         num_candidates = 5
@@ -194,4 +189,96 @@ def view_subset_selection(R,gamma, num_candidate_views, K, r_2):
             print(f'Early stopping at iteration {i}, no change in indices')
             break
 
-    return indices_chosen
+    return angle_candidates[indices_chosen]
+
+
+def create2d_mask(cur_slice):
+    y_indices, x_indices = np.where(cur_slice > 0)
+
+    # Calculate x_min, x_max, y_min, y_max
+    x_min, x_max = x_indices.min(), x_indices.max()
+    y_min, y_max = y_indices.min(), y_indices.max()
+
+    # Calculate the center of the circle
+    x_center = (x_min + x_max) / 2
+    y_center = (y_min + y_max) / 2
+
+    # Calculate the radius of the circle as the maximum distance from the center
+    radius = np.max(np.sqrt((x_indices - x_center) ** 2 + (y_indices - y_center) ** 2))
+    radius_bigger = 1.01 * radius
+
+    # Generate the mask: if the distance from the center is less than the radius, set value to 1
+    h, w = cur_slice.shape
+    y = np.arange(h)[:, None]
+    x = np.arange(w)[None, :]
+
+    # Compute squared distances
+    dist2 = (x - x_center) ** 2 + (y - y_center) ** 2
+
+    # Build boolean mask in one shot
+    mask = (dist2 <= radius_bigger ** 2).astype(np.float32)
+
+    return mask
+
+
+def create3d_mask(phantom, repeat=False):
+    if repeat:
+        mask2d = create2d_mask(phantom[:, :, 0])
+        mask = np.repeat(mask2d[:, :, np.newaxis], phantom.shape[2], axis=2)
+
+    else:
+        mask = np.zeros(phantom.shape)
+        for i in range(phantom.shape[2]):
+            mask[:, :, i] = create2d_mask(phantom[:, :, i])
+
+    return mask
+
+
+def subsampling3d_indices(mask, r_1):
+    num_rows, num_cols, num_slices = mask.shape
+    num_samples = int(num_rows * num_cols * r_1)
+
+    random_indices = []
+    for slice_idx in range(num_slices):
+        # Randomly select unique indices for this slice
+        mask_indices = np.where(mask[:, :, slice_idx] == 1)  # Get 2D indices where mask == 1
+        # Ensure num_samples does not exceed the number of available points
+        if num_samples > len(mask_indices[0]):
+            num_samples_temp = len(mask_indices[0])
+        else:
+            num_samples_temp = num_samples
+        slice_choice = np.random.choice(len(mask_indices[0]), num_samples_temp, replace=False)
+        row_indices = mask_indices[0][slice_choice]
+        col_indices = mask_indices[1][slice_choice]
+        random_indices.append((row_indices, col_indices, slice_idx * np.ones(num_samples_temp, dtype=int)))
+
+    # Convert to a single index array for advanced indexing
+    random_indices = tuple(np.concatenate(idx) for idx in zip(*random_indices))
+
+    return random_indices
+
+
+def subsampling2d_indices(mask, num_slices, r_1):
+    num_rows, num_cols = mask.shape
+    num_samples = int(num_rows * num_cols * r_1)
+    mask_indices = np.where(mask[:, :] == 1)  # Get 2D indices where mask == 1
+    # Ensure num_samples does not exceed the number of available points
+    if num_samples > len(mask_indices[0]):
+        num_samples = len(mask_indices[0])
+    slice_choice = np.random.choice(len(mask_indices[0]), num_samples, replace=False)
+    row_inds = mask_indices[0][slice_choice]
+    col_inds = mask_indices[1][slice_choice]
+
+    row_inds_3d = np.tile(row_inds, num_slices)
+    col_inds_3d = np.tile(col_inds, num_slices)
+    slice_inds_3d = np.repeat(np.arange(num_slices, dtype=int), num_samples)
+
+    # pack into the same format as your other function
+    random_indices_3d = (row_inds_3d, col_inds_3d, slice_inds_3d)
+
+    random_indices_2d = row_inds * num_cols + col_inds
+    #random_indices_2d = np.sort(random_indices_2d)
+    random_indices_2d = jnp.array(random_indices_2d)
+    #random_indices_2d = jnp.array(random_indices_raster, dtype=jnp.int32)[None, :]  # shape (1, N)
+
+    return random_indices_3d, random_indices_2d, (row_inds, col_inds)

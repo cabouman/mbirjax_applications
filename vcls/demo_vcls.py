@@ -6,7 +6,6 @@ import jax.numpy as jnp
 import mbirjax as mj
 import demo_utils as dut
 import vcls_utils as vut
-import os
 
 import numpy as np
 
@@ -17,9 +16,6 @@ if __name__ == '__main__':
     # Sets user selectable parameters
     ##############################################
 
-    # Set path to vcls temporary scratch space
-    data_store_dir = f'./recon_bases_data/polygon_data'
-
     # Set geometry parameters
     num_object_rows = 128
     num_object_slices = 64
@@ -28,7 +24,7 @@ if __name__ == '__main__':
 
     # Cone-beam geometry parameters
     magnification = 2.0
-    cone_angle = (50/180)*np.pi     # cone angle in radians
+    cone_angle = (15/180)*np.pi     # cone angle in radians:  50/180 corresponds to 50 degrees
 
     # Set vcls algorithm parameters
     voxel_sampling_rate = 0.01      # r_1 in paper
@@ -42,33 +38,33 @@ if __name__ == '__main__':
     # Calculate function parameters from user parameters
     ####################################################
 
+    multiprocessing.freeze_support()  # We need this to do multiprocessing in vcls_utils.parallel_cov_matrix_computation
+
     # Create reference object
-    multiprocessing.freeze_support()
-    """**Set the geometry parameters**"""
-    # Generate polygon phantom
     print('Creating phantom')
     reference_object = dut.gen_polygon_phantom(num_rows=num_object_rows, num_slices=num_object_slices)
     print(f'reference_object shape: {reference_object.shape}')
 
     # Setup ct_params values
-    ct_params = {}
-    # Choose the geometry type
-    ct_params['geometry_type'] = 'cone'  # 'cone' or 'parallel'
+    geometry_type = 'cone'  # 'cone' or 'parallel'
 
     # Set parameters for the problem size - you can vary these, but if you make num_det_rows very small relative to
     # channels, then the generated phantom may not have an interior.
-    ct_params['num_views'] = num_candidate_views
-    ct_params['num_det_rows'] = reference_object.shape[2]
-    ct_params['num_det_channels'] = reference_object.shape[0]
-    ct_params['sinogram_shape'] = (ct_params['num_views'], ct_params['num_det_rows'], ct_params['num_det_channels'])
+    num_views = num_candidate_views
+    num_det_rows = reference_object.shape[2]
+    num_det_channels = reference_object.shape[0]
+    sinogram_shape = (num_views, num_det_rows, num_det_channels)
 
     # For cone beam geometry, we need to describe the distances source to detector and source to rotation axis.
     # np.Inf is an allowable value, in which case this is essentially parallel beam
-    ct_params['source_detector_dist'] = (1.0/np.tan(cone_angle/2.0)) * (ct_params['num_det_channels']/2)
-    ct_params['source_iso_dist'] = ct_params['source_detector_dist'] / magnification
+    source_detector_dist = (1.0/np.tan(cone_angle/2.0)) * (num_det_channels/2)
+    source_iso_dist = source_detector_dist / magnification
 
     # Compute view angles
-    angle_candidates = jnp.linspace(start_angle, end_angle, ct_params['num_views'], endpoint=False)
+    angle_candidates = jnp.linspace(start_angle, end_angle, num_views, endpoint=False)
+
+    # Create the model to contain all the geometry information
+    ct_model = vut.get_ct_model(geometry_type, sinogram_shape, angle_candidates, source_detector_dist, source_iso_dist)
 
     # Set vcls parameters
     vcls_params = {}
@@ -79,7 +75,6 @@ if __name__ == '__main__':
     #vcls_params['num_cpus'] = mp.cpu_count()
     vcls_params['num_cpus'] = 4
 
-    os.makedirs(data_store_dir, exist_ok=True)
     time0 = time.time()
 
     ##############################################
@@ -87,7 +82,7 @@ if __name__ == '__main__':
     ##############################################
 
     # #### run vcls to select views ####
-    optimal_angles = vut.vcls(reference_object, angle_candidates, ct_params, vcls_params, data_store_dir)
+    optimal_angles = vut.vcls(reference_object, ct_model, vcls_params)
 
     # Record elapsed time
     elapsed = time.time() - time0
@@ -95,9 +90,25 @@ if __name__ == '__main__':
 
     # Convert to degrees and display
     angles_arr = jnp.stack(optimal_angles) * 180 / np.pi
-    angles_arr = np.sort(angles_arr)
+    angles_arr = np.sort(angles_arr).flatten()
     formatted = np.array2string(angles_arr, precision=3, suppress_small=True, separator=', ')
     print('chosen angles: ' + formatted)
 
     # Display selected angles
     dut.show_image_with_angles(reference_object[:, :, 0], angles_arr)
+
+    # Display the default and optimal angle recons
+    new_num_views = len(angles_arr)
+    sinogram_shape = (new_num_views, sinogram_shape[1], sinogram_shape[2])
+
+    # Do a recon with optimal angles
+    ct_model = vut.copy_ct_model(ct_model, sinogram_shape, angles_arr)
+    sinogram_optimal_angles = ct_model.forward_project(reference_object)
+    recon_optimal_angles, recon_params = ct_model.recon(sinogram_optimal_angles)
+
+    angles = jnp.linspace(start_angle, end_angle, new_num_views, endpoint=False)
+    ct_model = vut.copy_ct_model(ct_model, sinogram_shape, angles)
+    sinogram_uniform = ct_model.forward_project(reference_object)
+    recon_uniform, recon_params_uniform = ct_model.recon(sinogram_uniform)
+
+    mj.slice_viewer(recon_uniform, recon_optimal_angles, title='Recon from uniformly spaced angles (left) \nand optimal angles (right)')
