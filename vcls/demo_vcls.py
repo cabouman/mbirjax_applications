@@ -93,19 +93,19 @@ if __name__ == '__main__':
     angle_candidates = jnp.linspace(start_angle, end_angle, ct_params['num_views'], endpoint=False)
 
     # vcls parameters
-    vcls_parms = {}
-    vcls_parms['K'] = num_selected_views # num of selected views
-    vcls_parms['r_1'] = 0.001
-    vcls_parms['r_2'] = 0.1
-    vcls_parms['3d_subsample'] = False # Set to True to enable subsampling of different voxel indices across slices
-    #vcls_parms['num_cpus'] = mp.cpu_count()
-    vcls_parms['num_cpus'] = 4
+    vcls_params = {}
+    vcls_params['K'] = num_selected_views # num of selected views
+    vcls_params['r_1'] = 0.01
+    vcls_params['r_2'] = 0.1
+    vcls_params['3d_subsample'] = False # Set to True to enable subsampling of different voxel indices across slices
+    #vcls_params['num_cpus'] = mp.cpu_count()
+    vcls_params['num_cpus'] = 4
 
     os.makedirs(data_store_dir, exist_ok=True)
     time0 = time.time()
 
     # #### run vcls to select views ####
-    optimal_angles = vut.vcls(reference_object, angle_candidates, ct_params, vcls_parms, data_store_dir)
+    optimal_angles = vut.vcls(reference_object, angle_candidates, ct_params, vcls_params, data_store_dir)
 
     # Record elapsed time
     elapsed = time.time() - time0
