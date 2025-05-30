@@ -4,74 +4,35 @@ import numpy as np
 import time
 import jax.numpy as jnp
 import mbirjax as mj
-import _utils as ut
+import demo_utils as dut
 import vcls_utils as vut
 import os
 
 import numpy as np
-import matplotlib.pyplot as plt
 
-def show_image_with_angles(image: np.ndarray, angles_deg: np.ndarray) -> None:
-    """
-    Display a square image and overlay lines representing angles.
-
-    Parameters
-    ----------
-    image : np.ndarray
-        A 2D square numpy array representing the image.
-    angles_deg : np.ndarray
-        A 1D array of angles in degrees. Each angle will be shown as a line
-        through the image center in both directions.
-
-    Returns
-    -------
-    None
-    """
-    if image.ndim != 2 or image.shape[0] != image.shape[1]:
-        raise ValueError("Image must be a square 2D array")
-
-    side_length = image.shape[0]
-    center = side_length / 2
-    radius = side_length / 2  # Half-length of the line to reach from center to edge
-
-    # Plot the image
-    plt.imshow(image, cmap='gray', origin='upper', extent=[0, side_length, side_length, 0])
-    plt.gca().set_aspect('equal')
-
-    # Overlay lines for each angle
-    colors = plt.cm.tab10(np.arange(len(angles_deg)) % 10)
-
-    for i, angle_deg in enumerate(angles_deg):
-        theta = np.deg2rad(angle_deg)
-        dx = radius * np.cos(theta)
-        dy = radius * np.sin(theta)
-
-        x0, x1 = center - dx, center + dx
-        y0, y1 = center - dy, center + dy
-
-        plt.plot([x0, x1], [y0, y1], color=colors[i], linewidth=2)
-
-    plt.title("Image with Overlaid Angles")
-    plt.axis('off')
-    plt.show()
 
 if __name__ == '__main__':
+
+    # Define path to vcls temporary scratch space
+    data_store_dir = f'./recon_bases_data/polygon_data'
 
     # Define primary parameters
     num_object_rows = 128
     num_object_slices = 64
     num_candidate_views = 128
     num_selected_views = 30
-    data_store_dir = f'./recon_bases_data/polygon_data'
 
     # Do setup
     multiprocessing.freeze_support()
     """**Set the geometry parameters**"""
     # Generate polygon phantom
     print('Creating phantom')
-    reference_object = ut.gen_polygon_phantom(num_rows=num_object_rows, num_slices=num_object_slices)
+    reference_object = dut.gen_polygon_phantom(num_rows=num_object_rows, num_slices=num_object_slices)
     print(f'reference_object shape: {reference_object.shape}')
 
+    ###########################################
+    # Set ct_params values
+    ###########################################
     ct_params = {}
     # Choose the geometry type
     ct_params['geometry_type'] = 'cone'  # 'cone' or 'parallel'
@@ -117,4 +78,4 @@ if __name__ == '__main__':
     formatted = np.array2string(angles_arr, precision=3, suppress_small=True, separator=', ')
     print('chosen angles: ' + formatted)
 
-    show_image_with_angles(reference_object[:, :, 0], angles_arr)
+    dut.show_image_with_angles(reference_object[:, :, 0], angles_arr)

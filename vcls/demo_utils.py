@@ -1,6 +1,8 @@
 import numpy as np
 import jax.numpy as jnp
 from matplotlib.path import Path
+import matplotlib.pyplot as plt
+
 import mbirjax as mj
 
 def gen_polygon_phantom(num_rows=512, num_slices=256):
@@ -157,3 +159,47 @@ def Subsampling2DIndices(mask, num_slices, r_1):
 
     return random_indices_3d, random_indices_2d, (row_inds,col_inds)
 
+
+def show_image_with_angles(image: np.ndarray, angles_deg: np.ndarray) -> None:
+    """
+    Display a square image and overlay lines representing angles.
+
+    Parameters
+    ----------
+    image : np.ndarray
+        A 2D square numpy array representing the image.
+    angles_deg : np.ndarray
+        A 1D array of angles in degrees. Each angle will be shown as a line
+        through the image center in both directions.
+
+    Returns
+    -------
+    None
+    """
+    if image.ndim != 2 or image.shape[0] != image.shape[1]:
+        raise ValueError("Image must be a square 2D array")
+
+    side_length = image.shape[0]
+    center = side_length / 2
+    radius = side_length / 2  # Half-length of the line to reach from center to edge
+
+    # Plot the image
+    plt.imshow(image, cmap='gray', origin='upper', extent=[0, side_length, side_length, 0])
+    plt.gca().set_aspect('equal')
+
+    # Overlay lines for each angle
+    colors = plt.cm.tab10(np.arange(len(angles_deg)) % 10)
+
+    for i, angle_deg in enumerate(angles_deg):
+        theta = np.deg2rad(angle_deg)
+        dx = radius * np.cos(theta)
+        dy = radius * np.sin(theta)
+
+        x0, x1 = center - dx, center + dx
+        y0, y1 = center - dy, center + dy
+
+        plt.plot([x0, x1], [y0, y1], color=colors[i], linewidth=2)
+
+    plt.title("Image with Overlaid Angles")
+    plt.axis('off')
+    plt.show()

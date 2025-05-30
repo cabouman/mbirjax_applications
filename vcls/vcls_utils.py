@@ -2,7 +2,7 @@ import numpy as np
 import jax.numpy as jnp
 import mbirjax as mj
 import tqdm  # Included in mbirjax
-import _utils as ut
+import demo_utils as ut
 import os
 import multiprocessing as mp
 import time
