@@ -22,7 +22,15 @@ if __name__ == '__main__':
     num_candidate_views = 128
     num_selected_views = 30
 
-    # Do setup
+    # Cone-beam geometry parameters
+    magnification = 2.0
+    cone_angle = (50/180)*np.pi     # cone angle in radians
+
+    # Set vcls algorithm parameters
+    voxel_sampling_rate = 0.01      # r_1 in paper
+    view_sampling_rate = 0.1        # r_2 in paper
+
+    # Create reference object
     multiprocessing.freeze_support()
     """**Set the geometry parameters**"""
     # Generate polygon phantom
@@ -30,9 +38,7 @@ if __name__ == '__main__':
     reference_object = dut.gen_polygon_phantom(num_rows=num_object_rows, num_slices=num_object_slices)
     print(f'reference_object shape: {reference_object.shape}')
 
-    ###########################################
-    # Set ct_params values
-    ###########################################
+    # Setup ct_params values
     ct_params = {}
     # Choose the geometry type
     ct_params['geometry_type'] = 'cone'  # 'cone' or 'parallel'
@@ -46,18 +52,18 @@ if __name__ == '__main__':
 
     # For cone beam geometry, we need to describe the distances source to detector and source to rotation axis.
     # np.Inf is an allowable value, in which case this is essentially parallel beam
-    ct_params['source_detector_dist'] = 4 * ct_params['num_det_channels']
-    ct_params['source_iso_dist'] = ct_params['source_detector_dist'] / 2
+    ct_params['source_detector_dist'] = (1.0/np.tan(cone_angle/2.0)) * (ct_params['num_det_channels']/2)
+    ct_params['source_iso_dist'] = ct_params['source_detector_dist'] / magnification
 
     start_angle = 0
     end_angle = 2 * np.pi
     angle_candidates = jnp.linspace(start_angle, end_angle, ct_params['num_views'], endpoint=False)
 
-    # vcls parameters
+    # Set vcls parameters
     vcls_params = {}
     vcls_params['K'] = num_selected_views # num of selected views
-    vcls_params['r_1'] = 0.01
-    vcls_params['r_2'] = 0.1
+    vcls_params['r_1'] = voxel_sampling_rate
+    vcls_params['r_2'] = view_sampling_rate
     vcls_params['3d_subsample'] = False # Set to True to enable subsampling of different voxel indices across slices
     #vcls_params['num_cpus'] = mp.cpu_count()
     vcls_params['num_cpus'] = 4
