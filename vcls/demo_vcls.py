@@ -20,7 +20,7 @@ if __name__ == '__main__':
     num_object_rows = 128
     num_object_slices = 64
     num_candidate_views = 128
-    num_selected_views = 30
+    num_selected_views = 25
 
     # Cone-beam geometry parameters
     magnification = 2.0
@@ -111,4 +111,4 @@ if __name__ == '__main__':
     sinogram_uniform = ct_model.forward_project(reference_object)
     recon_uniform, recon_params_uniform = ct_model.recon(sinogram_uniform)
 
-    mj.slice_viewer(recon_uniform, recon_optimal_angles, title='Recon from uniformly spaced angles (left) \nand optimal angles (right)')
+    mj.slice_viewer(recon_uniform, recon_optimal_angles, slice_label=['Uniform Angles', 'VCLS Angles'], title='Recon from uniformly spaced angles (left) \nand optimal angles (right)')
