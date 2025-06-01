@@ -1,14 +1,29 @@
-import numpy as np
-import mbirjax as mj
-import jax.numpy as jnp
-import tqdm  # Included in mbirjax
 import os
 import multiprocessing as mp
 import random
 import tempfile
+import warnings
+
+import numpy as np
+import mbirjax as mj
+import jax.numpy as jnp
+import tqdm  # Included in mbirjax
 
 
 def get_ct_model(geometry_type, sinogram_shape, angles, source_detector_dist=None, source_iso_dist=None):
+    """
+    Create an instance of TomographyModel with the given parameters
+
+    Args:
+        geometry_type (str): 'parallel' or 'cone'
+        sinogram_shape (tuple list of int): (num_views, num_rows, num_channels)
+        angles (ndarray of float): 1D vector of projection angles in radians
+        source_detector_dist (float or None, optional): Distance in ALU from source to detector.  Defaults to None for geometries that don't need this.
+        source_iso_dist (float or None, optional): Distance in ALU from source to iso.  Defaults to None for geometries that don't need this.
+
+    Returns:
+        An instance of ConeBeamModel or ParallelBeam model
+    """
     if geometry_type == 'cone':
         model = mj.ConeBeamModel(sinogram_shape, angles, source_detector_dist=source_detector_dist,
                                  source_iso_dist=source_iso_dist)
@@ -21,21 +36,52 @@ def get_ct_model(geometry_type, sinogram_shape, angles, source_detector_dist=Non
 
 
 def copy_ct_model(ct_model, new_sinogram_shape, new_angles):
-    if 'parallel' in str(type(ct_model)):
-        geometry_type = 'parallel'
-        new_model = get_ct_model(geometry_type, new_sinogram_shape, new_angles)
+    """
+    Create a TomographyModel with the same type and parameters as the given ct_model except with the input sinogram
+    shape and angles.
 
-    elif 'cone' in str(type(ct_model)):
-        geometry_type = 'cone'
-        source_detector_dist, source_iso_dist = ct_model.get_params(['source_detector_dist', 'source_iso_dist'])
-        new_model = get_ct_model(geometry_type, new_sinogram_shape, new_angles, source_detector_dist, source_iso_dist)
+    Args:
+        ct_model (TomographyModel): The model to copy.
+        new_sinogram_shape (tuple list of int): (num_views, num_rows, num_channels)
+        new_angles (ndarray of float): 1D vector of projection angles in radians
+
+    Returns:
+        An instance of ConeBeamModel or ParallelBeam model
+    """
+    required_param_names = ct_model.get_required_param_names()
+    required_params, other_params = ct_model.get_required_params_from_dict(ct_model.params,
+                                                                           required_param_names=required_param_names,
+                                                                           values_only=True)
+    required_params['sinogram_shape'] = new_sinogram_shape
+    required_params['angles'] = new_angles
+    new_model = type(ct_model)(**required_params)
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        new_model.set_params(**other_params)
 
     return new_model
 
 
+def max_abs_neighbor_diff(arr):
+    padded = np.pad(arr, pad_width=1, mode='reflect')
+    center = arr
+    max_diff = np.zeros_like(arr)
+
+    # Define the directional offsets: (di, dj)
+    directions = [(-1, 0), (1, 0), (0, -1), (0, 1)]  # up, down, left, right
+
+    for di, dj in directions:
+        neighbor = padded[1 + di : 1 + di + arr.shape[0],
+                          1 + dj : 1 + dj + arr.shape[1]]
+        diff = np.abs(center - neighbor)
+        np.maximum(max_diff, diff, out=max_diff)
+
+    return max_diff
+
+
 def vcls(reference_object, ct_model, vcls_params):
     num_views = ct_model.get_params('sinogram_shape')[0]
-    angle_candidates = np.asarray(ct_model.get_params('view_params_array'))
+    angle_candidates = np.asarray(ct_model.get_params('angles'))
     with tempfile.TemporaryDirectory() as data_store_dir:
         # Compute recon bases
         gamma = compute_recon_bases(reference_object, ct_model, vcls_params, data_store_dir)
@@ -78,7 +124,7 @@ def compute_recon_bases(reference_object, ct_model, vcls_params, data_store_dir)
         phantom_sub_values = reference_object[sub_indices_3d]
 
     num_views = ct_model.get_params('sinogram_shape')[0]
-    angle_candidates = np.asarray(ct_model.get_params('view_params_array'))
+    angle_candidates = np.asarray(ct_model.get_params('angles'))
     gamma = np.zeros((num_views, 1))  # Inner product between reference object and recon from a single angle
 
     # Compute recon bases - choose one view at a time and do an fbp/fdk from that.
@@ -114,8 +160,7 @@ def compute_cov_matrix_part(i, num_views, data_store_dir):
     recon_i = np.load(os.path.join(data_store_dir, f'recon_view{i}.npy'))
     for j in range(i, num_views):
         recon_j = np.load(os.path.join(data_store_dir, f'recon_view{j}.npy'))
-        product = np.multiply(recon_i, recon_j)
-        row[j] = np.sum(product)
+        row[j] = np.dot(recon_i, recon_j)
 
     return i, row
 
