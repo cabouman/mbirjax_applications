@@ -89,6 +89,13 @@ def vcls(reference_object, ct_model, vcls_params):
         # Compute inner product between recon bases
         R = parallel_cov_matrix_computation(num_views, vcls_params['num_cpus'], data_store_dir)
 
+    import matplotlib.pyplot as plt
+    plt.imshow(R)
+    plt.title('Covariance matrix')
+    plt.show()
+    plt.plot(gamma, '.')
+    plt.title('Gamma')
+    plt.show()
     # Find optimal view angles
     optimal_angles = angle_subset_selection(R, gamma, angle_candidates, vcls_params['K'], vcls_params['r_2'])
 
