@@ -95,7 +95,7 @@ if __name__ == '__main__':
     print('chosen angles: ' + formatted)
 
     # Display selected angles
-    dut.show_image_with_angles(reference_object[:, :, 0], angles_arr)
+    dut.show_image_with_angles(reference_object[:, :, 0], angles_rad=angles_arr)
 
     # Display the default and optimal angle recons
     new_num_views = len(angles_arr)
@@ -111,4 +111,5 @@ if __name__ == '__main__':
     sinogram_uniform = ct_model.forward_project(reference_object)
     recon_uniform, recon_params_uniform = ct_model.recon(sinogram_uniform)
 
-    mj.slice_viewer(recon_uniform, recon_optimal_angles, slice_label=['Uniform Angles', 'VCLS Angles'], title='Recon from uniformly spaced angles (left) \nand optimal angles (right)')
+    mj.slice_viewer(reference_object, recon_uniform, recon_optimal_angles, slice_label=['Ref object', 'Uniform Angles', 'VCLS Angles'],
+                    title='Reference object (left) plus Recons from \nuniformly spaced angles (middle) and optimal angles (right)')
