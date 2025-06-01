@@ -89,8 +89,7 @@ if __name__ == '__main__':
     print('Elapsed time for selected views is {:.3f} seconds'.format(elapsed))
 
     # Convert to degrees and display
-    angles_arr = jnp.stack(optimal_angles) * 180 / np.pi
-    angles_arr = np.sort(angles_arr).flatten()
+    angles_arr = np.sort(optimal_angles).flatten()
     formatted = np.array2string(angles_arr, precision=3, suppress_small=True, separator=', ')
     print('chosen angles: ' + formatted)
 
