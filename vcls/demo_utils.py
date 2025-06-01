@@ -70,24 +70,31 @@ def fill_convex_polygon(array: np.ndarray, vertices: np.ndarray, fill_value: flo
     array[mask] = fill_value
 
 
-def show_image_with_angles(image: np.ndarray, angles_deg: np.ndarray) -> None:
+def show_image_with_angles(image: np.ndarray, *, angles_deg: np.ndarray = None, angles_rad: np.ndarray = None) -> None:
     """
-    Display a square image and overlay lines representing angles.
+    Display a square image and overlay lines representing angles.  Exactly one of angles_deg or angles_rad must be
+    None, and the other must be an array of floats
 
-    Parameters
-    ----------
-    image : np.ndarray
-        A 2D square numpy array representing the image.
-    angles_deg : np.ndarray
-        A 1D array of angles in degrees. Each angle will be shown as a line
-        through the image center in both directions.
+    Args:
+        image : np.ndarray
+            A 2D square numpy array representing the image.
+        angles_deg : np.ndarray
+            A 1D array of angles in degrees. Each angle will be shown as a line
+            through the image center in both directions.
+        angles_rad : np.ndarray
+            A 1D array of angles in radians. Each angle will be shown as a line
+            through the image center in both directions.
 
-    Returns
-    -------
-    None
+    Returns:
+        None
     """
     if image.ndim != 2 or image.shape[0] != image.shape[1]:
         raise ValueError("Image must be a square 2D array")
+    if (angles_deg is None and angles_rad is None) or (angles_deg is not None and angles_rad is not None):
+        raise ValueError("Exactly one of angles_deg or angles_rad must be None, and the other must be an array of floats")
+
+    if angles_rad is None:
+        angles_rad = np.deg2rad(angles_deg)
 
     side_length = image.shape[0]
     center = side_length / 2
@@ -98,10 +105,9 @@ def show_image_with_angles(image: np.ndarray, angles_deg: np.ndarray) -> None:
     plt.gca().set_aspect('equal')
 
     # Overlay lines for each angle
-    colors = plt.cm.tab10(np.arange(len(angles_deg)) % 10)
+    colors = plt.cm.tab10(np.arange(len(angles_rad)) % 10)
 
-    for i, angle_deg in enumerate(angles_deg):
-        theta = np.deg2rad(angle_deg)
+    for i, theta in enumerate(angles_rad):
         dx = radius * np.cos(theta)
         dy = radius * np.sin(theta)
 
