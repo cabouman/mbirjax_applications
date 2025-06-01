@@ -28,7 +28,7 @@ if __name__ == '__main__':
 
     # Set vcls algorithm parameters
     voxel_sampling_rate = 0.01      # r_1 in paper
-    view_sampling_rate = 0.1        # r_2 in paper
+    view_sampling_rate = 0.5       # r_2 in paper
 
     # Set view angle limits
     start_angle = 0
@@ -102,7 +102,8 @@ if __name__ == '__main__':
     sinogram_shape = (new_num_views, sinogram_shape[1], sinogram_shape[2])
 
     # Do a recon with optimal angles
-    ct_model = vut.copy_ct_model(ct_model, sinogram_shape, angles_arr)
+    optimal_angles = np.sort(jnp.stack(optimal_angles)).flatten()
+    ct_model = vut.copy_ct_model(ct_model, sinogram_shape, optimal_angles)
     sinogram_optimal_angles = ct_model.forward_project(reference_object)
     recon_optimal_angles, recon_params = ct_model.recon(sinogram_optimal_angles)
 

@@ -119,9 +119,9 @@ def compute_recon_bases(reference_object, ct_model, vcls_params, data_store_dir)
         sub_indices = subsampling3d_indices(mask, vcls_params['r_1'])
         phantom_sub_values = reference_object[sub_indices]
     else:
-        sub_indices_3d, random_indices_2d, row_col_indices = subsampling2d_indices(mask, reference_object.shape[2],
-                                                                                   vcls_params['r_1'])
-        phantom_sub_values = reference_object[sub_indices_3d]
+        random_indices_2d, row_col_indices = subsampling2d_indices(mask, vcls_params['r_1'])
+        ref_flat = reference_object.reshape(reference_object.shape[0] * reference_object.shape[1], reference_object.shape[2])
+        phantom_sub_values = ref_flat[random_indices_2d, :].flatten()
 
     num_views = ct_model.get_params('sinogram_shape')[0]
     angle_candidates = np.asarray(ct_model.get_params('angles'))
@@ -182,12 +182,8 @@ def parallel_cov_matrix_computation(num_views, num_cpus, data_store_dir):
 
 
 def compute_vcl(sub_R, sub_gamma):
-    # beta_transpose = np.transpose(sub_gamma)
-    # R_inverse = np.linalg.inv(sub_R)
-    # matrix_temp = beta_transpose @ R_inverse
-    # loss_value = (matrix_temp @ sub_gamma) * -1
-
     loss_value = - sub_gamma.T @ np.linalg.solve(sub_R, sub_gamma)
+
     return loss_value
 
 
@@ -303,7 +299,7 @@ def subsampling3d_indices(mask, r_1):
     return random_indices
 
 
-def subsampling2d_indices(mask, num_slices, r_1):
+def subsampling2d_indices(mask, r_1):
     num_rows, num_cols = mask.shape
     num_samples = int(num_rows * num_cols * r_1)
     mask_indices = np.where(mask[:, :] == 1)  # Get 2D indices where mask == 1
@@ -313,17 +309,7 @@ def subsampling2d_indices(mask, num_slices, r_1):
     slice_choice = np.random.choice(len(mask_indices[0]), num_samples, replace=False)
     row_inds = mask_indices[0][slice_choice]
     col_inds = mask_indices[1][slice_choice]
-
-    row_inds_3d = np.tile(row_inds, num_slices)
-    col_inds_3d = np.tile(col_inds, num_slices)
-    slice_inds_3d = np.repeat(np.arange(num_slices, dtype=int), num_samples)
-
-    # pack into the same format as your other function
-    random_indices_3d = (row_inds_3d, col_inds_3d, slice_inds_3d)
-
     random_indices_2d = row_inds * num_cols + col_inds
-    #random_indices_2d = np.sort(random_indices_2d)
     random_indices_2d = jnp.array(random_indices_2d)
-    #random_indices_2d = jnp.array(random_indices_raster, dtype=jnp.int32)[None, :]  # shape (1, N)
 
-    return random_indices_3d, random_indices_2d, (row_inds, col_inds)
+    return random_indices_2d, (row_inds, col_inds)
