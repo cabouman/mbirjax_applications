@@ -19,20 +19,20 @@ if __name__ == '__main__':
     # Set geometry parameters
     num_object_rows = 128
     num_object_slices = 64
-    num_candidate_views = 128
-    num_selected_views = 25
-
-    # Cone-beam geometry parameters
     magnification = 2.0
     cone_angle = (15/180)*np.pi     # cone angle in radians:  50/180 corresponds to 50 degrees
-
-    # Set vcls algorithm parameters
-    voxel_sampling_rate = 0.01      # r_1 in paper
-    view_sampling_rate = 0.5       # r_2 in paper
-
-    # Set view angle limits
+    num_candidate_views = 128
     start_angle = 0
     end_angle = 2 * np.pi
+
+    # Set VCLS parameters
+    num_selected_views = 25
+    voxel_sampling_rate = 0.01     # r_1 in paper
+    view_sampling_rate = 1.0       # r_2 in paper
+    fast_sample = True
+    num_cpus = multiprocessing.cpu_count()
+    print('Number of CPUs: ', num_cpus)
+
 
     ####################################################
     # Calculate function parameters from user parameters
@@ -66,25 +66,13 @@ if __name__ == '__main__':
     # Create the model to contain all the geometry information
     ct_model = vut.get_ct_model(geometry_type, sinogram_shape, angle_candidates, source_detector_dist, source_iso_dist)
 
-    # Set vcls parameters
-    vcls_params = {}
-    vcls_params['K'] = num_selected_views # num of selected views
-    vcls_params['r_1'] = voxel_sampling_rate
-    vcls_params['r_2'] = view_sampling_rate
-    vcls_params['3d_subsample'] = False # Set to True to enable subsampling of different voxel indices across slices
-    #vcls_params['num_cpus'] = mp.cpu_count()
-    vcls_params['num_cpus'] = 4
-
-    time0 = time.time()
-
     ##############################################
     # Run VCLS to Select Views and Display Results
     ##############################################
 
     # #### run vcls to select views ####
-    optimal_angles = vut.vcls(ct_model, reference_object, vcls_params, verbose=1)
-
-    # Record elapsed time
+    time0 = time.time()
+    optimal_angles = vut.vcls(ct_model, reference_object, K=num_selected_views, r_1=voxel_sampling_rate, r_2=view_sampling_rate, fast_sample=fast_sample, num_cpus=num_cpus, verbose=1)
     elapsed = time.time() - time0
     print('Elapsed time for selected views is {:.3f} seconds'.format(elapsed))
 

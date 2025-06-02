@@ -79,15 +79,31 @@ def max_abs_neighbor_diff(arr):
     return max_diff
 
 
-def vcls(ct_model, reference_object, vcls_params, verbose=0):
+
+def vcls(ct_model, reference_object, K, r_1=0.001, r_2=0.01, fast_sample=True, num_cpus=4, verbose=0):
+    """
+    Algorithm for selecting the optimal view angles based on the minimization of the View Correlation Loss (VCL).
+
+    Args:
+        ct_model:
+        reference_object:
+        K: Number of view angles to select.
+        r_1: Voxel sampling rate.
+        r_2: View sampling rate for stochastic minimization of the View Correlation Loss (VCL).
+        num_cpus: Number of CPUs to use.
+        verbose:
+
+    Returns:
+
+    """
     num_views = ct_model.get_params('sinogram_shape')[0]
     angle_candidates = np.asarray(ct_model.get_params('angles'))
     with tempfile.TemporaryDirectory() as data_store_dir:
         # Compute recon bases
-        gamma = compute_recon_bases(ct_model, reference_object, vcls_params, data_store_dir)
+        gamma = compute_recon_bases(ct_model, reference_object, K=K, r_1=r_1, fast_sample=True, data_store_dir=data_store_dir)
 
         # Compute inner product between recon bases
-        R = parallel_cov_matrix_computation(num_views, vcls_params['num_cpus'], data_store_dir)
+        R = parallel_cov_matrix_computation(num_views, num_cpus, data_store_dir)
 
     if verbose > 0:
         # plot the the covariance matrix and gamma
@@ -100,12 +116,13 @@ def vcls(ct_model, reference_object, vcls_params, verbose=0):
         plt.show()
 
     # Find optimal view angles
-    optimal_angles = angle_subset_selection(R, gamma, angle_candidates, vcls_params['K'], vcls_params['r_2'])
+    optimal_angles = angle_subset_selection(R, gamma, angle_candidates, K, r_2)
 
     return optimal_angles
 
 
-def compute_recon_bases(ct_model, reference_object, vcls_params, data_store_dir):
+
+def compute_recon_bases(ct_model, reference_object, K, r_1, fast_sample, data_store_dir):
     # Generate synthetic sinogram data
     print('Creating sinogram')
     sinogram = ct_model.forward_project(reference_object)
@@ -116,22 +133,22 @@ def compute_recon_bases(ct_model, reference_object, vcls_params, data_store_dir)
     # mj.slice_viewer(sinogram, slice_axis=0, title=title, slice_label='View')
 
     # define ROI
-    if vcls_params['3d_subsample']:
-        mask = create3d_mask(reference_object)
-    else:
+    if fast_sample:
         mask = create2d_mask(reference_object[:, :, 0])
+    else:
+        mask = create3d_mask(reference_object)
 
     # View ROI
     # mj.slice_viewer(reference_object, mask, slice_axis=2, slice_label='View')
 
     # subsampling voxel indices in ROI
-    if vcls_params['3d_subsample']:
-        sub_indices = subsampling3d_indices(mask, vcls_params['r_1'])
-        phantom_sub_values = reference_object[sub_indices]
-    else:
-        random_indices_2d, row_col_indices = subsampling2d_indices(mask, vcls_params['r_1'])
+    if fast_sample:
+        random_indices_2d, row_col_indices = subsampling2d_indices(mask, r_1)
         ref_flat = reference_object.reshape(reference_object.shape[0] * reference_object.shape[1], reference_object.shape[2])
         phantom_sub_values = ref_flat[random_indices_2d, :].flatten()
+    else:
+        sub_indices = subsampling3d_indices(mask, r_1)
+        phantom_sub_values = reference_object[sub_indices]
 
     num_views = ct_model.get_params('sinogram_shape')[0]
     angle_candidates = np.asarray(ct_model.get_params('angles'))
@@ -144,15 +161,14 @@ def compute_recon_bases(ct_model, reference_object, vcls_params, data_store_dir)
         one_angle = angle_candidates[i: i + 1]
         one_angle_model = copy_ct_model(ct_model, one_angle_sinogram.shape, one_angle)
 
-        if vcls_params['3d_subsample']:
+        if fast_sample:
+            filtered_sinogram = one_angle_model.direct_filter(one_angle_sinogram, filter_name="ramp", view_batch_size=None)
+            recon_cylinder = one_angle_model.sparse_back_project(filtered_sinogram, random_indices_2d)
+            rec_sub_values = recon_cylinder.flatten()
+        else:
             recon_3d = one_angle_model.direct_recon(one_angle_sinogram)
             rec_sub_values = recon_3d[sub_indices]
 
-        else:
-            filtered_sinogram = one_angle_model.direct_filter(one_angle_sinogram, filter_name="ramp",
-                                                              view_batch_size=None)
-            recon_cylinder = one_angle_model.sparse_back_project(filtered_sinogram, random_indices_2d)
-            rec_sub_values = recon_cylinder.flatten()
 
         #view recon bases
         #mj.slice_viewer(reference_object, recon_3d, slice_axis=2, slice_label='View')
