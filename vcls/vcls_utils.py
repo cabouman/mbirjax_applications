@@ -157,8 +157,8 @@ def compute_recon_bases(ct_model, reference_object, r_1, data_store_dir):
     sinogram = np.asarray(sinogram)
 
     # define ROI
-    mask = create2d_mask(reference_object[:, :, 0])
-
+    mask = mj.get_2d_ror_mask(reference_object[:, :, 0].shape)
+    
     # subsampling voxel indices in ROI
     random_indices_2d, row_col_indices = subsampling2d_indices(mask, r_1)
     ref_flat = reference_object.reshape(reference_object.shape[0] * reference_object.shape[1], reference_object.shape[2])
@@ -291,33 +291,6 @@ def angle_subset_selection(R, gamma, angle_candidates, K, r_2):
     return angle_candidates[indices_chosen]
 
 
-def create2d_mask(cur_slice):
-    y_indices, x_indices = np.where(cur_slice > 0)
-
-    # Calculate x_min, x_max, y_min, y_max
-    x_min, x_max = x_indices.min(), x_indices.max()
-    y_min, y_max = y_indices.min(), y_indices.max()
-
-    # Calculate the center of the circle
-    x_center = (x_min + x_max) / 2
-    y_center = (y_min + y_max) / 2
-
-    # Calculate the radius of the circle as the maximum distance from the center
-    radius = np.max(np.sqrt((x_indices - x_center) ** 2 + (y_indices - y_center) ** 2))
-    radius_bigger = 1.01 * radius
-
-    # Generate the mask: if the distance from the center is less than the radius, set value to 1
-    h, w = cur_slice.shape
-    y = np.arange(h)[:, None]
-    x = np.arange(w)[None, :]
-
-    # Compute squared distances
-    dist2 = (x - x_center) ** 2 + (y - y_center) ** 2
-
-    # Build boolean mask in one shot
-    mask = (dist2 <= radius_bigger ** 2).astype(np.float32)
-
-    return mask
 
 
 
