@@ -80,7 +80,7 @@ def max_abs_neighbor_diff(arr):
 
 
 
-def vcls(ct_model, reference_object, K, r_1=0.001, r_2=0.01, fast_sample=True, num_cpus=4, verbose=0):
+def vcls(ct_model, reference_object, K, r_1=0.001, r_2=0.01, fast_sample=True, verbose=0):
     """
     Algorithm for selecting the optimal view angles based on the minimization of the View Correlation Loss (VCL).
 
@@ -103,7 +103,7 @@ def vcls(ct_model, reference_object, K, r_1=0.001, r_2=0.01, fast_sample=True, n
         gamma = compute_recon_bases(ct_model, reference_object, K=K, r_1=r_1, fast_sample=True, data_store_dir=data_store_dir)
 
         # Compute inner product between recon bases
-        R = parallel_cov_matrix_computation(num_views, num_cpus, data_store_dir)
+        R = parallel_cov_matrix_computation(num_views, data_store_dir)
 
     if verbose > 0:
         # plot the the covariance matrix and gamma
@@ -191,7 +191,11 @@ def compute_cov_matrix_part(i, num_views, data_store_dir):
     return i, row
 
 
-def parallel_cov_matrix_computation(num_views, num_cpus, data_store_dir):
+def parallel_cov_matrix_computation(num_views, data_store_dir):
+    # Set number of processors
+    num_cpus = mp.cpu_count()
+    print('Number of CPUs: ', num_cpus)
+
     cov_matrix = np.zeros((num_views, num_views))
 
     # Create a pool of workers

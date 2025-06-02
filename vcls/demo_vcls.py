@@ -30,9 +30,6 @@ if __name__ == '__main__':
     voxel_sampling_rate = 0.01     # r_1 in paper
     view_sampling_rate = 1.0       # r_2 in paper
     fast_sample = True
-    num_cpus = multiprocessing.cpu_count()
-    print('Number of CPUs: ', num_cpus)
-
 
     ####################################################
     # Calculate function parameters from user parameters
@@ -72,7 +69,7 @@ if __name__ == '__main__':
 
     # #### run vcls to select views ####
     time0 = time.time()
-    optimal_angles = vut.vcls(ct_model, reference_object, K=num_selected_views, r_1=voxel_sampling_rate, r_2=view_sampling_rate, fast_sample=fast_sample, num_cpus=num_cpus, verbose=1)
+    optimal_angles = vut.vcls(ct_model, reference_object, K=num_selected_views, r_1=voxel_sampling_rate, r_2=view_sampling_rate, fast_sample=fast_sample, verbose=1)
     elapsed = time.time() - time0
     print('Elapsed time for selected views is {:.3f} seconds'.format(elapsed))
 
