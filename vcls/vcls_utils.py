@@ -320,42 +320,6 @@ def create2d_mask(cur_slice):
     return mask
 
 
-def create3d_mask(phantom, repeat=False):
-    if repeat:
-        mask2d = create2d_mask(phantom[:, :, 0])
-        mask = np.repeat(mask2d[:, :, np.newaxis], phantom.shape[2], axis=2)
-
-    else:
-        mask = np.zeros(phantom.shape)
-        for i in range(phantom.shape[2]):
-            mask[:, :, i] = create2d_mask(phantom[:, :, i])
-
-    return mask
-
-
-def subsampling3d_indices(mask, r_1):
-    num_rows, num_cols, num_slices = mask.shape
-    num_samples = int(num_rows * num_cols * r_1)
-
-    random_indices = []
-    for slice_idx in range(num_slices):
-        # Randomly select unique indices for this slice
-        mask_indices = np.where(mask[:, :, slice_idx] == 1)  # Get 2D indices where mask == 1
-        # Ensure num_samples does not exceed the number of available points
-        if num_samples > len(mask_indices[0]):
-            num_samples_temp = len(mask_indices[0])
-        else:
-            num_samples_temp = num_samples
-        slice_choice = np.random.choice(len(mask_indices[0]), num_samples_temp, replace=False)
-        row_indices = mask_indices[0][slice_choice]
-        col_indices = mask_indices[1][slice_choice]
-        random_indices.append((row_indices, col_indices, slice_idx * np.ones(num_samples_temp, dtype=int)))
-
-    # Convert to a single index array for advanced indexing
-    random_indices = tuple(np.concatenate(idx) for idx in zip(*random_indices))
-
-    return random_indices
-
 
 def subsampling2d_indices(mask, r_1):
     num_rows, num_cols = mask.shape
