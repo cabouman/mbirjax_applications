@@ -80,7 +80,7 @@ def max_abs_neighbor_diff(arr):
 
 
 
-def vcls(ct_model, reference_object, K, r_1=0.001, r_2=0.01, fast=True, verbose=0):
+def vcls(ct_model, reference_object, K, r_1=0.001, r_2=0.1, fast=True, verbose=0):
     """
     Run the View Correlation Loss Selection (VCLS) algorithm to choose an optimal subset of view angles.
 

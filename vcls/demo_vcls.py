@@ -33,8 +33,7 @@ if __name__ == '__main__':
     # r_1 = voxel sampling rate in (0,1]. Smaller => faster; Larger => more accurate
     r_1 = 0.01
     # r_2 = view sampling rate used for stochastic search in (0,1]. Smaller => faster; Larger => more accurate
-    # In this example, r_2 is set large because the number of views is very small
-    r_2 = 1.0
+    r_2 = 0.5
     fast = True    # Use built in sparse back projection in mbirjax to speed algorithm
 
 
