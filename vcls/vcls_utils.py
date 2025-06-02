@@ -80,21 +80,33 @@ def max_abs_neighbor_diff(arr):
 
 
 
-def vcls(ct_model, reference_object, K, r_1=0.001, r_2=0.01, fast_sample=True, verbose=0):
+def vcls(ct_model, reference_object, K, r_1=0.001, r_2=0.01, fast=True, verbose=0):
     """
-    Algorithm for selecting the optimal view angles based on the minimization of the View Correlation Loss (VCL).
+    Run the View Correlation Loss Selection (VCLS) algorithm to choose an optimal subset of view angles.
+
+    This function selects a subset of K views that minimize the View Correlation Loss (VCL) using a stochastic greedy optimization algorithm.
+    The VCL is defined in the following paper: ???
 
     Args:
-        ct_model:
-        reference_object:
-        K: Number of view angles to select.
-        r_1: Voxel sampling rate.
-        r_2: View sampling rate for stochastic minimization of the View Correlation Loss (VCL).
-        num_cpus: Number of CPUs to use.
-        verbose:
+        ct_model (TomographyModel): A CT model instance (e.g., ParallelBeamModel or ConeBeamModel) containing the system geometry and angles.
+        reference_object (ndarray): 3D array representing the reference volume (e.g., ground truth).
+        K (int): Number of view angles to select.
+        r_1 (float, optional): Voxel sampling rate in the reference object (default is 0.001).
+        r_2 (float, optional): View sampling rate for stochastic minimization (default is 0.01).
+        fast (bool, optional): Use built-in mbirjax sparse back projector for 2D mask-based sampling (default is True).
+        verbose (int, optional): Verbosity level. If > 0, visualizations of the covariance matrix and gamma vector will be shown.
 
     Returns:
+        ndarray: A 1D NumPy array of the selected optimal view angles of shape (K,).
 
+    Example:
+        >>> angles = np.linspace(0, np.pi, num=180, endpoint=False)
+        >>> sinogram_shape = (180, 128, 1)
+        >>> ct_model = mj.ParallelBeamModel(sinogram_shape, angles)
+        >>> ref_obj = np.random.rand(128, 128, 1)
+        >>> selected_angles = vcls(ct_model, ref_obj, K=10)
+        >>> print(selected_angles.shape)
+        (10,)
     """
     num_views = ct_model.get_params('sinogram_shape')[0]
     angle_candidates = np.asarray(ct_model.get_params('angles'))

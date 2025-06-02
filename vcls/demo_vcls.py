@@ -17,6 +17,7 @@ if __name__ == '__main__':
     ##############################################
 
     # Set geometry parameters
+    geometry_type = 'cone'  # 'cone' or 'parallel'
     num_object_rows = 128
     num_object_slices = 64
     magnification = 2.0
@@ -27,23 +28,21 @@ if __name__ == '__main__':
 
     # Set VCLS parameters
     num_selected_views = 25
-    voxel_sampling_rate = 0.01     # r_1 in paper
-    view_sampling_rate = 1.0       # r_2 in paper
-    fast_sample = True
+    r_1 = 0.01     # voxel sampling rate in (0,1]. Smaller => faster; Larger => more accurate
+    r_2 = 1.0      # view sampling rate used for stochastic search in (0,1]. Smaller => faster; Larger => more accurate
+    fast = True    # Use built in sparse back projection in mbirjax to speed algorithm
 
     ####################################################
     # Calculate function parameters from user parameters
     ####################################################
 
-    multiprocessing.freeze_support()  # We need this to do multiprocessing in vcls_utils.parallel_cov_matrix_computation
+    # We need this to do multiprocessing in vcls_utils.parallel_cov_matrix_computation
+    multiprocessing.freeze_support()
 
     # Create reference object
     print('Creating phantom')
     reference_object = dut.gen_polygon_phantom(num_rows=num_object_rows, num_slices=num_object_slices)
     print(f'reference_object shape: {reference_object.shape}')
-
-    # Setup ct_params values
-    geometry_type = 'cone'  # 'cone' or 'parallel'
 
     # Set parameters for the problem size - you can vary these, but if you make num_det_rows very small relative to
     # channels, then the generated phantom may not have an interior.
@@ -66,10 +65,8 @@ if __name__ == '__main__':
     ##############################################
     # Run VCLS to Select Views and Display Results
     ##############################################
-
-    # #### run vcls to select views ####
     time0 = time.time()
-    optimal_angles = vut.vcls(ct_model, reference_object, K=num_selected_views, r_1=voxel_sampling_rate, r_2=view_sampling_rate, fast_sample=fast_sample, verbose=1)
+    optimal_angles = vut.vcls(ct_model, reference_object, K=num_selected_views, r_1=r_1, r_2=r_2, fast=fast, verbose=1)
     elapsed = time.time() - time0
     print('Elapsed time for selected views is {:.3f} seconds'.format(elapsed))
 
