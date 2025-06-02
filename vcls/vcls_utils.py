@@ -112,7 +112,7 @@ def vcls(ct_model, reference_object, K, r_1=0.001, r_2=0.01, fast=True, verbose=
     angle_candidates = np.asarray(ct_model.get_params('angles'))
     with tempfile.TemporaryDirectory() as data_store_dir:
         # Compute recon bases
-        gamma = compute_recon_bases(ct_model, reference_object, K=K, r_1=r_1, fast_sample=True, data_store_dir=data_store_dir)
+        gamma = compute_recon_bases(ct_model, reference_object, r_1=r_1, fast_sample=True, data_store_dir=data_store_dir)
 
         # Compute inner product between recon bases
         R = parallel_cov_matrix_computation(num_views, data_store_dir)
@@ -134,24 +134,35 @@ def vcls(ct_model, reference_object, K, r_1=0.001, r_2=0.01, fast=True, verbose=
 
 
 
-def compute_recon_bases(ct_model, reference_object, K, r_1, fast_sample, data_store_dir):
+def compute_recon_bases(ct_model, reference_object, r_1, fast_sample, data_store_dir):
+    """
+    Compute the reconstruction bases and inner product vector (gamma) used in the VCLS algorithm.
+
+    Args:
+        ct_model (TomographyModel): CT model specifying the system geometry.
+        reference_object (ndarray): 3D volume (typically ground truth) of shape (rows, cols, slices).
+        r_1 (float): Voxel sampling rate in the reference object (fraction of total voxels).
+        fast_sample (bool): Whether to use 2D mask-based sampling (`True`) or full 3D sampling (`False`).
+        data_store_dir (str): Directory where the computed reconstructions will be stored as .npy files.
+
+    Returns:
+        ndarray: A 2D array of shape (num_views, 1) representing the gamma vector (inner products of recon bases with reference).
+
+    Example:
+        >>> gamma = compute_recon_bases(ct_model, ref_obj, r_1=0.001, fast_sample=True, data_store_dir="/tmp/recons")
+        >>> print(gamma.shape)
+        (180, 1)
+    """
     # Generate synthetic sinogram data
     print('Creating sinogram')
     sinogram = ct_model.forward_project(reference_object)
     sinogram = np.asarray(sinogram)
-
-    # View sinogram
-    # title = 'Original sinogram \nUse the sliders to change the view or adjust the intensity range.'
-    # mj.slice_viewer(sinogram, slice_axis=0, title=title, slice_label='View')
 
     # define ROI
     if fast_sample:
         mask = create2d_mask(reference_object[:, :, 0])
     else:
         mask = create3d_mask(reference_object)
-
-    # View ROI
-    # mj.slice_viewer(reference_object, mask, slice_axis=2, slice_label='View')
 
     # subsampling voxel indices in ROI
     if fast_sample:
@@ -180,10 +191,6 @@ def compute_recon_bases(ct_model, reference_object, K, r_1, fast_sample, data_st
         else:
             recon_3d = one_angle_model.direct_recon(one_angle_sinogram)
             rec_sub_values = recon_3d[sub_indices]
-
-
-        #view recon bases
-        #mj.slice_viewer(reference_object, recon_3d, slice_axis=2, slice_label='View')
 
         with open(os.path.join(data_store_dir, f'recon_view{i}.npy'), 'wb') as f:
             np.save(f, rec_sub_values)

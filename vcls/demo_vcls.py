@@ -26,16 +26,21 @@ if __name__ == '__main__':
     start_angle = 0
     end_angle = 2 * np.pi
 
+    #####################
     # Set VCLS parameters
+    #####################
     num_selected_views = 25
-    r_1 = 0.01     # voxel sampling rate in (0,1]. Smaller => faster; Larger => more accurate
-    r_2 = 1.0      # view sampling rate used for stochastic search in (0,1]. Smaller => faster; Larger => more accurate
+    # r_1 = voxel sampling rate in (0,1]. Smaller => faster; Larger => more accurate
+    r_1 = 0.01
+    # r_2 = view sampling rate used for stochastic search in (0,1]. Smaller => faster; Larger => more accurate
+    # In this example, r_2 is set large because the number of views is very small
+    r_2 = 1.0
     fast = True    # Use built in sparse back projection in mbirjax to speed algorithm
+
 
     ####################################################
     # Calculate function parameters from user parameters
     ####################################################
-
     # We need this to do multiprocessing in vcls_utils.parallel_cov_matrix_computation
     multiprocessing.freeze_support()
 
