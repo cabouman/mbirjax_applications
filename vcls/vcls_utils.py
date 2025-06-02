@@ -80,7 +80,7 @@ def max_abs_neighbor_diff(arr):
 
 
 
-def vcls(ct_model, reference_object, K, r_1=0.001, r_2=0.1, fast=True, verbose=0):
+def vcls(ct_model, reference_object, num_selected_views, r_1=0.001, r_2=0.1, fast=True, verbose=0):
     """
     Run the View Correlation Loss Selection (VCLS) algorithm to choose an optimal subset of view angles.
 
@@ -90,7 +90,7 @@ def vcls(ct_model, reference_object, K, r_1=0.001, r_2=0.1, fast=True, verbose=0
     Args:
         ct_model (TomographyModel): A CT model instance (e.g., ParallelBeamModel or ConeBeamModel) containing the system geometry and angles.
         reference_object (ndarray): 3D array representing the reference volume (e.g., ground truth).
-        K (int): Number of view angles to select.
+        num_selected_views (int): Number of view angles to select.
         r_1 (float, optional): Voxel sampling rate in the reference object (default is 0.001).
         r_2 (float, optional): View sampling rate for stochastic minimization (default is 0.01).
         fast (bool, optional): Use built-in mbirjax sparse back projector for 2D mask-based sampling (default is True).
@@ -104,7 +104,7 @@ def vcls(ct_model, reference_object, K, r_1=0.001, r_2=0.1, fast=True, verbose=0
         >>> sinogram_shape = (180, 128, 1)
         >>> ct_model = mj.ParallelBeamModel(sinogram_shape, angles)
         >>> ref_obj = np.random.rand(128, 128, 1)
-        >>> selected_angles = vcls(ct_model, ref_obj, K=10)
+        >>> selected_angles = vcls(ct_model, ref_obj, num_selected_views=10)
         >>> print(selected_angles.shape)
         (10,)
     """
@@ -112,7 +112,7 @@ def vcls(ct_model, reference_object, K, r_1=0.001, r_2=0.1, fast=True, verbose=0
     angle_candidates = np.asarray(ct_model.get_params('angles'))
     with tempfile.TemporaryDirectory() as data_store_dir:
         # Compute recon bases
-        gamma = compute_recon_bases(ct_model, reference_object, r_1=r_1, fast_sample=True, data_store_dir=data_store_dir)
+        gamma = compute_recon_bases(ct_model, reference_object, r_1=r_1, fast=fast, data_store_dir=data_store_dir)
 
         # Compute inner product between recon bases
         R = parallel_cov_matrix_computation(num_views, data_store_dir)
@@ -128,13 +128,13 @@ def vcls(ct_model, reference_object, K, r_1=0.001, r_2=0.1, fast=True, verbose=0
         plt.show()
 
     # Find optimal view angles
-    optimal_angles = angle_subset_selection(R, gamma, angle_candidates, K, r_2)
+    optimal_angles = angle_subset_selection(R, gamma, angle_candidates, num_selected_views, r_2)
 
     return optimal_angles
 
 
 
-def compute_recon_bases(ct_model, reference_object, r_1, fast_sample, data_store_dir):
+def compute_recon_bases(ct_model, reference_object, r_1, fast, data_store_dir):
     """
     Compute the reconstruction bases and inner product vector (gamma) used in the VCLS algorithm.
 
@@ -142,14 +142,14 @@ def compute_recon_bases(ct_model, reference_object, r_1, fast_sample, data_store
         ct_model (TomographyModel): CT model specifying the system geometry.
         reference_object (ndarray): 3D volume (typically ground truth) of shape (rows, cols, slices).
         r_1 (float): Voxel sampling rate in the reference object (fraction of total voxels).
-        fast_sample (bool): Whether to use 2D mask-based sampling (`True`) or full 3D sampling (`False`).
+        fast (bool): Whether to use 2D mask-based sampling (`True`) or full 3D sampling (`False`).
         data_store_dir (str): Directory where the computed reconstructions will be stored as .npy files.
 
     Returns:
         ndarray: A 2D array of shape (num_views, 1) representing the gamma column vector.
 
     Example:
-        >>> gamma = compute_recon_bases(ct_model, ref_obj, r_1=0.001, fast_sample=True, data_store_dir="/tmp/recons")
+        >>> gamma = compute_recon_bases(ct_model, ref_obj, r_1=0.001, fast=True, data_store_dir="/tmp/recons")
         >>> print(gamma.shape)
         (180, 1)
     """
@@ -159,13 +159,13 @@ def compute_recon_bases(ct_model, reference_object, r_1, fast_sample, data_store
     sinogram = np.asarray(sinogram)
 
     # define ROI
-    if fast_sample:
+    if fast:
         mask = create2d_mask(reference_object[:, :, 0])
     else:
         mask = create3d_mask(reference_object)
 
     # subsampling voxel indices in ROI
-    if fast_sample:
+    if fast:
         random_indices_2d, row_col_indices = subsampling2d_indices(mask, r_1)
         ref_flat = reference_object.reshape(reference_object.shape[0] * reference_object.shape[1], reference_object.shape[2])
         phantom_sub_values = ref_flat[random_indices_2d, :].flatten()
@@ -184,7 +184,7 @@ def compute_recon_bases(ct_model, reference_object, r_1, fast_sample, data_store
         one_angle = angle_candidates[i: i + 1]
         one_angle_model = copy_ct_model(ct_model, one_angle_sinogram.shape, one_angle)
 
-        if fast_sample:
+        if fast:
             filtered_sinogram = one_angle_model.direct_filter(one_angle_sinogram, filter_name="ramp", view_batch_size=None)
             recon_cylinder = one_angle_model.sparse_back_project(filtered_sinogram, random_indices_2d)
             rec_sub_values = recon_cylinder.flatten()
@@ -252,10 +252,10 @@ def angle_subset_selection(R, gamma, angle_candidates, K, r_2):
         r_2 (float): Fraction of unchosen candidates to sample per view per iteration.
 
     Returns:
-        ndarray: A 1D NumPy array of selected view angles of shape (K,).
+        ndarray: A 1D NumPy array of selected view angles of shape (num_selected_views,).
 
     Example:
-        >>> selected = angle_subset_selection(R, gamma, angle_candidates, K=10, r_2=0.01)
+        >>> selected = angle_subset_selection(R, gamma, angle_candidates, num_selected_views=10, r_2=0.01)
         >>> print(selected.shape)
         (10,)
     """
