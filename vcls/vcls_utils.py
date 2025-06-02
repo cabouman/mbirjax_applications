@@ -103,7 +103,7 @@ def vcls(ct_model, reference_object, num_selected_views, r_1=0.001, r_2=0.1, ver
         >>> sinogram_shape = (180, 128, 1)
         >>> ct_model = mj.ParallelBeamModel(sinogram_shape, angles)
         >>> ref_obj = np.random.rand(128, 128, 1)
-        >>> selected_angles = vcls(ct_model,ref_obj,num_selected_views=10)
+        >>> selected_angles = vcls(ct_model, ref_obj, num_selected_views=10)
         >>> print(selected_angles.shape)
         (10,)
     """
@@ -119,12 +119,18 @@ def vcls(ct_model, reference_object, num_selected_views, r_1=0.001, r_2=0.1, ver
     if verbose > 0:
         # plot the the covariance matrix and gamma
         import matplotlib.pyplot as plt
-        plt.imshow(R)
-        plt.title('VCL Covariance matrix')
+        fig, axes = plt.subplots(1, 3, figsize=(12, 4))
+        axes[0].imshow(R)
+        axes[0].set_title('Normalized R')
+        axes[1].imshow(np.linalg.inv(R))
+        axes[1].set_title('R Inverse')
+        axes[2].plot(gamma, '.')
+        axes[2].set_ylim([0, np.max(gamma)])
+        axes[2].set_title('VCL Gamma vector')
+        plt.tight_layout()
         plt.show()
-        plt.plot(gamma, '.')
-        plt.title('VCL Gamma vector')
-        plt.show()
+
+
 
     # Find optimal view angles
     optimal_angles = angle_subset_selection(R, gamma, angle_candidates, num_selected_views, r_2)
