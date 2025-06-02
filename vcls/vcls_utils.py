@@ -133,13 +133,13 @@ def vcls(ct_model, reference_object, num_selected_views, r_1=0.001, r_2=0.1, ver
 
 
 
-def compute_recon_bases(ct_model, reference_object, r_1, data_store_dir):
+def compute_recon_bases(ct_model, ref_object, r_1, data_store_dir):
     """
     Compute the reconstruction bases and inner product vector (gamma) used in the VCLS algorithm.
 
     Args:
         ct_model (TomographyModel): CT model specifying the system geometry.
-        reference_object (ndarray): 3D volume (typically ground truth) of shape (rows, cols, slices).
+        ref_object (ndarray): 3D reference object with shape (rows, cols, slices).
         r_1 (float): Voxel sampling rate in the reference object (fraction of total voxels).
         data_store_dir (str): Directory where the computed reconstructions will be stored as .npy files.
 
@@ -147,42 +147,46 @@ def compute_recon_bases(ct_model, reference_object, r_1, data_store_dir):
         ndarray: A 2D array of shape (num_views, 1) representing the gamma column vector.
 
     Example:
-        >>> gamma = compute_recon_bases(ct_model,ref_obj,r_1=0.001,data_store_dir="/tmp/recons")
+        >>> gamma = compute_recon_bases(ct_model, ref_obj, r_1=0.001, data_store_dir="/tmp/recons")
         >>> print(gamma.shape)
         (180, 1)
     """
-    # Generate synthetic sinogram data
+    # Compute forward projection of reference object
     print('Creating sinogram')
-    sinogram = ct_model.forward_project(reference_object)
-    sinogram = np.asarray(sinogram)
+    ref_sino = ct_model.forward_project(ref_object)
+    ref_sino = np.asarray(ref_sino)
 
-    # define ROI
-    mask = mj.get_2d_ror_mask(reference_object[:, :, 0].shape)
-    
+    # Create mask that defines the region of reconstruction (ROR)
+    mask = mj.get_2d_ror_mask(ref_object[:, :, 0].shape)
+
     # subsampling voxel indices in ROI
-    random_indices_2d, row_col_indices = subsampling2d_indices(mask, r_1)
-    ref_flat = reference_object.reshape(reference_object.shape[0] * reference_object.shape[1], reference_object.shape[2])
-    phantom_sub_values = ref_flat[random_indices_2d, :].flatten()
+    sparse_indices, row_col_indices = subsampling2d_indices(mask, r_1)
+    ref_object_flat = ref_object.reshape(ref_object.shape[0] * ref_object.shape[1], ref_object.shape[2])
+    sparse_ref_object = ref_object_flat[sparse_indices, :].flatten()
 
+    # Initialize arrays
     num_views = ct_model.get_params('sinogram_shape')[0]
-    angle_candidates = np.asarray(ct_model.get_params('angles'))
+    candidate_angles = np.asarray(ct_model.get_params('angles'))
     gamma = np.zeros((num_views, 1))  # Inner product between reference object and recon from a single angle
 
     # Compute recon bases - choose one view at a time and do an fbp/fdk from that.
     print('Creating recon bases')
     for i in tqdm.tqdm(range(num_views)):
-        one_angle_sinogram = sinogram[[i], :, :]
-        one_angle = angle_candidates[i: i + 1]
-        one_angle_model = copy_ct_model(ct_model, one_angle_sinogram.shape, one_angle)
+        one_angle_sino = ref_sino[[i], :, :]
+        one_angle = candidate_angles[i: i + 1]
+        one_angle_model = copy_ct_model(ct_model, one_angle_sino.shape, one_angle)
 
-        filtered_sinogram = one_angle_model.direct_filter(one_angle_sinogram, filter_name="ramp", view_batch_size=None)
-        recon_cylinder = one_angle_model.sparse_back_project(filtered_sinogram, random_indices_2d)
-        rec_sub_values = recon_cylinder.flatten()
+        # Filter sinogram using appropriate filter for geometry
+        filtered_sinogram = one_angle_model.direct_filter(one_angle_sino, view_batch_size=None)
+
+        # Backproject filered sinogram to form sparse reconstruction basis, T_\theta in paper
+        sparse_recon_basis = one_angle_model.sparse_back_project(filtered_sinogram, sparse_indices)
+        sparse_recon_basis_flat = sparse_recon_basis.flatten()
 
         with open(os.path.join(data_store_dir, f'recon_view{i}.npy'), 'wb') as f:
-            np.save(f, rec_sub_values)
+            np.save(f, sparse_recon_basis_flat)
 
-        gamma[i, :] = np.sum(rec_sub_values * phantom_sub_values)
+        gamma[i, :] = np.sum(sparse_recon_basis_flat * sparse_ref_object)
 
     return gamma
 
