@@ -79,12 +79,12 @@ def max_abs_neighbor_diff(arr):
     return max_diff
 
 
-def vcls(reference_object, ct_model, vcls_params, verbose=0):
+def vcls(ct_model, reference_object, vcls_params, verbose=0):
     num_views = ct_model.get_params('sinogram_shape')[0]
     angle_candidates = np.asarray(ct_model.get_params('angles'))
     with tempfile.TemporaryDirectory() as data_store_dir:
         # Compute recon bases
-        gamma = compute_recon_bases(reference_object, ct_model, vcls_params, data_store_dir)
+        gamma = compute_recon_bases(ct_model, reference_object, vcls_params, data_store_dir)
 
         # Compute inner product between recon bases
         R = parallel_cov_matrix_computation(num_views, vcls_params['num_cpus'], data_store_dir)
@@ -105,7 +105,7 @@ def vcls(reference_object, ct_model, vcls_params, verbose=0):
     return optimal_angles
 
 
-def compute_recon_bases(reference_object, ct_model, vcls_params, data_store_dir):
+def compute_recon_bases(ct_model, reference_object, vcls_params, data_store_dir):
     # Generate synthetic sinogram data
     print('Creating sinogram')
     sinogram = ct_model.forward_project(reference_object)
