@@ -70,7 +70,8 @@ if __name__ == '__main__':
     # Run VCLS to Select Views and Display Results
     ##############################################
     time0 = time.time()
-    optimal_angles = vut.vcls(ct_model, reference_object, num_selected_views=num_selected_views, r_1=r_1, r_2=r_2, fast=fast, verbose=1)
+    optimal_angles = vut.vcls(ct_model, reference_object, num_selected_views=num_selected_views, r_1=r_1, r_2=r_2,
+                              verbose=1)
     elapsed = time.time() - time0
     print('Elapsed time for selected views is {:.3f} seconds'.format(elapsed))
 
