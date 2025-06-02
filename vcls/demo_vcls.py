@@ -88,12 +88,12 @@ if __name__ == '__main__':
 
     # Do a recon with optimal angles
     optimal_angles = np.sort(jnp.stack(optimal_angles)).flatten()
-    ct_model = vut.copy_ct_model(ct_model, sinogram_shape, optimal_angles)
+    ct_model = vut.copy_ct_model(ct_model, optimal_angles)
     sinogram_optimal_angles = ct_model.forward_project(reference_object)
     recon_optimal_angles, recon_params = ct_model.recon(sinogram_optimal_angles)
 
     angles = jnp.linspace(start_angle, end_angle, new_num_views, endpoint=False)
-    ct_model = vut.copy_ct_model(ct_model, sinogram_shape, angles)
+    ct_model = vut.copy_ct_model(ct_model, angles)
     sinogram_uniform = ct_model.forward_project(reference_object)
     recon_uniform, recon_params_uniform = ct_model.recon(sinogram_uniform)
 

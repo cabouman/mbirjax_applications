@@ -35,14 +35,13 @@ def get_ct_model(geometry_type, sinogram_shape, angles, source_detector_dist=Non
     return model
 
 
-def copy_ct_model(ct_model, new_sinogram_shape, new_angles):
+def copy_ct_model(ct_model, new_angles):
     """
     Create a TomographyModel with the same type and parameters as the given ct_model except with the input sinogram
     shape and angles.
 
     Args:
         ct_model (TomographyModel): The model to copy.
-        new_sinogram_shape (tuple list of int): (num_views, num_rows, num_channels)
         new_angles (ndarray of float): 1D vector of projection angles in radians
 
     Returns:
@@ -52,7 +51,12 @@ def copy_ct_model(ct_model, new_sinogram_shape, new_angles):
     required_params, other_params = ct_model.get_required_params_from_dict(ct_model.params,
                                                                            required_param_names=required_param_names,
                                                                            values_only=True)
-    required_params['sinogram_shape'] = new_sinogram_shape
+
+    #  Get the shape of the old sinogram
+    old_shape = ct_model.get_params('sinogram_shape')
+
+    # Set the new sinogram shape and angles
+    required_params['sinogram_shape'] = (len(new_angles), old_shape[1], old_shape[2])
     required_params['angles'] = new_angles
     new_model = type(ct_model)(**required_params)
     with warnings.catch_warnings():
@@ -184,7 +188,7 @@ def compute_recon_bases(ct_model, ref_object, r_1, data_store_dir):
     for i in tqdm.tqdm(range(num_views)):
         one_angle_sino = ref_sino[[i], :, :]
         one_angle = candidate_angles[i: i + 1]
-        one_angle_model = copy_ct_model(ct_model, one_angle_sino.shape, one_angle)
+        one_angle_model = copy_ct_model(ct_model, one_angle)
 
         # Filter sinogram using appropriate filter for geometry
         filtered_sinogram = one_angle_model.direct_filter(one_angle_sino, view_batch_size=None)
