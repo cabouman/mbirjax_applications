@@ -147,10 +147,13 @@ def compute_recon_bases(ct_model, ref_object, r_1, data_store_dir):
         ndarray: A 2D array of shape (num_views, 1) representing the gamma column vector.
 
     Example:
-        >>> gamma = compute_recon_bases(ct_model, ref_obj, r_1=0.001, data_store_dir="/tmp/recons")
+        >>> gamma = compute_recon_bases(ct_model, ref_object, 0.001, "/tmp/recons")
         >>> print(gamma.shape)
         (180, 1)
     """
+    # Define epsilon to avoid divide by zero
+    eps = 1e-12
+
     # Compute forward projection of reference object
     print('Creating sinogram')
     ref_sino = ct_model.forward_project(ref_object)
@@ -158,6 +161,7 @@ def compute_recon_bases(ct_model, ref_object, r_1, data_store_dir):
 
     # Create mask that defines the region of reconstruction (ROR)
     mask = mj.get_2d_ror_mask(ref_object[:, :, 0].shape)
+    norm_x = np.linalg.norm((mask[:, :, None] * ref_object).flatten())
 
     # subsampling voxel indices in ROI
     sparse_indices, row_col_indices = subsampling2d_indices(mask, r_1)
@@ -179,14 +183,15 @@ def compute_recon_bases(ct_model, ref_object, r_1, data_store_dir):
         # Filter sinogram using appropriate filter for geometry
         filtered_sinogram = one_angle_model.direct_filter(one_angle_sino, view_batch_size=None)
 
-        # Backproject filered sinogram to form sparse reconstruction basis, T_\theta in paper
-        sparse_recon_basis = one_angle_model.sparse_back_project(filtered_sinogram, sparse_indices)
-        sparse_recon_basis_flat = sparse_recon_basis.flatten()
+        # Compute normalized sparse reconstruction basis, T_\theta in paper
+        sparse_recon_basis = one_angle_model.sparse_back_project(filtered_sinogram, sparse_indices).flatten()
+        norm = np.linalg.norm(sparse_recon_basis)
+        normalized_sparse_recon_basis = sparse_recon_basis / (norm + eps)
 
         with open(os.path.join(data_store_dir, f'recon_view{i}.npy'), 'wb') as f:
-            np.save(f, sparse_recon_basis_flat)
+            np.save(f, normalized_sparse_recon_basis)
 
-        gamma[i, :] = np.sum(sparse_recon_basis_flat * sparse_ref_object)
+        gamma[i, :] = np.sum(normalized_sparse_recon_basis * sparse_ref_object) / (norm_x + eps)
 
     return gamma
 
