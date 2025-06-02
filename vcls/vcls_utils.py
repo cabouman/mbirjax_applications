@@ -146,7 +146,7 @@ def compute_recon_bases(ct_model, reference_object, r_1, fast_sample, data_store
         data_store_dir (str): Directory where the computed reconstructions will be stored as .npy files.
 
     Returns:
-        ndarray: A 2D array of shape (num_views, 1) representing the gamma vector (inner products of recon bases with reference).
+        ndarray: A 2D array of shape (num_views, 1) representing the gamma column vector.
 
     Example:
         >>> gamma = compute_recon_bases(ct_model, ref_obj, r_1=0.001, fast_sample=True, data_store_dir="/tmp/recons")
@@ -237,6 +237,28 @@ def compute_vcl(sub_R, sub_gamma):
 
 
 def angle_subset_selection(R, gamma, angle_candidates, K, r_2):
+    """
+    Select a subset of view angles that minimize the View Correlation Loss (VCL) using stochastic greedy optimization.
+
+    This function performs an iterative stochastic search over candidate view indices to minimize the VCL,
+    defined as VCL = -γᵀ R⁻¹ γ, where R is a covariance matrix of reconstructions and γ is the inner product vector.
+    At each step, it considers random replacements of the current selection and keeps changes that improve the loss.
+
+    Args:
+        R (ndarray): Covariance matrix of shape (num_views, num_views).
+        gamma (ndarray): Column vector of shape (num_views, 1), representing the inner product between reconstructions and reference.
+        angle_candidates (ndarray): 1D array of view angles (shape (num_views,)) corresponding to R and gamma.
+        K (int): Number of view angles to select.
+        r_2 (float): Fraction of unchosen candidates to sample per view per iteration.
+
+    Returns:
+        ndarray: A 1D NumPy array of selected view angles of shape (K,).
+
+    Example:
+        >>> selected = angle_subset_selection(R, gamma, angle_candidates, K=10, r_2=0.01)
+        >>> print(selected.shape)
+        (10,)
+    """
     max_num_iteration = 100
     num_candidate_views = len(angle_candidates)
     num_candidates = int(r_2 * (num_candidate_views - K))
