@@ -79,7 +79,7 @@ def max_abs_neighbor_diff(arr):
     return max_diff
 
 
-def vcls(reference_object, ct_model, vcls_params):
+def vcls(reference_object, ct_model, vcls_params, verbose=0):
     num_views = ct_model.get_params('sinogram_shape')[0]
     angle_candidates = np.asarray(ct_model.get_params('angles'))
     with tempfile.TemporaryDirectory() as data_store_dir:
@@ -89,13 +89,16 @@ def vcls(reference_object, ct_model, vcls_params):
         # Compute inner product between recon bases
         R = parallel_cov_matrix_computation(num_views, vcls_params['num_cpus'], data_store_dir)
 
-    import matplotlib.pyplot as plt
-    plt.imshow(R)
-    plt.title('Covariance matrix')
-    plt.show()
-    plt.plot(gamma, '.')
-    plt.title('Gamma')
-    plt.show()
+    if verbose > 0:
+        # plot the the covariance matrix and gamma
+        import matplotlib.pyplot as plt
+        plt.imshow(R)
+        plt.title('VCL Covariance matrix')
+        plt.show()
+        plt.plot(gamma, '.')
+        plt.title('VCL Gamma vector')
+        plt.show()
+
     # Find optimal view angles
     optimal_angles = angle_subset_selection(R, gamma, angle_candidates, vcls_params['K'], vcls_params['r_2'])
 

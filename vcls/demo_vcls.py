@@ -82,7 +82,7 @@ if __name__ == '__main__':
     ##############################################
 
     # #### run vcls to select views ####
-    optimal_angles = vut.vcls(reference_object, ct_model, vcls_params)
+    optimal_angles = vut.vcls(reference_object, ct_model, vcls_params, verbose=1)
 
     # Record elapsed time
     elapsed = time.time() - time0
