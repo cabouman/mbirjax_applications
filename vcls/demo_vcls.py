@@ -1,4 +1,5 @@
 import multiprocessing
+seed = 42  # Change this value to control randomness across runs
 
 import numpy as np
 import time
@@ -33,7 +34,7 @@ if __name__ == '__main__':
     # r_1 = voxel sampling rate in (0,1]. Smaller => faster; Larger => more accurate
     r_1 = 0.01
     # r_2 = view sampling rate used for stochastic search in (0,1]. Smaller => faster; Larger => more accurate
-    r_2 = 0.5
+    r_2 = 1.0
     fast = True    # Use built in sparse back projection in mbirjax to speed algorithm
 
 
@@ -70,7 +71,7 @@ if __name__ == '__main__':
     # Run VCLS to Select Views and Display Results
     ##############################################
     time0 = time.time()
-    optimal_angles = vut.vcls(ct_model, reference_object, num_selected_views, r_1=r_1, r_2=r_2, verbose=1)
+    optimal_angles = vut.vcls(ct_model, reference_object, num_selected_views, r_1=r_1, r_2=r_2, verbose=1, seed=seed)
     elapsed = time.time() - time0
     print('Elapsed time for selected views is {:.3f} seconds'.format(elapsed))
 
