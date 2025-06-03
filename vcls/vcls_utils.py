@@ -10,6 +10,25 @@ import jax.numpy as jnp
 import tqdm  # Included in mbirjax
 
 
+def subsample_R_gamma(R, gamma, selected_indices):
+    """
+    Extract a submatrix of R and subvector of gamma corresponding to the selected indices.
+
+    Args:
+        R (ndarray): Full covariance matrix of shape (N, N).
+        gamma (ndarray): Full gamma vector of shape (N, 1).
+        selected_indices (ndarray): 1D array of indices to select.
+
+    Returns:
+        tuple: A tuple (R_sub, gamma_sub) where:
+            R_sub (ndarray): Submatrix of shape (K, K).
+            gamma_sub (ndarray): Subvector of shape (K, 1).
+    """
+    R_sub = R[selected_indices[:, None], selected_indices]
+    gamma_sub = gamma[selected_indices, :]
+    return R_sub, gamma_sub
+
+
 def get_ct_model(geometry_type, sinogram_shape, angles, source_detector_dist=None, source_iso_dist=None):
     """
     Create an instance of TomographyModel with the given parameters
@@ -257,7 +276,7 @@ def compute_vcl(sub_R, sub_gamma):
     return loss_value
 
 
-def angle_subset_selection(R, gamma, angle_candidates, K, r_2, search_min=30, seed=None):
+def angle_subset_selection(R, gamma, candidate_angles, K, r_2, search_min=30, seed=None):
     """
     Select a subset of view angles that minimize the View Correlation Loss (VCL) using stochastic greedy optimization.
 
@@ -268,7 +287,7 @@ def angle_subset_selection(R, gamma, angle_candidates, K, r_2, search_min=30, se
     Args:
         R (ndarray): Covariance matrix of shape (num_views, num_views).
         gamma (ndarray): Column vector of shape (num_views, 1), representing the inner product between reconstructions and reference.
-        angle_candidates (ndarray): 1D array of view angles (shape (num_views,)) corresponding to R and gamma.
+        candidate_angles (ndarray): 1D array of view angles (shape (num_views,)) corresponding to R and gamma.
         K (int): Number of view angles to select.
         r_2 (float): Fraction of unchosen candidates to sample per view per iteration.
         search_min (int, optional): Minimum number of angles that are searched per interation. Defaults to 30.
@@ -278,7 +297,7 @@ def angle_subset_selection(R, gamma, angle_candidates, K, r_2, search_min=30, se
         ndarray: A 1D NumPy array of selected view angles of shape (num_selected_views,).
 
     Example:
-        >>> selected = angle_subset_selection(R, gamma, angle_candidates, num_selected_views=10, r_2=0.01)
+        >>> selected = angle_subset_selection(R, gamma, candidate_angles, num_selected_views=10, r_2=0.01)
         >>> print(selected.shape)
         (10,)
     """
@@ -289,50 +308,49 @@ def angle_subset_selection(R, gamma, angle_candidates, K, r_2, search_min=30, se
     max_num_iteration = 100
 
     # Determine the number of candidate views for the stochastic search
-    num_angle_candidates = len(angle_candidates)
-    num_unselected_candidates = num_angle_candidates - K
+    num_candidate_angles = len(candidate_angles)
+    num_unselected_angles = num_candidate_angles - K
 
     # If there are no available angles, just return the full set of angle candidates
-    if num_unselected_candidates <= 0:
-        print(f"Requested {K} views, but only {num_angle_candidates} available. Returning all candidates.")
-        return angle_candidates
+    if num_unselected_angles <= 0:
+        print(f"Requested {K} views, but only {num_candidate_angles} available. Returning all candidates.")
+        return candidate_angles
 
     # Compute the number of candidates to search
-    num_search_candidates = np.minimum(np.maximum(int(r_2 * num_unselected_candidates), search_min), num_unselected_candidates)
+    num_search_candidates = np.minimum(np.maximum(int(r_2 * num_unselected_angles), search_min), num_unselected_angles)
 
     # Initialize indices by taking approximately uniform sample spacing
-    indices_chosen = np.linspace(0, num_angle_candidates, K, endpoint=False, dtype=int)
+    selected_angles = np.linspace(0, num_candidate_angles, K, endpoint=False, dtype=int)
 
     # Subsample R and gamma to form smaller submatrix and subvector
-    R_chosen = R[indices_chosen[:, None], indices_chosen]
-    gamma_chosen = gamma[indices_chosen, :]
+    R_chosen, gamma_chosen = subsample_R_gamma(R, gamma, selected_angles)
 
+    # Compute the vcl loss
     vcl_target = compute_vcl(R_chosen, gamma_chosen)
 
     for i in range(max_num_iteration):
-        prev_indices_chosen = np.copy(indices_chosen)
+        prev_selected_angles = np.copy(selected_angles)
         for j in range(K):
-            candidate_indices = list(set(range(num_angle_candidates)) - set(indices_chosen))
+            candidate_indices = list(set(range(num_candidate_angles)) - set(selected_angles))
             random.shuffle(candidate_indices)
             candidate_indices = candidate_indices[:num_search_candidates]
 
             for k in candidate_indices:
-                indices_temp = np.copy(indices_chosen)
-                indices_temp[j] = k
-                R_temp = R[indices_temp[:, None], indices_temp]
-                gamma_temp = gamma[indices_temp, :]
+                selected_angles_tmp = np.copy(selected_angles)
+                selected_angles_tmp[j] = k
+                R_temp, gamma_temp = subsample_R_gamma(R, gamma, selected_angles_tmp)
                 vcl_temp = compute_vcl(R_temp, gamma_temp)
 
                 if vcl_temp < vcl_target:
                     vcl_target = np.copy(vcl_temp)
-                    indices_chosen = np.copy(indices_temp)
+                    selected_angles = np.copy(selected_angles_tmp)
 
         # Early stopping: Check if the indices have changed
-        if np.array_equal(indices_chosen, prev_indices_chosen):
+        if np.array_equal(selected_angles, prev_selected_angles):
             print(f'Early stopping at iteration {i}, no change in indices')
             break
 
-    return np.sort(angle_candidates[indices_chosen])
+    return np.sort(candidate_angles[selected_angles])
 
 
 
