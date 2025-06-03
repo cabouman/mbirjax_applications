@@ -103,11 +103,9 @@ def max_abs_neighbor_diff(arr):
 
 
 
-def vcls(ct_model, reference_object, num_selected_views, r_1=0.001, r_2=0.1, verbose=0, seed=None):
+def get_opt_views(ct_model, reference_object, num_selected_views, r_1=0.001, r_2=0.1, verbose=0, seed=None):
     """
-    Run the View Correlation Loss Selection (VCLS) algorithm to choose an optimal subset of view angles.
-
-    This function selects a subset of K views that minimize the View Correlation Loss (VCL) using a stochastic greedy optimization algorithm.
+    Compute the optimal view angles by minimizing the View Covariance Loss (VCL) using a stochastic greedy optimization algorithm.
     The VCL is defined in the following paper: ???
 
     Args:
@@ -129,7 +127,7 @@ def vcls(ct_model, reference_object, num_selected_views, r_1=0.001, r_2=0.1, ver
         >>> sinogram_shape = (180, 128, 1)
         >>> ct_model = mj.ParallelBeamModel(sinogram_shape, angles)
         >>> ref_obj = np.random.rand(128, 128, 1)
-        >>> selected_angles = vcls(ct_model, ref_obj, num_selected_views=10)
+        >>> selected_angles = get_opt_views(ct_model, ref_obj, num_selected_views=10)
         >>> print(selected_angles.shape)
         (10,)
     """
@@ -192,12 +190,12 @@ def compute_recon_bases(ct_model, ref_object, r_1, data_store_dir, seed=None):
 
     # Create mask that defines the region of reconstruction (ROR)
     mask = mj.get_2d_ror_mask(ref_object[:, :, 0].shape)
-    norm_x = np.linalg.norm((mask[:, :, None] * ref_object).flatten())
 
-    # subsampling voxel indices in ROI
+    # subsample voxels indices and reference object in ROI using 2D voxel cylinders
     sparse_indices, row_col_indices = subsampling2d_indices(mask, r_1, seed=seed)
     ref_object_flat = ref_object.reshape(ref_object.shape[0] * ref_object.shape[1], ref_object.shape[2])
     sparse_ref_object = ref_object_flat[sparse_indices, :].flatten()
+    norm_x = np.linalg.norm(sparse_ref_object)
 
     # Initialize arrays
     num_views = ct_model.get_params('sinogram_shape')[0]
