@@ -137,7 +137,6 @@ def vcls(ct_model, reference_object, num_selected_views, r_1=0.001, r_2=0.1, ver
 
     # Compute optimal view angles
     optimal_angles = angle_subset_selection(R, gamma, angle_candidates, num_selected_views, r_2, seed=seed)
-    optimal_angles = np.sort(optimal_angles).flatten()
 
     return optimal_angles
 
@@ -258,7 +257,7 @@ def compute_vcl(sub_R, sub_gamma):
     return loss_value
 
 
-def angle_subset_selection(R, gamma, angle_candidates, K, r_2, seed=None):
+def angle_subset_selection(R, gamma, angle_candidates, K, r_2, search_min=30, seed=None):
     """
     Select a subset of view angles that minimize the View Correlation Loss (VCL) using stochastic greedy optimization.
 
@@ -272,6 +271,7 @@ def angle_subset_selection(R, gamma, angle_candidates, K, r_2, seed=None):
         angle_candidates (ndarray): 1D array of view angles (shape (num_views,)) corresponding to R and gamma.
         K (int): Number of view angles to select.
         r_2 (float): Fraction of unchosen candidates to sample per view per iteration.
+        search_min (int, optional): Minimum number of angles that are searched per interation. Defaults to 30.
         seed (int, optional): Random seed for deterministic behavior. Default is None.
 
     Returns:
@@ -290,12 +290,15 @@ def angle_subset_selection(R, gamma, angle_candidates, K, r_2, seed=None):
 
     # Determine the number of candidate views for the stochastic search
     num_angle_candidates = len(angle_candidates)
-    if K > num_angle_candidates:
+    num_unselected_candidates = num_angle_candidates - K
+
+    # If there are no available angles, just return the full set of angle candidates
+    if num_unselected_candidates <= 0:
+        print(f"Requested {K} views, but only {num_angle_candidates} available. Returning all candidates.")
         return angle_candidates
 
-    num_search_candidates = int(r_2 * (num_angle_candidates - K))
-    if num_search_candidates < 5:
-        num_search_candidates = 5
+    # Compute the number of candidates to search
+    num_search_candidates = np.minimum(np.maximum(int(r_2 * num_unselected_candidates), search_min), num_unselected_candidates)
 
     # Initialize indices by taking approximately uniform sample spacing
     indices_chosen = np.linspace(0, num_angle_candidates, K, endpoint=False, dtype=int)
@@ -329,8 +332,7 @@ def angle_subset_selection(R, gamma, angle_candidates, K, r_2, seed=None):
             print(f'Early stopping at iteration {i}, no change in indices')
             break
 
-    return angle_candidates[indices_chosen]
-
+    return np.sort(angle_candidates[indices_chosen])
 
 
 
