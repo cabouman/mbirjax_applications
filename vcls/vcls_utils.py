@@ -84,7 +84,7 @@ def max_abs_neighbor_diff(arr):
 
 
 
-def vcls(ct_model, reference_object, num_selected_views, r_1=0.001, r_2=0.1, verbose=0):
+def vcls(ct_model, reference_object, num_selected_views, r_1=0.001, r_2=0.1, verbose=0, seed=None):
     """
     Run the View Correlation Loss Selection (VCLS) algorithm to choose an optimal subset of view angles.
 
@@ -98,6 +98,7 @@ def vcls(ct_model, reference_object, num_selected_views, r_1=0.001, r_2=0.1, ver
         r_1 (float, optional): Voxel sampling rate in the reference object (default is 0.001).
         r_2 (float, optional): View sampling rate for stochastic minimization (default is 0.01).
         verbose (int, optional): Verbosity level. If > 0, visualizations of the covariance matrix and gamma vector will be shown.
+        seed (int, optional): Random seed for deterministic behavior. If set, results will be reproducible.
 
     Returns:
         ndarray: A 1D NumPy array of the selected optimal view angles of shape (K,).
@@ -115,7 +116,7 @@ def vcls(ct_model, reference_object, num_selected_views, r_1=0.001, r_2=0.1, ver
     angle_candidates = np.asarray(ct_model.get_params('angles'))
     with tempfile.TemporaryDirectory() as data_store_dir:
         # Compute recon bases
-        gamma = compute_recon_bases(ct_model, reference_object, r_1=r_1, data_store_dir=data_store_dir)
+        gamma = compute_recon_bases(ct_model, reference_object, r_1=r_1, data_store_dir=data_store_dir, seed=seed)
 
         # Compute inner product between recon bases
         R = parallel_cov_matrix_computation(num_views, data_store_dir)
@@ -135,14 +136,14 @@ def vcls(ct_model, reference_object, num_selected_views, r_1=0.001, r_2=0.1, ver
         plt.show()
 
     # Compute optimal view angles
-    optimal_angles = angle_subset_selection(R, gamma, angle_candidates, num_selected_views, r_2)
+    optimal_angles = angle_subset_selection(R, gamma, angle_candidates, num_selected_views, r_2, seed=seed)
     optimal_angles = np.sort(optimal_angles).flatten()
 
     return optimal_angles
 
 
 
-def compute_recon_bases(ct_model, ref_object, r_1, data_store_dir):
+def compute_recon_bases(ct_model, ref_object, r_1, data_store_dir, seed=None):
     """
     Compute the reconstruction bases and inner product vector (gamma) used in the VCLS algorithm.
 
@@ -151,6 +152,7 @@ def compute_recon_bases(ct_model, ref_object, r_1, data_store_dir):
         ref_object (ndarray): 3D reference object with shape (rows, cols, slices).
         r_1 (float): Voxel sampling rate in the reference object (fraction of total voxels).
         data_store_dir (str): Directory where the computed reconstructions will be stored as .npy files.
+        seed (int, optional): Random seed for deterministic behavior. Default is None.
 
     Returns:
         ndarray: A 2D array of shape (num_views, 1) representing the gamma column vector.
@@ -173,7 +175,7 @@ def compute_recon_bases(ct_model, ref_object, r_1, data_store_dir):
     norm_x = np.linalg.norm((mask[:, :, None] * ref_object).flatten())
 
     # subsampling voxel indices in ROI
-    sparse_indices, row_col_indices = subsampling2d_indices(mask, r_1)
+    sparse_indices, row_col_indices = subsampling2d_indices(mask, r_1, seed=seed)
     ref_object_flat = ref_object.reshape(ref_object.shape[0] * ref_object.shape[1], ref_object.shape[2])
     sparse_ref_object = ref_object_flat[sparse_indices, :].flatten()
 
@@ -241,7 +243,7 @@ def compute_vcl(sub_R, sub_gamma):
     return loss_value
 
 
-def angle_subset_selection(R, gamma, angle_candidates, K, r_2):
+def angle_subset_selection(R, gamma, angle_candidates, K, r_2, seed=None):
     """
     Select a subset of view angles that minimize the View Correlation Loss (VCL) using stochastic greedy optimization.
 
@@ -255,6 +257,7 @@ def angle_subset_selection(R, gamma, angle_candidates, K, r_2):
         angle_candidates (ndarray): 1D array of view angles (shape (num_views,)) corresponding to R and gamma.
         K (int): Number of view angles to select.
         r_2 (float): Fraction of unchosen candidates to sample per view per iteration.
+        seed (int, optional): Random seed for deterministic behavior. Default is None.
 
     Returns:
         ndarray: A 1D NumPy array of selected view angles of shape (num_selected_views,).
@@ -264,6 +267,10 @@ def angle_subset_selection(R, gamma, angle_candidates, K, r_2):
         >>> print(selected.shape)
         (10,)
     """
+    if seed is not None:
+        random.seed(seed)
+        np.random.seed(seed)
+
     max_num_iteration = 100
     num_candidate_views = len(angle_candidates)
     num_candidates = int(r_2 * (num_candidate_views - K))
@@ -312,7 +319,9 @@ def angle_subset_selection(R, gamma, angle_candidates, K, r_2):
 
 
 
-def subsampling2d_indices(mask, r_1):
+def subsampling2d_indices(mask, r_1, seed=None):
+    if seed is not None:
+        np.random.seed(seed)
     num_rows, num_cols = mask.shape
     num_samples = int(num_rows * num_cols * r_1)
     mask_indices = np.where(mask[:, :] == 1)  # Get 2D indices where mask == 1
