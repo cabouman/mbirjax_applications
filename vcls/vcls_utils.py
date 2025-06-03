@@ -1,3 +1,4 @@
+from mbirjax import bn
 import os
 import multiprocessing as mp
 import random
@@ -360,19 +361,66 @@ def angle_subset_selection(R, gamma, candidate_angles, K, r_2, search_min=30, se
 
 
 
-def subsampling2d_indices(mask, r_1, seed=None):
-    if seed is not None:
-        np.random.seed(seed)
+def subsampling2d_indices(mask, r_1, seed=None, blue_noise=False):
+    """
+    Perform 2D subsampling of voxel indices within a masked region.
+
+    If `blue_noise` is False, then the function samples with a uniformly distributed random sampling pattern.
+    Otherwise, a blue noise pattern is used to select points using a stored blue noise mask.
+    However, the blue noise doesn't work with a ramp filtered signal, so it is probably not a good choice in this applications.
+
+    Args:
+        mask (ndarray): A 2D binary array indicating the region of interest (ROI).
+        r_1 (float): Fraction of voxels to sample from the ROI. Must be in (0, 1].
+        seed (int, optional): Random seed for reproducibility in random mode.
+        blue_noise (bool, optional): If False (default), use uniform random sampling.
+                                     If True, use a blue noise pattern for sampling.
+
+    Returns:
+        Tuple:
+            random_indices_2d (jnp.ndarray): Flattened 1D array of selected voxel indices.
+            (row_inds, col_inds) (Tuple[ndarray, ndarray]): Arrays of row and column indices
+                corresponding to the selected voxels.
+    """
+    # Math is needed for ceiling operations used in tiling the blue noise pattern.
+    import math
+
+    # Validate that r_1 is a valid fraction.
+    if r_1 <= 0 or r_1 > 1:
+        raise ValueError("r_1 must be in the range (0, 1].")
+
+    # Extract dimensions of the mask and compute number of samples to select.
     num_rows, num_cols = mask.shape
-    num_samples = int(num_rows * num_cols * r_1)
-    mask_indices = np.where(mask[:, :] == 1)  # Get 2D indices where mask == 1
-    # Ensure num_samples does not exceed the number of available points
-    if num_samples > len(mask_indices[0]):
-        num_samples = len(mask_indices[0])
-    slice_choice = np.random.choice(len(mask_indices[0]), num_samples, replace=False)
-    row_inds = mask_indices[0][slice_choice]
-    col_inds = mask_indices[1][slice_choice]
+    mask_flat = mask.ravel()
+    num_total = np.sum(mask_flat)
+    num_samples = min(int(num_total * r_1), int(num_total))
+
+    # Blue noise-based voxel sampling.
+    if not blue_noise:
+        # Uniform random voxel sampling.
+        if seed is not None:
+            np.random.seed(seed)
+        # Identify eligible voxel indices from the flattened mask.
+        eligible_indices = np.where(mask_flat > 0)[0]
+        flat_indices = np.random.choice(eligible_indices, size=num_samples, replace=False)
+    else:
+        # Load the precomputed blue noise pattern from mbirjax.
+        bn_pattern = bn.bn256
+        # Determine how many times to tile the blue noise pattern to cover the mask.
+        tile_rows = math.ceil(num_rows / bn_pattern.shape[0])
+        tile_cols = math.ceil(num_cols / bn_pattern.shape[1])
+        tiled_pattern = np.tile(bn_pattern, (tile_rows, tile_cols))
+        tiled_pattern = tiled_pattern[:num_rows, :num_cols]
+
+        # Mask out non-ROI regions with infinity to exclude them from sampling.
+        masked_values = np.where(mask, tiled_pattern, np.inf)
+        # Select the lowest blue noise values within the mask.
+        flat_indices = np.argsort(masked_values.ravel())[:num_samples]
+
+    # Convert flat indices back to 2D row/column indices and linear indices.
+    row_inds, col_inds = np.unravel_index(flat_indices, (num_rows, num_cols))
     random_indices_2d = row_inds * num_cols + col_inds
     random_indices_2d = jnp.array(random_indices_2d)
 
+    # Return the flattened and row/column indices.
     return random_indices_2d, (row_inds, col_inds)
