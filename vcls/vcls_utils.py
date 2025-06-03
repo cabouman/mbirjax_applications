@@ -120,7 +120,9 @@ def vcls(ct_model, reference_object, num_selected_views, r_1=0.001, r_2=0.1, ver
         seed (int, optional): Random seed for deterministic behavior. If set, results will be reproducible.
 
     Returns:
-        ndarray: A 1D NumPy array of the selected optimal view angles of shape (K,).
+        Tuple[ndarray, float]: A tuple containing:
+            - A 1D NumPy array of the selected optimal view angles of shape (K,).
+            - The scalar VCL value for the selected subset.
 
     Example:
         >>> angles = np.linspace(0, np.pi, num=180, endpoint=False)
@@ -155,9 +157,9 @@ def vcls(ct_model, reference_object, num_selected_views, r_1=0.001, r_2=0.1, ver
         plt.show()
 
     # Compute optimal view angles
-    optimal_angles = angle_subset_selection(R, gamma, angle_candidates, num_selected_views, r_2, seed=seed)
+    optimal_angles, vcl_value = angle_subset_selection(R, gamma, angle_candidates, num_selected_views, r_2, seed=seed)
 
-    return optimal_angles
+    return optimal_angles, vcl_value
 
 
 
@@ -294,7 +296,9 @@ def angle_subset_selection(R, gamma, candidate_angles, K, r_2, search_min=30, se
         seed (int, optional): Random seed for deterministic behavior. Default is None.
 
     Returns:
-        ndarray: A 1D NumPy array of selected view angles of shape (num_selected_views,).
+        Tuple[ndarray, float]: A tuple containing:
+            - A 1D NumPy array of selected view angles of shape (num_selected_views,).
+            - The scalar VCL value for the selected subset.
 
     Example:
         >>> selected = angle_subset_selection(R, gamma, candidate_angles, num_selected_views=10, r_2=0.01)
@@ -326,7 +330,7 @@ def angle_subset_selection(R, gamma, candidate_angles, K, r_2, search_min=30, se
     R_chosen, gamma_chosen = subsample_R_gamma(R, gamma, selected_angles)
 
     # Compute the vcl loss
-    vcl_target = compute_vcl(R_chosen, gamma_chosen)
+    vcl_current_best = compute_vcl(R_chosen, gamma_chosen)
 
     for i in range(max_num_iteration):
         prev_selected_angles = np.copy(selected_angles)
@@ -341,8 +345,8 @@ def angle_subset_selection(R, gamma, candidate_angles, K, r_2, search_min=30, se
                 R_temp, gamma_temp = subsample_R_gamma(R, gamma, selected_angles_tmp)
                 vcl_temp = compute_vcl(R_temp, gamma_temp)
 
-                if vcl_temp < vcl_target:
-                    vcl_target = np.copy(vcl_temp)
+                if vcl_temp < vcl_current_best:
+                    vcl_current_best = np.copy(vcl_temp)
                     selected_angles = np.copy(selected_angles_tmp)
 
         # Early stopping: Check if the indices have changed
@@ -350,7 +354,9 @@ def angle_subset_selection(R, gamma, candidate_angles, K, r_2, search_min=30, se
             print(f'Early stopping at iteration {i}, no change in indices')
             break
 
-    return np.sort(candidate_angles[selected_angles])
+    # Read-out and sort set of best angles
+    best_view_angles = np.sort(candidate_angles[selected_angles])
+    return best_view_angles, float(vcl_current_best)
 
 
 
