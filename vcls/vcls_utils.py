@@ -238,8 +238,23 @@ def parallel_cov_matrix_computation(num_views, data_store_dir):
 
 
 def compute_vcl(sub_R, sub_gamma):
-    loss_value = - sub_gamma.T @ np.linalg.solve(sub_R, sub_gamma)
+    """
+    Compute the View Correlation Loss (VCL) for a subset of views.
 
+    This function evaluates the VCL metric, defined as:
+        VCL = 1 - γᵀ R⁻¹ γ,
+    where R is the submatrix of the covariance matrix and γ is the inner product vector.
+    Lower values of VCL indicate a more informative and less redundant view subset.
+
+    Args:
+        sub_R (ndarray): A square (K, K) covariance matrix corresponding to a subset of K views.
+        sub_gamma (ndarray): A column vector of shape (K, 1) representing the inner products
+                              between the reconstruction bases and the reference object.
+
+    Returns:
+        float: The scalar VCL value for the selected subset of views.
+    """
+    loss_value = 1 - sub_gamma.T @ np.linalg.solve(sub_R, sub_gamma)
     return loss_value
 
 
@@ -272,19 +287,20 @@ def angle_subset_selection(R, gamma, angle_candidates, K, r_2, seed=None):
         np.random.seed(seed)
 
     max_num_iteration = 100
-    num_candidate_views = len(angle_candidates)
-    num_candidates = int(r_2 * (num_candidate_views - K))
-    if num_candidates < 5:
-        num_candidates = 5
 
-    # Initialize choosing indices (uniformly sampling)
-    step_size = num_candidate_views / K
-    indices_chosen = []
-    for i in range(K):
-        indices_chosen.append(int(step_size * i))
-    indices_chosen = np.array(indices_chosen)
+    # Determine the number of candidate views for the stochastic search
+    num_angle_candidates = len(angle_candidates)
+    if K > num_angle_candidates:
+        return angle_candidates
 
-    # Subsample the matrix using the uniformly spaced indices
+    num_search_candidates = int(r_2 * (num_angle_candidates - K))
+    if num_search_candidates < 5:
+        num_search_candidates = 5
+
+    # Initialize indices by taking approximately uniform sample spacing
+    indices_chosen = np.linspace(0, num_angle_candidates, K, endpoint=False, dtype=int)
+
+    # Subsample R and gamma to form smaller submatrix and subvector
     R_chosen = R[indices_chosen[:, None], indices_chosen]
     gamma_chosen = gamma[indices_chosen, :]
 
@@ -293,9 +309,9 @@ def angle_subset_selection(R, gamma, angle_candidates, K, r_2, seed=None):
     for i in range(max_num_iteration):
         prev_indices_chosen = np.copy(indices_chosen)
         for j in range(K):
-            candidate_indices = list(set(range(num_candidate_views)) - set(indices_chosen))
+            candidate_indices = list(set(range(num_angle_candidates)) - set(indices_chosen))
             random.shuffle(candidate_indices)
-            candidate_indices = candidate_indices[:num_candidates]
+            candidate_indices = candidate_indices[:num_search_candidates]
 
             for k in candidate_indices:
                 indices_temp = np.copy(indices_chosen)
