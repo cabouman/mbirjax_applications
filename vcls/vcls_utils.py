@@ -318,7 +318,8 @@ def angle_subset_selection(R, gamma, candidate_angles, K, r_2, search_min=30, se
     # If there are no available angles, just return the full set of angle candidates
     if num_unselected_angles <= 0:
         print(f"Requested {K} views, but only {num_candidate_angles} available. Returning all candidates.")
-        return candidate_angles
+        sorted_angles = np.sort(candidate_angles)
+        return sorted_angles, float(compute_vcl(*subsample_R_gamma(R, gamma, np.arange(len(candidate_angles)))))
 
     # Compute the number of candidates to search
     num_search_candidates = np.minimum(np.maximum(int(r_2 * num_unselected_angles), search_min), num_unselected_angles)
