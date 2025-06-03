@@ -70,32 +70,24 @@ if __name__ == '__main__':
     # Run VCLS to Select Views and Display Results
     ##############################################
     time0 = time.time()
-    optimal_angles = vut.vcls(ct_model, reference_object, num_selected_views=num_selected_views, r_1=r_1, r_2=r_2, verbose=1)
+    optimal_angles = vut.vcls(ct_model, reference_object, num_selected_views, r_1=r_1, r_2=r_2, verbose=1)
     elapsed = time.time() - time0
     print('Elapsed time for selected views is {:.3f} seconds'.format(elapsed))
 
-    # Convert to degrees and display
-    angles_arr = np.sort(optimal_angles).flatten()
-    formatted = np.array2string(angles_arr, precision=3, suppress_small=True, separator=', ')
-    print('chosen angles: ' + formatted)
-
     # Display selected angles
-    dut.show_image_with_angles(reference_object[:, :, 0], angles_rad=angles_arr)
-
-    # Display the default and optimal angle recons
-    new_num_views = len(angles_arr)
-    sinogram_shape = (new_num_views, sinogram_shape[1], sinogram_shape[2])
+    formatted = np.array2string(optimal_angles, precision=3, suppress_small=True, separator=', ')
+    print('chosen angles: ' + formatted)
+    dut.show_image_with_angles(reference_object[:, :, 0], angles_rad=optimal_angles)
 
     # Do a recon with optimal angles
-    optimal_angles = np.sort(jnp.stack(optimal_angles)).flatten()
-    ct_model = vut.copy_ct_model(ct_model, optimal_angles)
-    sinogram_optimal_angles = ct_model.forward_project(reference_object)
-    recon_optimal_angles, recon_params = ct_model.recon(sinogram_optimal_angles)
+    ct_model_opt = vut.copy_ct_model(ct_model, optimal_angles)
+    sinogram_optimal_angles = ct_model_opt.forward_project(reference_object)
+    recon_optimal_angles, recon_params = ct_model_opt.recon(sinogram_optimal_angles)
 
-    angles = jnp.linspace(start_angle, end_angle, new_num_views, endpoint=False)
-    ct_model = vut.copy_ct_model(ct_model, angles)
-    sinogram_uniform = ct_model.forward_project(reference_object)
-    recon_uniform, recon_params_uniform = ct_model.recon(sinogram_uniform)
+    angles = jnp.linspace(start_angle, end_angle, len(optimal_angles), endpoint=False)
+    ct_model_uniform = vut.copy_ct_model(ct_model, angles)
+    sinogram_uniform = ct_model_uniform.forward_project(reference_object)
+    recon_uniform, recon_params_uniform = ct_model_uniform.recon(sinogram_uniform)
 
     mj.slice_viewer(reference_object, recon_uniform, recon_optimal_angles, slice_label=['Ref object', 'Uniform Angles', 'VCLS Angles'],
                     title='Reference object (left) plus Recons from \nuniformly spaced angles (middle) and optimal angles (right)')

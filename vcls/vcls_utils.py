@@ -37,8 +37,8 @@ def get_ct_model(geometry_type, sinogram_shape, angles, source_detector_dist=Non
 
 def copy_ct_model(ct_model, new_angles):
     """
-    Create a TomographyModel with the same type and parameters as the given ct_model except with the input sinogram
-    shape and angles.
+    Create a TomographyModel with the same type and parameters as the given ct_model except with the new input angles
+    and a corresponding sinogram shape.
 
     Args:
         ct_model (TomographyModel): The model to copy.
@@ -134,10 +134,9 @@ def vcls(ct_model, reference_object, num_selected_views, r_1=0.001, r_2=0.1, ver
         plt.tight_layout()
         plt.show()
 
-
-
-    # Find optimal view angles
+    # Compute optimal view angles
     optimal_angles = angle_subset_selection(R, gamma, angle_candidates, num_selected_views, r_2)
+    optimal_angles = np.sort(optimal_angles).flatten()
 
     return optimal_angles
 
