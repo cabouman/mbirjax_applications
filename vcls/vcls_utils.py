@@ -151,7 +151,7 @@ def get_opt_views(ct_model, reference_object, num_selected_views, r_1=0.001, r_2
         axes[1].set_title('R Inverse')
         axes[2].plot(gamma, '.')
         axes[2].set_ylim([0, np.max(gamma)])
-        axes[2].set_title('VCL Gamma vector')
+        axes[2].set_title('Gamma Vector')
         plt.tight_layout()
         plt.show()
 
