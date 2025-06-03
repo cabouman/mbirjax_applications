@@ -277,7 +277,7 @@ def compute_vcl(sub_R, sub_gamma):
     return loss_value
 
 
-def angle_subset_selection(R, gamma, candidate_angles, K, r_2, search_min=30, seed=None):
+def angle_subset_selection(R, gamma, candidate_angles, K, r_2, search_min=30, max_iterations = 100, seed=None):
     """
     Select a subset of view angles that minimize the View Correlation Loss (VCL) using stochastic greedy optimization.
 
@@ -291,39 +291,45 @@ def angle_subset_selection(R, gamma, candidate_angles, K, r_2, search_min=30, se
         candidate_angles (ndarray): 1D array of view angles (shape (num_views,)) corresponding to R and gamma.
         K (int): Number of view angles to select.
         r_2 (float): Fraction of unchosen candidates to sample per view per iteration.
-        search_min (int, optional): Minimum number of angles that are searched per interation. Defaults to 30.
+        search_min (int, optional): Minimum number of angles that are searched per iteration. Defaults to 30.
+        max_iterations (int, optional): Maximum allowed number of iterations. Defaults to 100.
         seed (int, optional): Random seed for deterministic behavior. Default is None.
 
     Returns:
         Tuple[ndarray, float]: A tuple containing:
-            - A 1D NumPy array of selected view angles of shape (num_selected_views,).
+            - A 1D NumPy array of selected view angles of shape (K,).
             - The scalar VCL value for the selected subset.
 
     Example:
-        >>> selected = angle_subset_selection(R, gamma, candidate_angles, num_selected_views=10, r_2=0.01)
+        >>> selected = angle_subset_selection(R, gamma, candidate_angles, K=10, r_2=0.01)
         >>> print(selected.shape)
         (10,)
+
+    Raises:
+        ValueError: If K <= 0.
     """
     if seed is not None:
         random.seed(seed)
         np.random.seed(seed)
 
-    max_num_iteration = 100
-
     # Determine the number of candidate views for the stochastic search
     num_candidate_angles = len(candidate_angles)
     num_unselected_angles = num_candidate_angles - K
 
+    if K <= 0:
+        raise ValueError("K must be positive. Received K={}".format(K))
+
     # If there are no available angles, just return the full set of angle candidates
     if num_unselected_angles <= 0:
-        print(f"Requested {K} views, but only {num_candidate_angles} available. Returning all candidates.")
+        import warnings
+        warnings.warn(f"Requested {K} views, but only {num_candidate_angles} available. Returning all candidates.")
         sorted_angles = np.sort(candidate_angles)
         return sorted_angles, float(compute_vcl(*subsample_R_gamma(R, gamma, np.arange(len(candidate_angles)))))
 
     # Compute the number of candidates to search
     num_search_candidates = np.minimum(np.maximum(int(r_2 * num_unselected_angles), search_min), num_unselected_angles)
 
-    # Initialize indices by taking approximately uniform sample spacing
+    # Initialize with uniformly spaced angles across candidate list.
     selected_angles = np.linspace(0, num_candidate_angles, K, endpoint=False, dtype=int)
 
     # Subsample R and gamma to form smaller submatrix and subvector
@@ -332,10 +338,10 @@ def angle_subset_selection(R, gamma, candidate_angles, K, r_2, search_min=30, se
     # Compute the vcl loss
     vcl_current_best = compute_vcl(R_chosen, gamma_chosen)
 
-    for i in range(max_num_iteration):
+    for i in range(max_iterations):
         prev_selected_angles = np.copy(selected_angles)
         for j in range(K):
-            candidate_indices = list(set(range(num_candidate_angles)) - set(selected_angles))
+            candidate_indices = np.setdiff1d(np.arange(num_candidate_angles), selected_angles, assume_unique=True).tolist()
             random.shuffle(candidate_indices)
             candidate_indices = candidate_indices[:num_search_candidates]
 
@@ -349,7 +355,7 @@ def angle_subset_selection(R, gamma, candidate_angles, K, r_2, search_min=30, se
                     vcl_current_best = np.copy(vcl_temp)
                     selected_angles = np.copy(selected_angles_tmp)
 
-        # Early stopping: Check if the indices have changed
+        # Early stopping: exit if no change in selected angles during this iteration.
         if np.array_equal(selected_angles, prev_selected_angles):
             print(f'Early stopping at iteration {i}, no change in indices')
             break
