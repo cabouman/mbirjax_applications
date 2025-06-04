@@ -148,7 +148,7 @@ def get_opt_views(ct_model, reference_object, num_selected_views, r_1=0.001, r_2
         axes[0].imshow(R)
         axes[0].set_title('R View-Covariance Matrix')
         axes[1].imshow(np.linalg.inv(R))
-        axes[1].set_title('B=R^{-1} Precision Matrix')
+        axes[1].set_title('B=R^{-1} View-Precision Matrix')
         axes[2].plot(gamma, '.')
         axes[2].set_ylim([0, np.max(gamma)])
         axes[2].set_title('Gamma Vector')

@@ -70,20 +70,27 @@ def fill_convex_polygon(array: np.ndarray, vertices: np.ndarray, fill_value: flo
     array[mask] = fill_value
 
 
-def show_image_with_angles(image: np.ndarray, *, angles_deg: np.ndarray = None, angles_rad: np.ndarray = None) -> None:
-    """
-    Display a square image and overlay lines representing angles.  Exactly one of angles_deg or angles_rad must be
-    None, and the other must be an array of floats
+def show_image_with_angles(
+    image: np.ndarray,
+    *,
+    angles_deg: np.ndarray = None,
+    angles_rad: np.ndarray = None,
+    title: str = None
+) -> None:
+    """Display a square image and overlay lines representing angles.
+
+    Exactly one of `angles_deg` or `angles_rad` must be provided (not both).
 
     Args:
-        image : np.ndarray
-            A 2D square numpy array representing the image.
-        angles_deg : np.ndarray
-            A 1D array of angles in degrees. Each angle will be shown as a line
-            through the image center in both directions.
-        angles_rad : np.ndarray
-            A 1D array of angles in radians. Each angle will be shown as a line
-            through the image center in both directions.
+        image (np.ndarray): A 2D square NumPy array representing the image.
+        angles_deg (np.ndarray, optional): A 1D array of angles in degrees. Each angle is visualized
+            as a bidirectional line through the image center.
+        angles_rad (np.ndarray, optional): A 1D array of angles in radians. Each angle is visualized
+            as a bidirectional line through the image center.
+        title (str, optional): Optional title to display above the plot.
+
+    Raises:
+        ValueError: If `image` is not square 2D, or if both/neither of `angles_deg` and `angles_rad` are provided.
 
     Returns:
         None
@@ -116,6 +123,6 @@ def show_image_with_angles(image: np.ndarray, *, angles_deg: np.ndarray = None, 
 
         plt.plot([x0, x1], [y0, y1], color=colors[i], linewidth=2)
 
-    plt.title("Image with Overlaid Angles")
+    plt.title(title or "Image with Overlaid Angles")
     plt.axis('off')
     plt.show()
