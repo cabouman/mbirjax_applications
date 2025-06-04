@@ -136,7 +136,7 @@ def get_opt_views(ct_model, reference_object, num_selected_views, r_1=0.001, r_2
     angle_candidates = np.asarray(ct_model.get_params('angles'))
     with tempfile.TemporaryDirectory() as data_store_dir:
         # Compute recon bases
-        gamma = compute_recon_bases(ct_model, reference_object, r_1=r_1, data_store_dir=data_store_dir, seed=seed)
+        gamma = compute_view_basis_functions(ct_model, reference_object, r_1=r_1, data_store_dir=data_store_dir, seed=seed)
 
         # Compute inner product between recon bases
         R = parallel_cov_matrix_computation(num_views, data_store_dir)
@@ -162,9 +162,9 @@ def get_opt_views(ct_model, reference_object, num_selected_views, r_1=0.001, r_2
 
 
 
-def compute_recon_bases(ct_model, ref_object, r_1, data_store_dir, seed=None):
+def compute_view_basis_functions(ct_model, ref_object, r_1, data_store_dir, seed=None):
     """
-    Compute the reconstruction bases and inner product vector (gamma) used in the VCLS algorithm.
+    Compute the view basis functions and inner product vector (gamma) used in the VCLS algorithm.
 
     Args:
         ct_model (TomographyModel): CT model specifying the system geometry.
@@ -177,7 +177,7 @@ def compute_recon_bases(ct_model, ref_object, r_1, data_store_dir, seed=None):
         ndarray: A 2D array of shape (num_views, 1) representing the gamma column vector.
 
     Example:
-        >>> gamma = compute_recon_bases(ct_model, ref_object, 0.001, "/tmp/recons")
+        >>> gamma = compute_view_basis_functions(ct_model, ref_object, 0.001, "/tmp/recons")
         >>> print(gamma.shape)
         (180, 1)
     """
@@ -205,31 +205,28 @@ def compute_recon_bases(ct_model, ref_object, r_1, data_store_dir, seed=None):
     filtered_sinogram = ct_model.direct_filter(ref_sino, view_batch_size=None)
 
     # Compute recon bases individually for each view
-    view_basis_functions_raw = []
-    for i in tqdm.trange(num_views, desc='Computing recon bases'):
-        view_sino = filtered_sinogram[i:i+1]
-        recon_i = ct_model.sparse_back_project(view_sino, sparse_indices, view_indices=jnp.array([i]))  # shape (voxels, slices)
-        view_basis_functions_raw.append(np.asarray(recon_i).reshape(-1))  # flatten to (voxels * slices,)
+    gamma = np.zeros((num_views, 1))
+    for i in tqdm.trange(num_views, desc='Computing and storing view basis functions'):
+        view_sino = filtered_sinogram[i:i + 1]
+        recon_i = ct_model.sparse_back_project(view_sino, sparse_indices, view_indices=jnp.array([i]))
+        recon_i_flat = np.asarray(recon_i).reshape(-1)
 
-    view_basis_functions_raw = np.stack(view_basis_functions_raw, axis=0)  # shape (num_views, voxels * slices)
-    norms = np.linalg.norm(view_basis_functions_raw, axis=1, keepdims=True) + eps
-    view_basis_functions = view_basis_functions_raw / norms
+        norm_i = np.linalg.norm(recon_i_flat) + eps
+        recon_i_normalized = recon_i_flat / norm_i
 
-    # Save recon bases and compute gamma
-    gamma = np.sum(view_basis_functions * sparse_ref_object, axis=1, keepdims=True) / (norm_x + eps)
-    for i in range(num_views):
-        basis = view_basis_functions[i]
-        with open(os.path.join(data_store_dir, f'recon_view{i}.npy'), 'wb') as f:
-            np.save(f, basis)
+        # Save view basis function
+        with open(os.path.join(data_store_dir, f'view_basis_function{i}.npy'), 'wb') as f:
+            np.save(f, recon_i_normalized)
 
+        gamma[i, 0] = np.dot(recon_i_normalized, sparse_ref_object) / (norm_x + eps)
     return gamma
 
 
 def compute_cov_matrix_part(i, num_views, data_store_dir):
     row = np.zeros(num_views)
-    recon_i = np.load(os.path.join(data_store_dir, f'recon_view{i}.npy'))
+    recon_i = np.load(os.path.join(data_store_dir, f'view_basis_function{i}.npy'))
     for j in range(i, num_views):
-        recon_j = np.load(os.path.join(data_store_dir, f'recon_view{j}.npy'))
+        recon_j = np.load(os.path.join(data_store_dir, f'view_basis_function{j}.npy'))
         row[j] = np.dot(recon_i, recon_j)
 
     return i, row
