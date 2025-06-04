@@ -190,7 +190,7 @@ def compute_view_basis_functions(ct_model, ref_object, r_1, data_store_dir, seed
 
     # Create ROI mask and subsample the indices
     mask = mj.get_2d_ror_mask(ref_object[:, :, 0].shape)
-    sparse_indices, row_col_indices = subsampling2d_indices(mask, r_1, seed=seed)
+    sparse_indices, row_col_indices = get_2d_subsampling_indices(mask, r_1, seed=seed)
     ref_object_flat = ref_object.reshape(ref_object.shape[0] * ref_object.shape[1], ref_object.shape[2])
     sparse_ref_object = ref_object_flat[sparse_indices, :].flatten()
     norm_x = np.linalg.norm(sparse_ref_object)
@@ -399,7 +399,7 @@ def compute_opt_angle_subset(R, gamma, candidate_angles, K, r_2, search_min=30, 
 
 
 
-def subsampling2d_indices(mask, r_1, seed=None, blue_noise=False):
+def get_2d_subsampling_indices(mask, r_1, seed=None, blue_noise=False):
     """
     Perform 2D subsampling of voxel indices within a masked region.
 
