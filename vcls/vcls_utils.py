@@ -205,7 +205,7 @@ def compute_recon_bases(ct_model, ref_object, r_1, data_store_dir, seed=None):
     filtered_sinogram = ct_model.direct_filter(ref_sino, view_batch_size=None)
 
     # Compute recon bases individually for each view
-    recon_matrix = []git 
+    recon_matrix = []
     for i in tqdm.trange(num_views, desc='Computing recon bases'):
         view_sino = filtered_sinogram[i:i+1]
         recon_i = ct_model.sparse_back_project(view_sino, sparse_indices, view_indices=jnp.array([i]))  # shape (voxels, slices)
