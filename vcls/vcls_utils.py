@@ -139,7 +139,7 @@ def get_opt_views(ct_model, reference_object, num_selected_views, r_1=0.001, r_2
         gamma = compute_view_basis_functions(ct_model, reference_object, r_1=r_1, data_store_dir=data_store_dir, seed=seed)
 
         # Compute inner product between recon bases
-        R = parallel_cov_matrix_computation(num_views, data_store_dir)
+        R = compute_cov_matrix(num_views, data_store_dir)
 
     if verbose > 0:
         # plot the the covariance matrix and gamma
@@ -156,7 +156,7 @@ def get_opt_views(ct_model, reference_object, num_selected_views, r_1=0.001, r_2
         plt.show()
 
     # Compute optimal view angles
-    optimal_angles, vcl_value = angle_subset_selection(R, gamma, angle_candidates, num_selected_views, r_2, seed=seed)
+    optimal_angles, vcl_value = compute_opt_angle_subset(R, gamma, angle_candidates, num_selected_views, r_2, seed=seed)
 
     return optimal_angles, vcl_value
 
@@ -222,7 +222,25 @@ def compute_view_basis_functions(ct_model, ref_object, r_1, data_store_dir, seed
     return gamma
 
 
-def compute_cov_matrix_part(i, num_views, data_store_dir):
+def compute_cov_matrix_row(i, num_views, data_store_dir):
+    """
+    Compute a single row of the covariance matrix between view basis functions.
+
+    Args:
+        i (int): The index of the row to be computed.
+        num_views (int): The total number of view basis functions.
+        data_store_dir (str): Directory path containing the stored `.npy` files for each view basis function.
+
+    Returns:
+        Tuple[int, ndarray]: A tuple containing:
+            - `i` (int): The row index for this portion of the covariance matrix.
+            - `row` (ndarray): 1D NumPy array of length `num_views.
+
+    Example:
+        >>> i, row = compute_cov_matrix_row(3, 180, "/tmp/recons")
+        >>> print(i, row.shape)
+        3 (180,)
+    """
     row = np.zeros(num_views)
     recon_i = np.load(os.path.join(data_store_dir, f'view_basis_function{i}.npy'))
     for j in range(i, num_views):
@@ -232,7 +250,25 @@ def compute_cov_matrix_part(i, num_views, data_store_dir):
     return i, row
 
 
-def parallel_cov_matrix_computation(num_views, data_store_dir):
+def compute_cov_matrix(num_views, data_store_dir):
+    """
+    Compute the covariance matrix of view basis functions in parallel.
+
+    This function utilizes multiprocessing to efficiently compute the symmetric covariance matrix
+    by loading precomputed basis functions stored as `.npy` files.
+
+    Args:
+        num_views (int): Total number of view basis functions.
+        data_store_dir (str): Directory containing the stored `.npy` files for each view basis function.
+
+    Returns:
+        ndarray: A symmetric covariance matrix of shape `(num_views, num_views)`.
+
+    Example:
+        >>> cov_matrix = compute_cov_matrix(180, "/tmp/recons")
+        >>> print(cov_matrix.shape)
+        (180, 180)
+    """
     # Set number of processors
     num_cpus = mp.cpu_count()
     print('Number of CPUs: ', num_cpus)
@@ -241,7 +277,7 @@ def parallel_cov_matrix_computation(num_views, data_store_dir):
 
     # Create a pool of workers
     with mp.Pool(processes=num_cpus) as pool:
-        results = [pool.apply_async(compute_cov_matrix_part, args=(i, num_views, data_store_dir)) for i in
+        results = [pool.apply_async(compute_cov_matrix_row, args=(i, num_views, data_store_dir)) for i in
                    range(num_views)]
 
         for result in results:
@@ -273,7 +309,7 @@ def compute_vcl(sub_R, sub_gamma):
     return loss_value
 
 
-def angle_subset_selection(R, gamma, candidate_angles, K, r_2, search_min=30, max_iterations = 100, seed=None):
+def compute_opt_angle_subset(R, gamma, candidate_angles, K, r_2, search_min=30, max_iterations = 100, seed=None):
     """
     Select a subset of view angles that minimize the View Correlation Loss (VCL) using stochastic greedy optimization.
 
@@ -297,7 +333,7 @@ def angle_subset_selection(R, gamma, candidate_angles, K, r_2, search_min=30, ma
             - The scalar VCL value for the selected subset.
 
     Example:
-        >>> selected = angle_subset_selection(R, gamma, candidate_angles, K=10, r_2=0.01)
+        >>> selected = compute_opt_angle_subset(R, gamma, candidate_angles, K=10, r_2=0.01)
         >>> print(selected.shape)
         (10,)
 

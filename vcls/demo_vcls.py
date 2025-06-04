@@ -41,7 +41,7 @@ if __name__ == '__main__':
     ####################################################
     # Calculate function parameters from user parameters
     ####################################################
-    # We need this to do multiprocessing in vcls_utils.parallel_cov_matrix_computation
+    # We need this to do multiprocessing in vcls_utils.compute_cov_matrix
     multiprocessing.freeze_support()
 
     # Create reference object
