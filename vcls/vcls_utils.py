@@ -181,47 +181,46 @@ def compute_recon_bases(ct_model, ref_object, r_1, data_store_dir, seed=None):
         >>> print(gamma.shape)
         (180, 1)
     """
-    # Define epsilon to avoid divide by zero
     eps = 1e-12
 
-    # Compute forward projection of reference object
+    # Forward project the reference object
     print('Creating sinogram')
     ref_sino = ct_model.forward_project(ref_object)
     ref_sino = np.asarray(ref_sino)
 
-    # Create mask that defines the region of reconstruction (ROR)
+    # Create ROI mask and subsample the indices
     mask = mj.get_2d_ror_mask(ref_object[:, :, 0].shape)
-
-    # subsample voxels indices and reference object in ROI using 2D voxel cylinders
     sparse_indices, row_col_indices = subsampling2d_indices(mask, r_1, seed=seed)
     ref_object_flat = ref_object.reshape(ref_object.shape[0] * ref_object.shape[1], ref_object.shape[2])
     sparse_ref_object = ref_object_flat[sparse_indices, :].flatten()
     norm_x = np.linalg.norm(sparse_ref_object)
 
-    # Initialize arrays
+    # Get number of views and angles
     num_views = ct_model.get_params('sinogram_shape')[0]
     candidate_angles = np.asarray(ct_model.get_params('angles'))
-    gamma = np.zeros((num_views, 1))  # Inner product between reference object and recon from a single angle
 
-    # Compute recon bases - choose one view at a time and do an fbp/fdk from that.
     print('Creating recon bases')
-    for i in tqdm.tqdm(range(num_views)):
-        one_angle_sino = ref_sino[[i], :, :]
-        one_angle = candidate_angles[i: i + 1]
-        one_angle_model = copy_ct_model(ct_model, one_angle)
 
-        # Filter sinogram using appropriate filter for geometry
-        filtered_sinogram = one_angle_model.direct_filter(one_angle_sino, view_batch_size=None)
+    # Filter the sinogram in a single call
+    filtered_sinogram = ct_model.direct_filter(ref_sino, view_batch_size=None)
 
-        # Compute normalized sparse reconstruction basis, T_\theta in paper
-        sparse_recon_basis = one_angle_model.sparse_back_project(filtered_sinogram, sparse_indices).flatten()
-        norm = np.linalg.norm(sparse_recon_basis)
-        normalized_sparse_recon_basis = sparse_recon_basis / (norm + eps)
+    # Compute recon bases individually for each view
+    recon_matrix = []
+    for i in range(num_views):
+        view_sino = filtered_sinogram[i:i+1]
+        recon_i = ct_model.sparse_back_project(view_sino, sparse_indices, view_indices=jnp.array([i]))  # shape (voxels, slices)
+        recon_matrix.append(np.asarray(recon_i).reshape(-1))  # flatten to (voxels * slices,)
 
+    recon_matrix = np.stack(recon_matrix, axis=0)  # shape (num_views, voxels * slices)
+    norms = np.linalg.norm(recon_matrix, axis=1, keepdims=True) + eps
+    recon_matrix_normalized = recon_matrix / norms
+
+    # Save recon bases and compute gamma
+    gamma = np.sum(recon_matrix_normalized * sparse_ref_object, axis=1, keepdims=True) / (norm_x + eps)
+    for i in range(num_views):
+        basis = recon_matrix_normalized[i]
         with open(os.path.join(data_store_dir, f'recon_view{i}.npy'), 'wb') as f:
-            np.save(f, normalized_sparse_recon_basis)
-
-        gamma[i, :] = np.sum(normalized_sparse_recon_basis * sparse_ref_object) / (norm_x + eps)
+            np.save(f, basis)
 
     return gamma
 
