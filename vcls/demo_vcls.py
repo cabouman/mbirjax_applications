@@ -76,10 +76,15 @@ if __name__ == '__main__':
     print('Elapsed time for selected views is {:.3f} seconds'.format(elapsed))
     print('VCL value for selected views: {:.6f}'.format(vcl_value))
 
-    # Display selected angles
+    # Display reference object cross-section with selected angles
     formatted = np.array2string(optimal_angles, precision=3, suppress_small=True, separator=', ')
     print('chosen angles: ' + formatted)
     dut.show_image_with_angles(reference_object[:, :, 0], angles_rad=optimal_angles)
+
+    # Display reference object Fourier transform along with selected angles
+    ref_fft = np.fft.fftshift(np.fft.fft2(reference_object, axes=(0, 1)))[:, :, 4]
+    angles_perp = optimal_angles + np.pi / 2
+    dut.show_image_with_angles(np.log10(1e-2 + np.abs(ref_fft)), angles_rad=angles_perp)
 
     # Do a recon with optimal angles
     ct_model_opt = vut.copy_ct_model(ct_model, optimal_angles)
