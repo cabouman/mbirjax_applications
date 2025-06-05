@@ -37,43 +37,59 @@ def _compute_scaling_factor(v: jnp.ndarray, u: jnp.ndarray) -> jnp.ndarray:
 
 def BHC_plastic_metal(ct_model, measured_sino, recon, epsilon=2e-4, order=(3, 4), include_const=False):
     """
-    Beam-hardening correction for plastic-metal case (linear plastic model only).
+    Beam-hardening correction for objects containing a combination of plastic and metal.
 
-    H = [p, p*m, p*m^2, ..., p*m^(cross_order-1), m, m^2, ..., m^(metal_order-1), (optional const)]
+    The function takes the measured sinogram and initial reconstruction as input, and it returns a corrected sinogram.
+    It is designed to reduce metal artifacts for scans of objects made from a combination of plastic and metal material.
+    The metal and plastic materials are each assumed to be composed of a single material.
+    However, it should work fine for a combination of different plastics as long as their optical density properites do not vary too much.
+
+    Note:
+        The corrected sinogram should result in a more accurate reconstruction of the plastic, but may not accurately reconstruct the metal portion.
 
     Args:
-        ct_model: CT model object with forward_project().
-        measured_sino: Raw sinogram.
-        recon: Reconstruction used to compute masks.
-        epsilon: Regularization parameter.
-        order: list [cross_order, metal_order]
-        include_const: whether to include constant term.
+        ct_model:
+            Object with `forward_project` method and `main_device` attribute.
+        measured_sino (jnp.ndarray):
+            Raw sinogram data of shape (views, rows, cols).
+        recon (jnp.ndarray):
+            Reconstructed volume array corresponding to `measured_sino`.
+        epsilon (float, optional):
+            Tolerance for regularization.
 
     Returns:
-        corrected_sino: corrected sinogram.
+        corrected_sino (jnp.ndarray):
+            Beam-hardening corrected sinogram, same shape as `measured_sino`.
+
+    Example:
+        >>> corrected = BHC_plastic_metal(ct_model, measured_sino, recon)
     """
     plastic_mask, metal_mask, plastic_scale, metal_scale = mjp.segment_plastic_metal(recon)
 
+    # Forward projection
     device = ct_model.main_device
     ideal_plastic_sino = plastic_scale * ct_model.forward_project(jax.device_put(plastic_mask, device)).reshape(-1)
     ideal_metal_sino = metal_scale * ct_model.forward_project(jax.device_put(metal_mask, device)).reshape(-1)
     y = measured_sino.reshape(-1)
 
-    # Normalize projections
+    # Compute normalized plastic and metal sinograms with max amplitude = 1
     p_normalization = jnp.max(jnp.abs(ideal_plastic_sino))
     m_normalization = jnp.max(jnp.abs(ideal_metal_sino))
     p = ideal_plastic_sino / p_normalization
     m = ideal_metal_sino / m_normalization
 
+    # Set order of models
     cross_order, metal_order = order
 
     # Build H matrix
     H = [p * m ** i for i in range(cross_order)]  # p, p*m, ..., p*m^(cross_order-1)
     H += [m ** i for i in range(1, metal_order)]  # m, m^2, ..., m^(metal_order-1)
 
+    # Include constant if desired
     if include_const:
         H.append(jnp.ones_like(p))  # constant term at the end
 
+    # Compute H^t H and H^t y
     order_total = len(H)
     HtH = jnp.zeros((order_total, order_total))
     Hty = jnp.zeros(order_total)
@@ -83,6 +99,7 @@ def BHC_plastic_metal(ct_model, measured_sino, recon, epsilon=2e-4, order=(3, 4)
         for j in range(order_total):
             HtH = HtH.at[i, j].set(jnp.dot(H[i], H[j]))
 
+    # Regularize and solve for least square value of theta that minimizes || y - H theta ||^2
     sigma_max = jnp.linalg.norm(HtH, ord=2)
     HtH_reg = HtH + (epsilon ** 2) * sigma_max * jnp.eye(order_total)
     theta = jnp.linalg.solve(HtH_reg, Hty)
@@ -106,7 +123,10 @@ def BHC_plastic_metal(ct_model, measured_sino, recon, epsilon=2e-4, order=(3, 4)
     if include_const:
         numerator -= theta[-1]
 
+    # Compute BH corrected version of plastic sinogram with metal removed
     corrected_plastic_sino = p_normalization * numerator / linear_plastic_coef
+
+    # Combine corrected plastic and metal sinogram and reshape
     corrected_sino_flat = corrected_plastic_sino + ideal_metal_sino
     corrected_sino = corrected_sino_flat.reshape(measured_sino.shape)
 
