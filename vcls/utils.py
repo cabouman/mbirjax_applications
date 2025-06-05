@@ -1,9 +1,6 @@
 import numpy as np
 import jax.numpy as jnp
 from matplotlib.path import Path
-import matplotlib.pyplot as plt
-
-import mbirjax as mj
 
 
 def gen_polygon_phantom(num_rows=512, num_slices=256):
@@ -68,57 +65,3 @@ def fill_convex_polygon(array: np.ndarray, vertices: np.ndarray, fill_value: flo
 
     # Fill the selected region
     array[mask] = fill_value
-
-
-def show_image_with_angles(
-    image: np.ndarray,
-    *,
-    angles_deg: np.ndarray = None,
-    angles_rad: np.ndarray = None,
-    title: str = None
-) -> None:
-    """
-    Display an image and overlay arrows pointing in direction of specified angles.
-
-    Exactly one of `angles_deg` or `angles_rad` must be provided (not both).
-
-    Args:
-        image (np.ndarray): A 2D NumPy array representing the image.
-        angles_deg (np.ndarray, optional): A 1D array of angles in degrees. Each angle is visualized
-            as an arrow through the image center.
-        angles_rad (np.ndarray, optional): A 1D array of angles in radians. Each angle is visualized
-            as an arrow through the image center.
-        title (str, optional): Optional title to display above the plot.
-
-    Returns:
-        None
-    """
-    if image.ndim != 2:
-        raise ValueError("Image must be a 2D array")
-    if (angles_deg is None and angles_rad is None) or (angles_deg is not None and angles_rad is not None):
-        raise ValueError("Exactly one of angles_deg or angles_rad must be None, and the other must be an array of floats")
-
-    if angles_rad is None:
-        angles_rad = np.deg2rad(angles_deg)
-
-    rows, cols = image.shape
-    center_x, center_y = cols / 2, rows / 2
-    radius = min(rows, cols) / 2  # Use shortest dimension to ensure arrows fit within the image
-
-    # Plot the image
-    plt.imshow(image, cmap='gray', origin='upper', extent=[0, cols, rows, 0])
-    plt.gca().set_aspect('equal')
-
-    # Overlay arrows for each angle
-    colors = plt.cm.tab10(np.arange(len(angles_rad)) % 10)
-
-    for i, theta in enumerate(angles_rad):
-        dx = radius * np.cos(theta)
-        dy = radius * np.sin(theta)
-
-        plt.arrow(center_x, center_y, dx, dy, color=colors[i], linewidth=2,
-                  head_width=min(rows, cols) * 0.02, length_includes_head=True)
-
-    plt.title(title or "Image with Overlaid Angles")
-    plt.axis('off')
-    plt.show()
