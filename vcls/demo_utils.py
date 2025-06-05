@@ -78,12 +78,12 @@ def show_image_with_angles(
     title: str = None
 ) -> None:
     """
-    Display a square image and overlay arrows pointing in direction of specified angles.
+    Display an image and overlay arrows pointing in direction of specified angles.
 
-    Note: The image must be square, and exactly one of `angles_deg` or `angles_rad` must be provided (not both).
+    Exactly one of `angles_deg` or `angles_rad` must be provided (not both).
 
     Args:
-        image (np.ndarray): A 2D square NumPy array representing the image.
+        image (np.ndarray): A 2D NumPy array representing the image.
         angles_deg (np.ndarray, optional): A 1D array of angles in degrees. Each angle is visualized
             as an arrow through the image center.
         angles_rad (np.ndarray, optional): A 1D array of angles in radians. Each angle is visualized
@@ -93,20 +93,20 @@ def show_image_with_angles(
     Returns:
         None
     """
-    if image.ndim != 2 or image.shape[0] != image.shape[1]:
-        raise ValueError("Image must be a square 2D array")
+    if image.ndim != 2:
+        raise ValueError("Image must be a 2D array")
     if (angles_deg is None and angles_rad is None) or (angles_deg is not None and angles_rad is not None):
         raise ValueError("Exactly one of angles_deg or angles_rad must be None, and the other must be an array of floats")
 
     if angles_rad is None:
         angles_rad = np.deg2rad(angles_deg)
 
-    side_length = image.shape[0]
-    center = side_length / 2
-    radius = side_length / 2  # Half-length of the arrow to reach from center to edge
+    rows, cols = image.shape
+    center_x, center_y = cols / 2, rows / 2
+    radius = min(rows, cols) / 2  # Use shortest dimension to ensure arrows fit within the image
 
     # Plot the image
-    plt.imshow(image, cmap='gray', origin='upper', extent=[0, side_length, side_length, 0])
+    plt.imshow(image, cmap='gray', origin='upper', extent=[0, cols, rows, 0])
     plt.gca().set_aspect('equal')
 
     # Overlay arrows for each angle
@@ -116,8 +116,8 @@ def show_image_with_angles(
         dx = radius * np.cos(theta)
         dy = radius * np.sin(theta)
 
-        plt.arrow(center, center, dx, dy, color=colors[i], linewidth=2,
-                  head_width=side_length * 0.02, length_includes_head=True)
+        plt.arrow(center_x, center_y, dx, dy, color=colors[i], linewidth=2,
+                  head_width=min(rows, cols) * 0.02, length_includes_head=True)
 
     plt.title(title or "Image with Overlaid Angles")
     plt.axis('off')
