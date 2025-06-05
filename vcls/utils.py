@@ -65,3 +65,62 @@ def fill_convex_polygon(array: np.ndarray, vertices: np.ndarray, fill_value: flo
 
     # Fill the selected region
     array[mask] = fill_value
+
+
+def create_uniform_index(angle_candidates, end_index, num_views):
+    """
+    Select `num_views` indices uniformly from the top `end_index` angles,
+    without matching values back into the original array via np.where.
+
+    This function:
+      1. Computes the descending sort order of `angle_candidates`.
+      2. Takes the first `end_index` indices from that sort.
+      3. Computes `num_views` positions spread evenly (using floor) across
+         those `end_index` slots, always including the first and last.
+      4. Returns the corresponding indices into the original `angle_candidates`
+         array.
+
+    Args:
+        angle_candidates : array-like of shape (N,)
+            1D array (or list) of candidate angles.
+        end_index : int
+            Number of top angles (in descending order) to consider. Must be
+            between 1 and len(angle_candidates), inclusive.
+        num_views : int
+            Number of indices to return. Must be at least 2.
+
+    Returns:
+        List[int]
+            A list of length `num_views` containing indices into `angle_candidates`.
+            These correspond to uniformly spaced angles within the top `end_index`
+            largest values of `angle_candidates`.
+
+    Raises:
+        ValueError:
+            If end_index < 1 or end_index > len(angle_candidates),
+            or if num_views < 2.
+    """
+    angles = np.asarray(angle_candidates)
+    N = angles.shape[0]
+
+    if not (1 <= end_index <= N):
+        raise ValueError(f"end_index must be between 1 and {N}, got {end_index}.")
+    if num_views < 2:
+        raise ValueError(f"num_views must be at least 2, got {num_views}.")
+
+    # 1. Get indices that would sort angles descending
+    sorted_desc_indices = np.argsort(angles)[::-1]
+
+    # 2. Keep only the top `end_index` indices in descending-value order
+    truncated_indices = sorted_desc_indices[:end_index]
+
+    # 3. Compute uniform positions (using floor) between 0 and end_index-1
+    #    We want to include positions 0 and end_index-1 exactly.
+    step = (end_index - 1) / (num_views - 1)
+    chosen_positions = [int(np.floor(step * i)) for i in range(num_views - 1)]
+    chosen_positions.append(end_index - 1)  # ensure last position is included
+
+    # 4. Map those positions back into the original indices
+    uniform_indices = [int(truncated_indices[pos]) for pos in chosen_positions]
+
+    return uniform_indices

@@ -16,12 +16,20 @@ if __name__ == '__main__':
     # Sets user selectable parameters
     ##############################################
 
-    # Load reference object
-    npy_dir = '/depot/bouman/users/lin1311/hexagonal_public_data'
-    reference_object = np.load(os.path.join(npy_dir, f'reference_object.npy'))
+    # ##### params for dataset downloading. User may change these parameters for their own datasets.
+    # An example dataset will be downloaded from `dataset_url`, and saved to `download_dir`.
+    # url to dataset.
+    dataset_url = '/depot/bouman/data/ORNL/hexagonal_public_data.tgz'
+    # destination path to download and extract the data and metadata.
+    download_dir = './demo_data/'
+    # Path to scan directory.
+    dataset_dir = mj.download_and_extract_tar(dataset_url, download_dir)
 
-    # Load views candidate
-    angle_candidates = np.load(os.path.join(npy_dir, f'angle_candidates_list.npy'))
+    # Load reference object
+    reference_object = np.load(os.path.join(dataset_dir, f'reference_object.npy'))
+
+    # Load angle candidates
+    angle_candidates = np.load(os.path.join(dataset_dir, f'angle_candidates_list.npy'))
 
     # Set geometry parameters
     geometry_type = 'cone'  # 'cone' or 'parallel'
@@ -59,7 +67,8 @@ if __name__ == '__main__':
     sinogram_shape = (num_views, num_det_rows, num_det_channels)
 
     # Create the model to contain all the geometry information
-    ct_model = mjp.get_ct_model(geometry_type, sinogram_shape, angle_candidates, source_detector_dist, source_iso_dist)
+    ct_model = mjp.get_ct_model(geometry_type, sinogram_shape, angle_candidates, source_detector_dist, source_iso_dist,
+                                det_channel_offset, det_row_offset)
 
     ##############################################
     # Run VCLS to Select Views and Display Results
@@ -80,15 +89,31 @@ if __name__ == '__main__':
     angles_perp = optimal_angles + np.pi / 2    # Add 90deg because Fourier transform of edge is perpendicular to edge
     mjp.show_image_with_angles(np.log10(1e-2 + np.abs(ref_fft)), angles_rad=angles_perp, title='FFT of Reference Object\n with Selected View Angles')
 
+    # Load measured data
+    full_sinogram = np.load(os.path.join(dataset_dir, f'measured_projection.npy'))
+
+    # Update ct_model
+    ct_model = mjp.get_ct_model(geometry_type, full_sinogram.shape, angle_candidates, source_detector_dist, source_iso_dist,
+                                det_channel_offset, det_row_offset)
+
     # Do a recon with optimal angles
+    optimal_index_list = np.argmin(
+        np.abs(angle_candidates[:, None] - optimal_angles[None, :]),
+        axis=0
+    )
+    optimal_angles = angle_candidates[optimal_index_list]
     ct_model_opt = mjp.copy_ct_model(ct_model, optimal_angles)
-    sinogram_optimal_angles = ct_model_opt.forward_project(reference_object)
+    sinogram_optimal_angles = full_sinogram[optimal_index_list]
     recon_optimal_angles, recon_params = ct_model_opt.recon(sinogram_optimal_angles)
 
-    angles = jnp.linspace(start_angle, end_angle, len(optimal_angles), endpoint=False)
+    # Do a recon with uniform angles
+    end_index = 569 # final angle in the short-scan range
+    uniform_index_list = dut.create_uniform_index(angle_candidates, end_index, len(optimal_angles))
+    angles = angle_candidates[uniform_index_list]
     ct_model_uniform = mjp.copy_ct_model(ct_model, angles)
-    sinogram_uniform = ct_model_uniform.forward_project(reference_object)
+    sinogram_uniform = full_sinogram[uniform_index_list]
     recon_uniform, recon_params_uniform = ct_model_uniform.recon(sinogram_uniform)
 
-    mj.slice_viewer(reference_object, recon_uniform, recon_optimal_angles, slice_label=['Ref object', 'Uniform Angles', 'VCLS Angles'],
-                    title='Reference object (left) plus Recons from \nuniformly spaced angles (middle) and optimal angles (right)')
+    mj.slice_viewer(recon_uniform, recon_optimal_angles, slice_label=['Uniform Angles', 'VCLS Angles'],
+                    title='Recons from \nuniformly spaced angles (left) and optimal angles (right)', vmin=0.0, vmax=0.05)
+
