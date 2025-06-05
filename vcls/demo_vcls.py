@@ -5,8 +5,9 @@ import numpy as np
 import time
 import jax.numpy as jnp
 import mbirjax as mj
+import mbirjax.preprocess as mjp
 import demo_utils as dut
-import vcls_utils as vut
+#import vcls_utils as vut
 
 import numpy as np
 
@@ -65,13 +66,13 @@ if __name__ == '__main__':
     angle_candidates = jnp.linspace(start_angle, end_angle, num_views, endpoint=False)
 
     # Create the model to contain all the geometry information
-    ct_model = vut.get_ct_model(geometry_type, sinogram_shape, angle_candidates, source_detector_dist, source_iso_dist)
+    ct_model = mjp.get_ct_model(geometry_type, sinogram_shape, angle_candidates, source_detector_dist, source_iso_dist)
 
     ##############################################
     # Run VCLS to Select Views and Display Results
     ##############################################
     time0 = time.time()
-    optimal_angles, vcl_value = vut.get_opt_views(ct_model, reference_object, num_selected_views, r_1=r_1, r_2=r_2, verbose=1, seed=seed)
+    optimal_angles, vcl_value = mjp.get_opt_views(ct_model, reference_object, num_selected_views, r_1=r_1, r_2=r_2, verbose=1, seed=seed)
     elapsed = time.time() - time0
     print('Elapsed time for selected views is {:.3f} seconds'.format(elapsed))
     print('VCL value for selected views: {:.6f}'.format(vcl_value))
@@ -87,12 +88,12 @@ if __name__ == '__main__':
     dut.show_image_with_angles(np.log10(1e-2 + np.abs(ref_fft)), angles_rad=angles_perp, title='FFT of Reference Object with Selected View Angles')
 
     # Do a recon with optimal angles
-    ct_model_opt = vut.copy_ct_model(ct_model, optimal_angles)
+    ct_model_opt = mjp.copy_ct_model(ct_model, optimal_angles)
     sinogram_optimal_angles = ct_model_opt.forward_project(reference_object)
     recon_optimal_angles, recon_params = ct_model_opt.recon(sinogram_optimal_angles)
 
     angles = jnp.linspace(start_angle, end_angle, len(optimal_angles), endpoint=False)
-    ct_model_uniform = vut.copy_ct_model(ct_model, angles)
+    ct_model_uniform = mjp.copy_ct_model(ct_model, angles)
     sinogram_uniform = ct_model_uniform.forward_project(reference_object)
     recon_uniform, recon_params_uniform = ct_model_uniform.recon(sinogram_uniform)
 
