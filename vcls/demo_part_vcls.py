@@ -8,7 +8,8 @@ import mbirjax as mj
 import mbirjax.preprocess as mjp
 import utils as dut
 import os
-
+import multiprocessing as mp
+mp.cpu_count = lambda: 14
 
 if __name__ == '__main__':
 
