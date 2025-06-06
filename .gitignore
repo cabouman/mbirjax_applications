@@ -5,6 +5,8 @@ nsi/output
 nersc/demo_data
 nersc/output
 
+vcls/demo_data
+vcls/output
 vcls/recon_bases_data
 vcls/recon_bases_data/polygon_data
 
