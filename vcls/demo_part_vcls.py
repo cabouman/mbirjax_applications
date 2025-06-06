@@ -52,6 +52,13 @@ if __name__ == '__main__':
     # r_2 = view sampling rate used for stochastic search in (0,1]. Smaller => faster; Larger => more accurate
     r_2 = 0.5
 
+    #####################
+    # Recon parameters
+    #####################
+    sharpness = 1.0
+    snr_db = 35.0
+    num_iterations = 20
+
 
     ####################################################
     # Calculate function parameters from user parameters
@@ -67,8 +74,8 @@ if __name__ == '__main__':
     sinogram_shape = (num_views, num_det_rows, num_det_channels)
 
     # Create the model to contain all the geometry information
-    ct_model = mjp.get_ct_model(geometry_type, sinogram_shape, angle_candidates, source_detector_dist, source_iso_dist,
-                                det_channel_offset, det_row_offset)
+    ct_model = mjp.get_ct_model(geometry_type, sinogram_shape, angle_candidates, source_detector_dist, source_iso_dist)
+    ct_model.set_params(det_channel_offset=det_channel_offset, det_row_offset=det_row_offset)
 
     ##############################################
     # Run VCLS to Select Views and Display Results
@@ -92,9 +99,9 @@ if __name__ == '__main__':
     # Load measured data
     full_sinogram = np.load(os.path.join(dataset_dir, f'measured_projection.npy'))
 
-    # Update ct_model
-    ct_model = mjp.get_ct_model(geometry_type, full_sinogram.shape, angle_candidates, source_detector_dist, source_iso_dist,
-                                det_channel_offset, det_row_offset)
+    # Update ct_model with new sinogram shape
+    ct_model = mjp.get_ct_model(geometry_type, full_sinogram.shape, angle_candidates, source_detector_dist, source_iso_dist)
+    ct_model.set_params(det_channel_offset=det_channel_offset, det_row_offset=det_row_offset, sharpness=sharpness, snr_db=snr_db)
 
     # Do a recon with optimal angles
     optimal_index_list = np.argmin(
@@ -104,7 +111,7 @@ if __name__ == '__main__':
     optimal_angles = angle_candidates[optimal_index_list]
     ct_model_opt = mjp.copy_ct_model(ct_model, optimal_angles)
     sinogram_optimal_angles = full_sinogram[optimal_index_list]
-    recon_optimal_angles, recon_params = ct_model_opt.recon(sinogram_optimal_angles)
+    recon_optimal_angles, recon_params = ct_model_opt.recon(sinogram_optimal_angles, num_iterations=num_iterations)
 
     # Do a recon with uniform angles
     end_index = 569 # final angle in the short-scan range
@@ -112,7 +119,7 @@ if __name__ == '__main__':
     angles = angle_candidates[uniform_index_list]
     ct_model_uniform = mjp.copy_ct_model(ct_model, angles)
     sinogram_uniform = full_sinogram[uniform_index_list]
-    recon_uniform, recon_params_uniform = ct_model_uniform.recon(sinogram_uniform)
+    recon_uniform, recon_params_uniform = ct_model_uniform.recon(sinogram_uniform, num_iterations=num_iterations)
 
     mj.slice_viewer(recon_uniform, recon_optimal_angles, slice_label=['Uniform Angles', 'VCLS Angles'],
                     title='Recons from \nuniformly spaced angles (left) and optimal angles (right)', vmin=0.0, vmax=0.05)
