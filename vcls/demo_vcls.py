@@ -70,7 +70,8 @@ if __name__ == '__main__':
     # Run VCLS to Select Views and Display Results
     ##############################################
     time0 = time.time()
-    optimal_angles, vcl_value = mjp.get_opt_views(ct_model, reference_object, num_selected_views, r_1=r_1, r_2=r_2, verbose=1, seed=seed)
+    optimal_angle_inds, vcl_value = mjp.get_opt_views(ct_model, reference_object, num_selected_views, r_1=r_1, r_2=r_2, verbose=1, seed=seed)
+    optimal_angles = angle_candidates[optimal_angle_inds]
     elapsed = time.time() - time0
     print('Elapsed time for selected views is {:.3f} seconds'.format(elapsed))
     print('VCL value for selected views: {:.6f}'.format(vcl_value))
