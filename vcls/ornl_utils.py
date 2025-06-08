@@ -105,9 +105,8 @@ def create_proj_params_dict_ornl(h5_file):
         angles = h5_file.attrs['angles'] * np.pi / 180
         det_rotation = h5_file.attrs['det_angle'] * np.pi / 180
 
-    proj_keys = list(h5_file['projection'].keys())
-    RawCounts = h5_file['projection'][proj_keys[1]][()]
-    sinogram_shape = RawCounts.shape
+    NegativeLogNorm_Proj = h5_file['projection']['NegativeLogNorm_Proj'][()]
+    sinogram_shape = NegativeLogNorm_Proj.shape
 
     cone_beam_params = dict()
     cone_beam_params["sinogram_shape"] = sinogram_shape
