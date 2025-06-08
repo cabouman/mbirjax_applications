@@ -18,15 +18,17 @@ if __name__ == '__main__':
     # ##### params for dataset downloading. User may change these parameters for their own datasets.
     # An example dataset will be downloaded from `dataset_url`, and saved to `download_dir`.
     # url to dataset.
-    dataset_url = '/depot/bouman/data/ORNL/hexagonal_public_data.tgz'
+    dataset_url_scan = '/depot/bouman/data/ORNL/ORNL_hfn_scan.tgz'
+    dataset_url_reference = '/depot/bouman/data/ORNL/hfn_reference_object.tgz'
     # destination path to download and extract the data and metadata.
     download_dir = './demo_data/'
     # Path to scan directory.
-    dataset_dir = mj.download_and_extract_tar(dataset_url, download_dir)
+    dataset_dir_scan = mj.download_and_extract_tar(dataset_url_scan, download_dir)
+    dataset_dir_reference = mj.download_and_extract_tar(dataset_url_reference, download_dir)
 
     # Load reference object
     print('Loading reference object')
-    reference_object = np.load(os.path.join(dataset_dir, f'reference_object.npy'))
+    reference_object = np.load(os.path.join(dataset_dir_reference, f'reference_object.npy'))
     print('Done')
 
     #####################
@@ -49,20 +51,35 @@ if __name__ == '__main__':
     # Construct model
     #####################
     # Load and preprocess ORNL data
-    sino, cone_beam_params, optional_params = out.compute_sino_and_params(dataset_dir)
+    # List all files ending in .h5 or .hdf5
+    hdf5_files = sorted(
+        f for f in os.listdir(dataset_dir_scan)
+        if f.lower().endswith(('.h5', '.hdf5'))
+    )
+    filename = os.path.join(dataset_dir_scan, hdf5_files[0])
+    full_sinogram, cone_beam_params_for_recon, optional_params_for_recon = out.compute_sino_and_params(filename)
+    angle_candidates = cone_beam_params_for_recon['angles']  # This is probably not the best way to do this
+
+    # construct different params used in VCLS
+    cone_beam_params_for_vcls = cone_beam_params_for_recon.copy()
+    optional_params_for_vcls = optional_params_for_recon.copy()
+    num_views = len(angle_candidates)
+    num_det_rows = reference_object.shape[2]
+    num_det_channels = reference_object.shape[0]
+    sinogram_shape_for_vcls = (num_views, num_det_rows, num_det_channels)
+    cone_beam_params_for_vcls["sinogram_shape"] = sinogram_shape_for_vcls
 
     # Construct cone beam object using ORNL parameters
-    ct_model = mj.ConeBeamModel(**cone_beam_params)
-    angle_candidates = cone_beam_params['angles']       # This is probably not the best way to do this
+    ct_model_for_vcls = mj.ConeBeamModel(**cone_beam_params_for_vcls)
 
     # Set optional ORNL geometry parameters
-    ct_model.set_params(**optional_params)
+    ct_model_for_vcls.set_params(**optional_params_for_vcls)
 
     ##############################################
     # Run VCLS to Select Views and Display Results
     ##############################################
     time0 = time.time()
-    optimal_angle_inds, vcl_value = mjp.get_opt_views(ct_model, reference_object, num_selected_views, r_1=r_1, r_2=r_2, verbose=1, seed=seed)
+    optimal_angle_inds, vcl_value = mjp.get_opt_views(ct_model_for_vcls, reference_object, num_selected_views, r_1=r_1, r_2=r_2, verbose=1, seed=seed)
     optimal_angles = angle_candidates[optimal_angle_inds]
     elapsed = time.time() - time0
     print('Elapsed time for selected views is {:.3f} seconds'.format(elapsed))
@@ -79,25 +96,31 @@ if __name__ == '__main__':
     angles_perp = optimal_angles + np.pi / 2    # Add 90deg because Fourier transform of edge is perpendicular to edge
     mjp.show_image_with_projection_rays(np.log10(1e-2 + np.abs(ref_fft)), rotation_angles_rad=angles_perp, title='FFT of Reference Object\n with Selected View Angles')
 
-    # Load measured data
-    full_sinogram = np.load(os.path.join(dataset_dir, f'measured_projection.npy'))
 
-    # Update ct_model with new sinogram shape
-    ct_model = mjp.get_ct_model(geometry_type, full_sinogram.shape, angle_candidates, source_detector_dist, source_iso_dist)
-    ct_model.set_params(det_channel_offset=det_channel_offset, det_row_offset=det_row_offset, sharpness=sharpness, snr_db=snr_db)
+    # Construct cone beam object for recon using ORNL parameters
+    ct_model_for_recon = mj.ConeBeamModel(**cone_beam_params_for_recon)
+    # Set optional ORNL geometry parameters
+    ct_model_for_recon.set_params(**optional_params_for_recon)
+    # Set recon parameters
+    ct_model_for_recon.set_params(sharpness=sharpness, snr_db=snr_db)
 
     # Do a recon with optimal angles
-    optimal_index_list = np.argmin(
-        np.abs(angle_candidates[:, None] - optimal_angles[None, :]),
-        axis=0
-    )
-    optimal_angles = angle_candidates[optimal_index_list]
-    ct_model_opt = mjp.copy_ct_model(ct_model, optimal_angles)
-    sinogram_optimal_angles = full_sinogram[optimal_index_list]
+    optimal_angles = angle_candidates[optimal_angle_inds]
+    ct_model_opt = mjp.copy_ct_model(ct_model_for_recon, optimal_angles)
+    sinogram_optimal_angles = full_sinogram[optimal_angle_inds]
     recon_optimal_angles, recon_params = ct_model_opt.recon(sinogram_optimal_angles, max_iterations=max_iterations)
 
     # Do a recon with uniform angles
-    ct_model_uniform = mjp.copy_ct_model(ct_model, uniform_angles)
+    # Find uniform sampled index list
+    num_det_channels_for_recon = cone_beam_params_for_recon["sinogram_shape"][2]
+    source_detector_dist = cone_beam_params_for_recon["source_detector_dist"]
+    detector_cone_angle = 2 * np.arctan2(num_det_channels_for_recon / 2, source_detector_dist)
+    candidates_normalized = np.abs(angle_candidates - angle_candidates[0])
+    end_index = np.where(candidates_normalized < np.pi + detector_cone_angle)[0][-1] # final angle in the short-scan range
+    uniform_index_list = dut.create_uniform_index(angle_candidates, end_index, num_selected_views)
+    uniform_angles = angle_candidates[uniform_index_list]
+
+    ct_model_uniform = mjp.copy_ct_model(ct_model_for_recon, uniform_angles)
     sinogram_uniform = full_sinogram[uniform_index_list]
     recon_uniform, recon_params_uniform = ct_model_uniform.recon(sinogram_uniform, max_iterations=max_iterations)
 
