@@ -100,10 +100,7 @@ if __name__ == "__main__":
     pprint.pprint(mbir_recon_params._asdict())
 
     # #### Save MBIR reconstruction to HDF5 file output
-    #mj.export_recon_to_hdf5(os.path.join(output_path, "recon.h5"), mbir_recon,
-    #                                        recon_description="MBIRJAX recon of phantom",
-    #                                        alu_description="1 ALU = 0.508 mm")
-
+    #ct_model.save_recon_to_hdf5(os.path.join(output_path, "recon.h5"), mbir_recon)
 
     # #### Display results
     # change the image data shape to (slices, rows, cols)
