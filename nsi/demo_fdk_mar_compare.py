@@ -31,8 +31,19 @@ if __name__ == "__main__":
 
     # ##### params for dataset downloading. User may change these parameters for their own datasets.
     # An example NSI dataset (tarball) will be downloaded from `dataset_url`, and saved to `download_dir`.
-    # url to NSI dataset.
-    dataset_url = 'https://www.datadepot.rcac.purdue.edu/bouman/data/mar_demo_data.tgz'
+
+    # #### Prompt the user for dataset choice
+    choice = input("Download dataset with metal? (Y/n): ").strip().lower()
+    if choice == 'n':
+        # URL to test phantom without metal
+        dataset_url = 'https://www.datadepot.rcac.purdue.edu/bouman/data/demo_nsi_vert_no_metal_all_views.tgz'
+        metal = False
+    else:
+        # URL to test phantom with metal
+        dataset_url = 'https://www.datadepot.rcac.purdue.edu/bouman/data/demo_nsi_vert_metal_all_views.tgz'
+        metal = True
+    print(f"Selected dataset URL: {dataset_url}")
+
     # destination path to download and extract the NSI data and metadata.
     download_dir = './demo_data/'
     # Path to NSI scan directory.
@@ -42,7 +53,7 @@ if __name__ == "__main__":
 
     # #### preprocessing parameters
     downsample_factor = [4, 4]  # downsample factor of scan images along detector rows and detector columns.
-    subsample_view_factor = 1  # view subsample factor.
+    subsample_view_factor = 8  # view subsample factor.
 
     # #### recon parameters
     sharpness = 1.0
@@ -88,28 +99,16 @@ if __name__ == "__main__":
     fdk_recon = ct_model.fdk_recon(sino)
 
     print("\n*******************************************************",
-          "\n*************** Estimate Metal Sinogram ***************",
-          "\n*******************************************************")
-    metal_sino, metal_mask = mar_utils.estimate_metal_sino(ct_model, sino, fdk_recon, verbose=1)
-    plastic_sino = sino - metal_sino
-    mj.slice_viewer(plastic_sino, metal_sino, vmin=0, vmax=2.0, slice_axis=[0, 0], slice_label= ["Plastic Sino", "Metal Sino"])
-
-    print("\n*******************************************************",
           "\n************ Calculate MAR sinogram weights ***********",
           "\n*******************************************************")
     weights_mar = ct_model.gen_weights_mar(sino, init_recon=fdk_recon, beta=1.0, gamma=3.0)
     mj.slice_viewer(weights_mar, jnp.abs(sino), vmin=0, vmax=2.0, slice_axis=[0, 0], slice_label= ["Weights", "Sinogram"])
 
-
     print("\n*******************************************************",
           "\n******** Perform MBIR recon with MAR weights **********",
           "\n*******************************************************")
-    recon_plastic, recon_params = ct_model.recon(plastic_sino, weights=weights_mar)
+    recon_mar, recon_params = ct_model.recon(sino, weights=weights_mar)
 
-    print("\n*******************************************************",
-          "\n*********** Blend metal and plastic recons ************",
-          "\n*******************************************************")
-    recon_mar = recon_plastic * (1.0-metal_mask) + fdk_recon * metal_mask
 
     # #### Display results
     # change the image data shape to (slices, rows, cols)
