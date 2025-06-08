@@ -76,12 +76,12 @@ if __name__ == '__main__':
     # Display reference object cross-section with selected angles
     formatted = np.array2string(optimal_angles, precision=3, suppress_small=True, separator=', ')
     print('chosen angles: ' + formatted)
-    mjp.show_image_with_angles(reference_object[:, :, 0], angles_rad=optimal_angles, title='Reference Object with Selected View Angles')
+    mjp.show_image_with_projection_rays(reference_object[:, :, 0], rotation_angles_rad=optimal_angles, title='Reference Object with Selected View Angles')
 
     # Display reference object Fourier transform along with selected angles
     ref_fft = np.fft.fftshift(np.fft.fft2(reference_object, axes=(0, 1)))[:, :, 4]
     angles_perp = optimal_angles + np.pi / 2    # Add 90deg because Fourier transform of edge is perpendicular to edge
-    mjp.show_image_with_angles(np.log10(1e-2 + np.abs(ref_fft)), angles_rad=angles_perp, title='FFT of Reference Object\n with Selected View Angles')
+    mjp.show_image_with_projection_rays(np.log10(1e-2 + np.abs(ref_fft)), rotation_angles_rad=angles_perp, title='FFT of Reference Object\n with Selected View Angles')
 
     # Do a recon with optimal angles
     ct_model_opt = mjp.copy_ct_model(ct_model, optimal_angles)
