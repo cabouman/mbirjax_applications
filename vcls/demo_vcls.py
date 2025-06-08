@@ -1,4 +1,3 @@
-import multiprocessing
 seed = 42  # Change this value to control randomness across runs
 
 import numpy as np
@@ -40,8 +39,6 @@ if __name__ == '__main__':
     ####################################################
     # Calculate function parameters from user parameters
     ####################################################
-    # We need this to do multiprocessing in vcls_utils.compute_cov_matrix
-    multiprocessing.freeze_support()
 
     # Create reference object
     print('Creating phantom')
