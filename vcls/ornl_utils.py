@@ -143,8 +143,7 @@ def load_projection_data_ornl(h5_file):
         numpy.ndarray:
             Raw sinogram data as a float32 array.
     """
-    proj_keys = list(h5_file['projection'].keys())
-    sinogram = h5_file['projection'][proj_keys[0]][()].astype(np.float32)
+    sinogram = h5_file['projection']['NegativeLogNorm_Proj'][()].astype(np.float32)
     return sinogram
 
 
@@ -200,28 +199,5 @@ def find_linearization_fit(alpha, density1, density2, poly_order=8, max_thick=30
     yyi_l = np.concatenate(([0], uavg0 * t_l))
     return np.poly1d(np.polyfit(xxi_l, yyi_l, poly_order))
 
-
-# Example usage:
-
-# import os
-# import mbirjax
-
-# # Path to the HDF5 scan file
-# hdf5_files_location = '/depot/bouman/users/lin1311/alce_projection/'
-# hdf5_file = 'subsampled_projection.hdf5'
-# filename = os.path.join(hdf5_files_location, hdf5_file)
-
-# # Load sinogram and reconstruction parameters
-# sinogram, cone_beam_params, optional_params = compute_sino_and_params(filename)
-
-# # Initialize and configure the reconstruction model
-# ct_model = mbirjax.ConeBeamModel(**cone_beam_params)
-# ct_model.set_params(**optional_params)
-
-# # Run reconstruction
-# mbir_recon, mbir_recon_params = ct_model.recon(sinogram)
-
-# # Visualize result
-# mbirjax.slice_viewer(mbir_recon)
 
 

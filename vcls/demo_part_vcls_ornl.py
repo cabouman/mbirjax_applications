@@ -18,7 +18,7 @@ if __name__ == '__main__':
     # ##### params for dataset downloading. User may change these parameters for their own datasets.
     # An example dataset will be downloaded from `dataset_url`, and saved to `download_dir`.
     # url to dataset.
-    dataset_url_scan = '/depot/bouman/data/ORNL/ORNL_hfn_scan.tgz'
+    dataset_url_scan = '/depot/bouman/data/ORNL/hfn_scan.tgz'
     dataset_url_reference = '/depot/bouman/data/ORNL/hfn_reference_object.tgz'
     # destination path to download and extract the data and metadata.
     download_dir = './demo_data/'
@@ -60,7 +60,7 @@ if __name__ == '__main__':
     full_sinogram, cone_beam_params_for_recon, optional_params_for_recon = out.compute_sino_and_params(filename)
     angle_candidates = cone_beam_params_for_recon['angles']  # This is probably not the best way to do this
 
-    # construct different params used in VCLS
+    # Construct different params used in VCLS
     cone_beam_params_for_vcls = cone_beam_params_for_recon.copy()
     optional_params_for_vcls = optional_params_for_recon.copy()
     num_views = len(angle_candidates)
