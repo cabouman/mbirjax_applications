@@ -10,26 +10,15 @@ import ornl_utils as out
 import os
 
 if __name__ == '__main__':
-
-    ##############################################
-    # Sets user selectable parameters
-    ##############################################
-
-    # ##### params for dataset downloading. User may change these parameters for their own datasets.
-    # An example dataset will be downloaded from `dataset_url`, and saved to `download_dir`.
-    # url to dataset.
+    #######################
+    # Sets pointers to data
+    #######################
+    # path or URL to CT scan in h5 format with tgz wrapper
     dataset_url_scan = '/depot/bouman/data/ORNL/hfn_scan.tgz'
+    # path or URL to reference object in npy format with tgz wrapper
     dataset_url_reference = '/depot/bouman/data/ORNL/hfn_reference_object.tgz'
-    # destination path to download and extract the data and metadata.
+    # path to directory for storage of data
     download_dir = './demo_data/'
-    # Path to scan directory.
-    dataset_dir_scan = mj.download_and_extract_tar(dataset_url_scan, download_dir)
-    dataset_dir_reference = mj.download_and_extract_tar(dataset_url_reference, download_dir)
-
-    # Load reference object
-    print('Loading reference object')
-    reference_object = np.load(os.path.join(dataset_dir_reference, f'reference_object.npy'))
-    print('Done')
 
     #####################
     # Set VCLS parameters
@@ -40,16 +29,29 @@ if __name__ == '__main__':
     # r_2 = view sampling rate used for stochastic search in (0,1]. Smaller => faster; Larger => more accurate
     r_2 = 0.5
 
-    #####################
-    # Recon parameters
-    #####################
+    ######################
+    # Set recon parameters
+    ######################
     sharpness = 1.0
     snr_db = 35.0
     max_iterations = 20
 
-    #####################
+
+    ###############
+    # Download Data
+    ###############
+    # Download and extract data
+    dataset_dir_scan = mj.download_and_extract_tar(dataset_url_scan, download_dir)
+    dataset_dir_reference = mj.download_and_extract_tar(dataset_url_reference, download_dir)
+
+    # Load reference object into workspace
+    print('Loading reference object')
+    reference_object = np.load(os.path.join(dataset_dir_reference, f'reference_object.npy'))
+    print('Done')
+
+    #################
     # Construct model
-    #####################
+    #################
     # Load and preprocess ORNL data
     # List all files ending in .h5 or .hdf5
     hdf5_files = sorted(
