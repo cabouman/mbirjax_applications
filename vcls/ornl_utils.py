@@ -1,6 +1,8 @@
+import warnings
 import numpy as np
+import jax.numpy as jnp
 import h5py
-import mbirjax
+import mbirjax as mj
 
 def compute_sino_and_params(filename, bh_correction=True):
     """
@@ -44,13 +46,19 @@ def compute_sino_and_params(filename, bh_correction=True):
         recon, recon_params = ct_model.recon(sino, weights=weights)
         ```
     """
-    h5_file = h5py.File(filename, 'r')
-    cone_beam_params, optional_params = create_proj_params_dict_ornl(h5_file)
-    sinogram = load_projection_data_ornl(h5_file)
-    if bh_correction:
-        BHCN_params = h5_file.attrs['BHC_params']
-        sinogram = apply_bh_correction(sinogram, BHCN_params)
-    h5_file.close()
+    with h5py.File(filename, 'r') as h5_file:
+        cone_beam_params, optional_params, det_rotation = create_proj_params_dict_ornl(h5_file)
+
+        sinogram = load_projection_data_ornl(h5_file)
+        if bh_correction:
+            BHCN_params = h5_file.attrs['BHC_params']
+            sinogram = apply_bh_correction(sinogram, BHCN_params)
+
+        if np.abs(det_rotation) > 1e-6:
+            # Correct the sinogram for detector rotation
+            sinogram = mj.preprocess.correct_det_rotation_and_background(sinogram, det_rotation=det_rotation)
+            warnings.warn('TODO: Verify the direction of sinogram rotation.')
+
     return sinogram, cone_beam_params, optional_params
 
 
@@ -86,16 +94,15 @@ def create_proj_params_dict_ornl(h5_file):
                   - "det_row_offset" (float)
     """
     # Unit conversion to 'ALU' pixel units if necessary
-    if h5_file.attrs['distance unit'] != 'ALU':
-        det_pixel_size = h5_file.attrs['det_pixel_size']
-        iso_det_dist = h5_file.attrs['iso_det_dist'] / det_pixel_size
-        source_iso_dist = h5_file.attrs['src_iso_dist'] / det_pixel_size
-        source_detector_dist = source_iso_dist + iso_det_dist
-        delta_voxel = h5_file.attrs['voxel_size'] / det_pixel_size
-        det_channel_offset = -h5_file.attrs['det_column_offset'] / det_pixel_size
-        det_row_offset = -h5_file.attrs['det_row_offset'] / det_pixel_size
-        delta_det_channel = 1.0
-        delta_det_row = 1.0
+    det_pixel_size = h5_file.attrs['det_pixel_size']
+    iso_det_dist = h5_file.attrs['iso_det_dist'] / det_pixel_size
+    source_iso_dist = h5_file.attrs['src_iso_dist'] / det_pixel_size
+    source_detector_dist = source_iso_dist + iso_det_dist
+    delta_voxel = h5_file.attrs['voxel_size'] / det_pixel_size
+    det_channel_offset = -h5_file.attrs['det_column_offset'] / det_pixel_size
+    det_row_offset = -h5_file.attrs['det_row_offset'] / det_pixel_size
+    delta_det_channel = 1.0
+    delta_det_row = 1.0
 
     # Angle conversion to radians
     if h5_file.attrs['angle unit'] == 'radian':
@@ -105,8 +112,7 @@ def create_proj_params_dict_ornl(h5_file):
         angles = h5_file.attrs['angles'] * np.pi / 180
         det_rotation = h5_file.attrs['det_angle'] * np.pi / 180
 
-    NegativeLogNorm_Proj = h5_file['projection']['NegativeLogNorm_Proj'][()]
-    sinogram_shape = NegativeLogNorm_Proj.shape
+    sinogram_shape = h5_file['projection']['NegativeLogNorm_Proj'].shape
 
     cone_beam_params = dict()
     cone_beam_params["sinogram_shape"] = sinogram_shape
@@ -121,10 +127,7 @@ def create_proj_params_dict_ornl(h5_file):
     optional_params["det_channel_offset"] = det_channel_offset
     optional_params["det_row_offset"] = det_row_offset
 
-    # not yet support in mbirjax?
-    #optional_params["det_rotation"] = det_rotation # tilt angle of rotation axis
-
-    return cone_beam_params, optional_params
+    return cone_beam_params, optional_params, det_rotation
 
 
 def load_projection_data_ornl(h5_file):
@@ -163,8 +166,10 @@ def apply_bh_correction(sinogram, BHCN_params):
             Sinogram after beam hardening linearization.
     """
     alpha, mu1, mu2, max_thickness = BHCN_params
-    poly_correction = find_linearization_fit(alpha, mu1, mu2, max_thick=max_thickness)
-    return poly_correction(sinogram)
+    poly_coefs = find_linearization_fit(alpha, mu1, mu2, max_thick=max_thickness)
+    corrected_sinogram = jnp.polyval(poly_coefs, sinogram)
+    corrected_sinogram = np.asarray(corrected_sinogram)
+    return corrected_sinogram
 
 
 def find_linearization_fit(alpha, density1, density2, poly_order=8, max_thick=30.25, step_size=0.25):
@@ -187,8 +192,8 @@ def find_linearization_fit(alpha, density1, density2, poly_order=8, max_thick=30
             Sampling interval for thickness. Defaults to 0.25.
 
     Returns:
-        numpy.poly1d:
-            Polynomial that correct BH effect in measured attenuation (–log I/I0).
+        numpy.ndarray:
+            Coefficients for a polynomial that correct BH effect in measured attenuation (–log I/I0).
     """
     uavg0 = (alpha * density1 + density2) / (1 + alpha)
     t_l = np.arange(0, max_thick, step_size)
@@ -196,7 +201,8 @@ def find_linearization_fit(alpha, density1, density2, poly_order=8, max_thick=30
     prfit_l = density2 * t_l + np.log((1 + alpha) / (1 + alpha * np.exp(dut)))
     xxi_l = np.concatenate(([0], prfit_l))
     yyi_l = np.concatenate(([0], uavg0 * t_l))
-    return np.poly1d(np.polyfit(xxi_l, yyi_l, poly_order))
+    coefs = np.polyfit(xxi_l, yyi_l, poly_order)
+    return coefs  # np.poly1d(np.polyfit(xxi_l, yyi_l, poly_order))
 
 
 

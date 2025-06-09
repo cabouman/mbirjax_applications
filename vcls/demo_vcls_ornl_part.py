@@ -25,14 +25,6 @@ if __name__ == '__main__':
     #####################
     num_selected_views = 40
 
-    ######################
-    # Set recon parameters
-    ######################
-    sharpness = 1.0
-    snr_db = 35.0
-    max_iterations = 20
-
-
     ###############
     # Download Data
     ###############
@@ -55,15 +47,15 @@ if __name__ == '__main__':
         if f.lower().endswith(('.h5', '.hdf5'))
     )
     filename = os.path.join(dataset_dir_scan, hdf5_files[0])
+    print('Loading sinogram and computing beam hardening correction')
     full_sino, cone_beam_params, optional_params = out.compute_sino_and_params(filename)
+    print('Sinogram shape: {}'.format(full_sino.shape))
     angle_candidates = cone_beam_params['angles']  # This is probably not the best way to do this
 
     # Construct cone beam object using ORNL parameters
     ct_model = mj.ConeBeamModel(**cone_beam_params)
     # Set optional geometry parameters
     ct_model.set_params(**optional_params)
-    # Set reconstruction parameters
-    ct_model.set_params(sharpness=sharpness, snr_db=snr_db)
 
     ## Force consistency between recon and reference object shapes
     # Print out default recon shape
@@ -85,7 +77,8 @@ if __name__ == '__main__':
     # Display reference object cross-section with selected angles
     formatted = np.array2string(optimal_angles, precision=3, suppress_small=True, separator=', ')
     print('chosen angles: ' + formatted)
-    mjp.show_image_with_projection_rays(reference_object[:, :, 200], rotation_angles_rad=optimal_angles, title='Reference Object with Selected View Angles')
+    middle_index = reference_object.shape[2] // 2
+    mjp.show_image_with_projection_rays(reference_object[:, :, middle_index], rotation_angles_rad=optimal_angles, title='Reference Object with Selected View Angles')
 
     # Display reference object Fourier transform along with selected angles
     center_slice = reference_object[:, :, reference_object.shape[2] // 2]
@@ -97,7 +90,7 @@ if __name__ == '__main__':
     optimal_angles = angle_candidates[optimal_angle_inds]
     ct_model_opt = mjp.copy_ct_model(ct_model, optimal_angles)
     sinogram_opt = full_sino[optimal_angle_inds]
-    recon_opt, recon_params = ct_model_opt.recon(sinogram_opt, max_iterations=max_iterations)
+    recon_opt, recon_params = ct_model_opt.recon(sinogram_opt)
 
     # Compute detector cone angle
     num_det_channels_for_recon = cone_beam_params["sinogram_shape"][2]
@@ -113,7 +106,7 @@ if __name__ == '__main__':
     # Compute mbir recon for uniformly sampled short scan
     ct_model_uniform = mjp.copy_ct_model(ct_model, uniform_angles)
     sino_uniform = full_sino[uniform_index_list]
-    recon_uniform, recon_params_uniform = ct_model_uniform.recon(sino_uniform, max_iterations=max_iterations)
+    recon_uniform, recon_params_uniform = ct_model_uniform.recon(sino_uniform)
 
     mj.slice_viewer(recon_uniform, recon_opt, slice_label=['Uniform: Slice', 'VCLS optimal: Slice'],
                     title='Recons from {} views: \nuniformly spaced angles (left) and optimal angles (right)'.format(num_selected_views), vmin=0.0, vmax=0.05)

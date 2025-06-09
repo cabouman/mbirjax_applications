@@ -5,7 +5,10 @@ import jax.numpy as jnp
 import mbirjax as mj
 import ornl_utils as out
 import os
-from skimage.filters import threshold_multiotsu
+
+"""
+Restrict to center slices to investigate noise in center slices.  
+"""
 
 if __name__ == '__main__':
     #######################
@@ -46,18 +49,19 @@ if __name__ == '__main__':
     ct_model = mj.ConeBeamModel(**cone_beam_params)
     # Set optional geometry parameters
     ct_model.set_params(**optional_params)
-    # Set reconsturction parameters
+    # Set reconstruction parameters
     ct_model.set_params(sharpness=sharpness, snr_db=snr_db)
 
     # Do a recon with the full sinogram
     recon, recon_params = ct_model.recon(full_sino, max_iterations=max_iterations)
+    # mj.slice_viewer(recon, slice_axis=2)
 
     # Zero out distorted marginal slices at both ends
     indices = jnp.array(list(range(100)) + list(range(-100, 0)))
     recon = recon.at[:, :, indices].set(0)
 
     # Segment the reconstruction to obtain the reference object
-    thresholds = threshold_multiotsu(recon, classes=3)
+    thresholds = mj.preprocess.multi_threshold_otsu(recon, classes=3)
     segmentation = np.digitize(recon, bins=thresholds)
     reference_object = (segmentation >= 2).astype(np.float32)
 
