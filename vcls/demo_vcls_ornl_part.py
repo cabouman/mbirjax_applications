@@ -16,7 +16,7 @@ if __name__ == '__main__':
     # path or URL to CT scan in h5 format with tgz wrapper
     dataset_url_scan = '/depot/bouman/data/ORNL/hfn_scan.tgz'
     # path or URL to reference object in npy format with tgz wrapper
-    dataset_url_reference = '/depot/bouman/data/ORNL/hfn_reference_object.tgz'
+    dataset_url_reference = '/depot/bouman/data/ORNL/hfn_reference_object_v2.tgz'
     # path to directory for storage of data
     download_dir = './demo_data/'
 
@@ -62,6 +62,8 @@ if __name__ == '__main__':
     ct_model = mj.ConeBeamModel(**cone_beam_params)
     # Set optional geometry parameters
     ct_model.set_params(**optional_params)
+    # Set reconsturction parameters
+    ct_model.set_params(sharpness=sharpness, snr_db=snr_db)
 
     ## Force consistency between recon and reference object shapes
     # Print out default recon shape
@@ -83,7 +85,7 @@ if __name__ == '__main__':
     # Display reference object cross-section with selected angles
     formatted = np.array2string(optimal_angles, precision=3, suppress_small=True, separator=', ')
     print('chosen angles: ' + formatted)
-    mjp.show_image_with_projection_rays(reference_object[:, :, 0], rotation_angles_rad=optimal_angles, title='Reference Object with Selected View Angles')
+    mjp.show_image_with_projection_rays(reference_object[:, :, 200], rotation_angles_rad=optimal_angles, title='Reference Object with Selected View Angles')
 
     # Display reference object Fourier transform along with selected angles
     center_slice = reference_object[:, :, reference_object.shape[2] // 2]
@@ -95,7 +97,7 @@ if __name__ == '__main__':
     optimal_angles = angle_candidates[optimal_angle_inds]
     ct_model_opt = mjp.copy_ct_model(ct_model, optimal_angles)
     sinogram_opt = full_sino[optimal_angle_inds]
-    recon_opt, recon_params = ct_model_opt.recon(sinogram_opt)
+    recon_opt, recon_params = ct_model_opt.recon(sinogram_opt, max_iterations=max_iterations)
 
     # Compute detector cone angle
     num_det_channels_for_recon = cone_beam_params["sinogram_shape"][2]
