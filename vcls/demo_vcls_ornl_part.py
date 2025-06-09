@@ -6,7 +6,6 @@ import jax.numpy as jnp
 import mbirjax as mj
 import mbirjax.preprocess as mjp
 import utils as dut
-import ornl_utils as out
 import os
 
 if __name__ == '__main__':
@@ -48,7 +47,7 @@ if __name__ == '__main__':
     )
     filename = os.path.join(dataset_dir_scan, hdf5_files[0])
     print('Loading sinogram and computing beam hardening correction')
-    full_sino, cone_beam_params, optional_params = out.compute_sino_and_params(filename)
+    full_sino, cone_beam_params, optional_params = mjp.pymbir.compute_sino_and_params(filename)
     print('Sinogram shape: {}'.format(full_sino.shape))
     angle_candidates = cone_beam_params['angles']  # This is probably not the best way to do this
 
