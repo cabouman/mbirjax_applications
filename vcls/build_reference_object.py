@@ -1,6 +1,7 @@
 seed = 42  # Change this value to control randomness across runs
 
 import numpy as np
+import jax.numpy as jnp
 import mbirjax as mj
 import ornl_utils as out
 import os
@@ -52,7 +53,8 @@ if __name__ == '__main__':
     recon, recon_params = ct_model.recon(full_sino, max_iterations=max_iterations)
 
     # Zero out distorted marginal slices at both ends
-    recon[:, :, list(range(100)) + list(range(-100, 0))] = 0
+    indices = jnp.array(list(range(100)) + list(range(-100, 0)))
+    recon = recon.at[:, :, indices].set(0)
 
     # Segment the reconstruction to obtain the reference object
     thresholds = threshold_multiotsu(recon, classes=3)
@@ -60,7 +62,7 @@ if __name__ == '__main__':
     reference_object = (segmentation >= 2).astype(np.float32)
 
     # Store the reference object
-    npy_dir = './demo_data/hfn_reference_object_v2'
+    npy_dir = './demo_data/hfn_reference_object'
     os.makedirs(npy_dir, exist_ok=True)
     with open(os.path.join(npy_dir, f'reference_object.npy'), 'wb') as f:
         np.save(f, reference_object)
