@@ -62,7 +62,7 @@ if __name__ == '__main__':
     ct_model = mj.ConeBeamModel(**cone_beam_params)
     # Set optional geometry parameters
     ct_model.set_params(**optional_params)
-    # Set reconsturction parameters
+    # Set reconstruction parameters
     ct_model.set_params(sharpness=sharpness, snr_db=snr_db)
 
     ## Force consistency between recon and reference object shapes
