@@ -67,7 +67,7 @@ if __name__ == '__main__':
     # Print out recon shape
     recon_shape = ct_model.get_params("recon_shape")
     print('Default reconstruction shape: {}'.format(recon_shape))
-    ct_model.set_params(recon_shape=reference_object)
+    ct_model.set_params(recon_shape=reference_object.shape)
 
     ##############################################
     # Run VCLS to Select Views and Display Results
