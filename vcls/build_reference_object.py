@@ -64,6 +64,6 @@ if __name__ == '__main__':
     # Store the reference object
     npy_dir = './demo_data/hfn_reference_object'
     os.makedirs(npy_dir, exist_ok=True)
-    with open(os.path.join(npy_dir, f'reference_object.npy'), 'wb') as f:
+    with open(os.path.join(npy_dir, f'hfn_reference_object.npy'), 'wb') as f:
         np.save(f, reference_object)
 

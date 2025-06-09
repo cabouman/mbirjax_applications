@@ -42,7 +42,7 @@ if __name__ == '__main__':
 
     # Load reference object into workspace
     print('Loading reference object')
-    reference_object = np.load(os.path.join(dataset_dir_reference, f'reference_object.npy'))
+    reference_object = np.load(os.path.join(dataset_dir_reference, f'hfn_reference_object.npy'))
     print('Shape of reference object: {}'.format(reference_object.shape))
 
     #################
