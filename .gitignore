@@ -1,14 +1,17 @@
 
 nsi/demo_data
 nsi/output
+nsi/logs
 
 nersc/demo_data
 nersc/output
+nersc/logs
 
 vcls/demo_data
 vcls/output
 vcls/recon_bases_data
 vcls/recon_bases_data/polygon_data
+nersc/logs
 
 
 # ignore jupyter notebook files
