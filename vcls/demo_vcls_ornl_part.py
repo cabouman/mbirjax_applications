@@ -43,7 +43,8 @@ if __name__ == '__main__':
     # Load reference object into workspace
     print('Loading reference object')
     reference_object = np.load(os.path.join(dataset_dir_reference, f'reference_object.npy'))
-    print('Done')
+    reference_obj_shape = reference_object.shape
+    print('Shape of reference object: {}'.format(reference_obj_shape))
 
     #################
     # Construct model
@@ -62,6 +63,11 @@ if __name__ == '__main__':
     ct_model = mj.ConeBeamModel(**cone_beam_params)
     # Set optional geometry parameters
     ct_model.set_params(**optional_params)
+
+    # Print out recon shape
+    recon_shape = ct_model.get_params("recon_shape")
+    print('Default reconstruction shape: {}'.format(recon_shape))
+    ct_model.set_params(recon_shape=reference_object)
 
     ##############################################
     # Run VCLS to Select Views and Display Results
