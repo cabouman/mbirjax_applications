@@ -43,8 +43,7 @@ if __name__ == '__main__':
     # Load reference object into workspace
     print('Loading reference object')
     reference_object = np.load(os.path.join(dataset_dir_reference, f'reference_object.npy'))
-    reference_obj_shape = reference_object.shape
-    print('Shape of reference object: {}'.format(reference_obj_shape))
+    print('Shape of reference object: {}'.format(reference_object.shape))
 
     #################
     # Construct model
@@ -64,9 +63,11 @@ if __name__ == '__main__':
     # Set optional geometry parameters
     ct_model.set_params(**optional_params)
 
-    # Print out recon shape
+    ## Force consistency between recon and reference object shapes
+    # Print out default recon shape
     recon_shape = ct_model.get_params("recon_shape")
     print('Default reconstruction shape: {}'.format(recon_shape))
+    # Set recon shape to reference object shape
     ct_model.set_params(recon_shape=reference_object.shape)
 
     ##############################################
