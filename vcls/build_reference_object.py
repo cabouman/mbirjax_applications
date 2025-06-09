@@ -48,14 +48,18 @@ if __name__ == '__main__':
     # Set reconsturction parameters
     ct_model.set_params(sharpness=sharpness, snr_db=snr_db)
 
+    # Do a recon with the full sinogram
     recon, recon_params = ct_model.recon(full_sino, max_iterations=max_iterations)
 
     # Zero out distorted marginal slices at both ends
     recon[:, :, list(range(100)) + list(range(-100, 0))] = 0
+
+    # Segment the reconstruction to obtain the reference object
     thresholds = threshold_multiotsu(recon, classes=3)
     segmentation = np.digitize(recon, bins=thresholds)
     reference_object = (segmentation >= 2).astype(np.float32)
 
+    # Store the reference object
     npy_dir = './demo_data/hfn_reference_object_v2'
     os.makedirs(npy_dir, exist_ok=True)
     with open(os.path.join(npy_dir, f'reference_object.npy'), 'wb') as f:
