@@ -3,7 +3,7 @@ seed = 42  # Change this value to control randomness across runs
 import numpy as np
 import jax.numpy as jnp
 import mbirjax as mj
-import ornl_utils as out
+import mbirjax.preprocess as mjp
 import os
 
 """
@@ -43,7 +43,7 @@ if __name__ == '__main__':
         if f.lower().endswith(('.h5', '.hdf5'))
     )
     filename = os.path.join(dataset_dir_scan, hdf5_files[0])
-    full_sino, cone_beam_params, optional_params = out.compute_sino_and_params(filename)
+    full_sino, cone_beam_params, optional_params = mjp.pymbir.compute_sino_and_params(filename)
 
     # Construct cone beam object using ORNL parameters
     ct_model = mj.ConeBeamModel(**cone_beam_params)
