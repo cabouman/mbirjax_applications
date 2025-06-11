@@ -13,26 +13,13 @@ import pprint
 pp = pprint.PrettyPrinter(indent=4)
 
 if __name__ == "__main__":
-    print('This script is a demonstration of the mbirjax metal artifact reduction (MAR) capability.\
-    \n Demo functionality includes:\
-    \n\t * downloading NSI dataset from specified urls;\
-    \n\t * Computing sinogram data;\
-    \n\t * Computing the FDK reconstruction;\
-    \n\t * Computing the estimated plastic and metal sinograms;\
-    \n\t * Computing the inital MBIR plastic reconstruction;\
-    \n\t * Computing the MAR weights;\
-    \n\t * Computing the generalized Huber weights;\
-    \n\t * Computing the final MBIR plastic reconstruction;\
-    \n\t * Blending the plastic and metal reconstructions together;\
-    \n\t * Displaying the results.\n')
-    # ###################### User defined params. Change the parameters below for your own use case.
+    print('This script is a simple demonstration of the mbirjax metal artifact reduction (MAR).\n')
+
+    # User defined params.
     output_path = './output/nsi_demo_mar/'  # path to store output recon images
     os.makedirs(output_path, exist_ok=True)  # mkdir if directory does not exist
 
-    # ##### params for dataset downloading. User may change these parameters for their own datasets.
-    # An example NSI dataset (tarball) will be downloaded from `dataset_url`, and saved to `download_dir`.
-
-    # #### Prompt the user for dataset choice
+    # Prompt the user for dataset choice
     choice = input("Download dataset with metal? (Y/n): ").strip().lower()
     if choice == 'n':
         # URL to test phantom without metal
@@ -48,14 +35,12 @@ if __name__ == "__main__":
     download_dir = './demo_data/'
     # Path to NSI scan directory.
     dataset_dir = mj.download_and_extract_tar(dataset_url, download_dir)
-    # for testing user prompt in NSI preprocessing function
-    # dataset_dir = "/depot/bouman/data/share_conebeam_data/Autoinjection-Full-LowRes/Vertical-0.5mmTin"
 
-    # #### preprocessing parameters
+    # preprocessing parameters
     downsample_factor = [4, 4]  # downsample factor of scan images along detector rows and detector columns.
     subsample_view_factor = 8  # view subsample factor.
 
-    # #### recon parameters
+    # recon parameters
     sharpness = 1.0
     snr_db = 30.0
     alpha = [1.0, 0.0, 0.0]  # BH_correction coefficient
@@ -69,7 +54,7 @@ if __name__ == "__main__":
                                                        downsample_factor=downsample_factor,
                                                        subsample_view_factor=subsample_view_factor)
 
-    # #### beam hardening correction
+    # beam hardening correction
     sino = jnp.maximum(sino, 0.0)
     sino = mjp.BH_correction(sino, alpha=alpha)
 
