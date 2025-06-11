@@ -141,7 +141,7 @@ if __name__ == "__main__":
         # Perform VCD reconstruction
         print('Starting recon')
         time0 = time.time()
-        recon, recon_params = ct_model_for_half_recon.recon(sinogram_half)
+        recon, recon_dict = ct_model_for_half_recon.recon(sinogram_half)
 
         recon.block_until_ready()
         elapsed = time.time() - time0
@@ -158,13 +158,13 @@ if __name__ == "__main__":
 
 
     # Print parameters used in recon
-    pprint.pprint(recon_params._asdict(), compact=True)
+    pprint.pprint(recon_dict['recon_params'], compact=True)
 
     mbirjax.get_memory_stats()
     print('Elapsed time for recon is ' + time.strftime('%H hrs, %M mins, %S secs', time.gmtime(elapsed)))
 
     # Display results
     title = 'Standard VCD recon (left) and residual with 2 halves stitched VCD Recon (right) \nThe residual is (stitched recon) - (standard recon).'
-    mbirjax.slice_viewer(recon, title=title)
+    mbirjax.slice_viewer(recon, attribute_dicts=recon_dict, title=title)
 
     """**Next:** Try changing some of the parameters and re-running or try [some of the other demos](https://mbirjax.readthedocs.io/en/latest/demos_and_faqs.html).  """

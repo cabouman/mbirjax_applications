@@ -171,13 +171,13 @@ def recon_BH_plastic_metal(ct_model, sino, weights, num_BH_iterations=3, stop_th
         corrected_sinogram = BHC_plastic_metal(ct_model, sino, recon, order=order, include_const=include_const)
 
         # Reconstruct Corrected Sinogram
-        recon, _ = ct_model.recon(corrected_sinogram, weights=weights, init_recon=recon,
+        recon, recon_dict = ct_model.recon(corrected_sinogram, weights=weights, init_recon=recon,
                                   stop_threshold_change_pct=stop_threshold_pct)
 
         if verbose > 0:
             print(f"\n************ BH Iteration {i + 1}: Display plastic and metal mask **************")
             plastic_mask, metal_mask, plastic_scale, metal_scale = mjp.segment_plastic_metal(recon)
-            mj.slice_viewer(plastic_mask, metal_mask, vmin=0, vmax=1.0,
+            mj.slice_viewer(plastic_mask, metal_mask,  vmin=0, vmax=1.0,
                             slice_label=['Plastic Mask', 'Metal Mask'],
                             title=f'Iteration {i + 1}: Comparison of Plastic and Metal Masks')
 
