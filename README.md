@@ -15,11 +15,17 @@ Available applications include:
      ```
      pip install mbirjax[cuda12]
      cd mbirjax_applications/nsi
-     python demo_nsi.py
+     python demo_fdk_mbir_compare.py
+     ```
+   * View Selection using VCL:
+     ```
+     pip install mbirjax[cuda12]
+     cd mbirjax_applications/vcls
+     python demo_vcls.py
      ```
    * NERSC:
      ```
      pip install mbirjax[cuda12]
      cd mbirjax_applications/nersc
-     python demo_nersc.py
+     python demo_nersc_public.py
      ```
