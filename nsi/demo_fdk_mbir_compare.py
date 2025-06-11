@@ -18,14 +18,14 @@ if __name__ == "__main__":
     print('This script is demonstrates the preprocessing and reconstruction of NSI an dataset\
     \n\t using both FDK and MBIR reconstruction.\n')
 
-    # #### User defined params
+    # User defined params
     output_path = './output/nsi_demo/'  # path to store output recon images
     os.makedirs(output_path, exist_ok=True)  # mkdir if directory does not exist
 
     # path to store and extract the NSI data and metadata.
     download_dir = './demo_data/'
 
-    # #### Prompt the user for dataset choice
+    # Prompt the user for dataset choice
     choice = input("Download dataset with metal? (Y/n): ").strip().lower()
     if choice == 'n':
         # URL to test phantom without metal
@@ -37,14 +37,14 @@ if __name__ == "__main__":
         metal = True
     print(f"Selected dataset URL: {dataset_url}")
 
-    # #### Download and extract data. Then set path to NSI scan directory.
+    # Download and extract data. Then set path to NSI scan directory.
     dataset_dir = mj.download_and_extract_tar(dataset_url, download_dir)
 
-    # #### preprocessing parameters
+    # preprocessing parameters
     downsample_factor = [4, 4]  # downsample factor of scan view images along detector rows and detector columns.
     subsample_view_factor = 8  # view subsample factor.
 
-    # #### recon parameters
+    # recon parameters
     sharpness = 1.0
     snr_db = 30.0
 
