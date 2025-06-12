@@ -134,7 +134,7 @@ if __name__ == "__main__":
           "\n************* Perform MBIR Reconstruction *************",
           "\n*******************************************************")
 
-    recon, _ = parallel_model.recon(sinogram)
+    recon, recon_dict = parallel_model.recon(sinogram)
 
     # Convert reconstruction values to units of 1/cm
     recon /= pixel_size
@@ -152,7 +152,7 @@ if __name__ == "__main__":
 
     # Save reconstruction results
     output_path = f'./demo_data/output/{dataset}_recon.h5'
-    parallel_model.save_recon_hdf5(filepath=output_path, recon=recon)
+    parallel_model.save_recon_hdf5(filepath=output_path, recon=recon, recon_dict=recon_dict)
 
     # Display the results
-    mj.slice_viewer(recon, vmin = 0, vmax = 10, title=f'MBIR Reconstruction for {dataset} data')
+    mj.slice_viewer(recon, attributes_dict=recon_dict, vmin = 0, vmax = 10, title=f'MBIR Reconstruction for {dataset} data')

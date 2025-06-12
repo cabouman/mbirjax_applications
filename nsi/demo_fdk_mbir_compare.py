@@ -91,13 +91,13 @@ if __name__ == "__main__":
 
     # #### Perform MBIR reconstruction
     time0 = time.time()
-    mbir_recon, mbir_recon_params = ct_model.recon(sino, weights=weights)
+    mbir_recon, mbir_recon_dict = ct_model.recon(sino, weights=weights)
     mbir_recon.block_until_ready()
     elapsed = time.time() - time0
     print('Elapsed time for recon is {:.3f} seconds'.format(elapsed))
 
     # #### Print out parameters used in recon
-    pprint.pprint(mbir_recon_params._asdict())
+    pprint.pprint(mbir_recon_dict['recon_params'])
 
     # #### Save MBIR reconstruction to HDF5 file output
     mj.save_data_hdf5(os.path.join(output_path, "recon.h5"), mbir_recon, array_name='recon')
@@ -110,4 +110,4 @@ if __name__ == "__main__":
     # Display FDK versus MBIR
     vmin = 0
     vmax = downsample_factor[0] * 0.025
-    mj.slice_viewer(fdk_recon, mbir_recon, vmin=0, vmax=vmax, slice_label= ["FDK Recon", "MBIR Recon"], title='Axial Slice')
+    mj.slice_viewer(fdk_recon, mbir_recon, attribute_dicts=[None, mbir_recon_dict], vmin=0, vmax=vmax, slice_label= ["FDK Recon", "MBIR Recon"], title='Axial Slice')
