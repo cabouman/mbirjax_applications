@@ -182,3 +182,40 @@ def recon_BH_plastic_metal(ct_model, sino, weights, num_BH_iterations=3, stop_th
                             title=f'Iteration {i + 1}: Comparison of Plastic and Metal Masks')
 
     return recon
+
+def crop_boundary(recon: jnp.ndarray, num_pixels_circular_crop: int, num_axial_slices: int):
+    """
+    Zero out boundary regions of the reconstruction volume:
+    - In each axial (row, col) slice, zero out pixels outside a centered circular region.
+    - Along the slice (Z) axis, zero out a specified number of slices from the top and bottom.
+
+    Args:
+        recon (jnp.ndarray): 3D volume of shape (rows, cols, slices)
+        num_pixels_circular_crop (int): Number of pixels to subtract from the circular radius
+        num_axial_slices (int): Number of slices to zero from both top and bottom along the Z-axis
+
+    Returns:
+        jnp.ndarray: Cropped volume.
+    """
+    num_recon_rows, num_recon_cols, num_slices = recon.shape
+    row_center = (num_recon_rows - 1) / 2
+    col_center = (num_recon_cols - 1) / 2
+
+    base_radius = max(row_center, col_center)
+    radius = base_radius - num_pixels_circular_crop
+
+    # Create circular mask in (row, col) plane
+    row_coords, col_coords = jnp.meshgrid(jnp.arange(num_recon_rows), jnp.arange(num_recon_cols), indexing='ij')
+    dist_sq = (row_coords - row_center) ** 2 + (col_coords - col_center) ** 2
+    circular_mask = (dist_sq <= radius ** 2).astype(recon.dtype)
+
+    # Apply circular mask to all slices
+    mask = jnp.broadcast_to(circular_mask[:, :, None], recon.shape)
+    recon = recon * mask
+
+    # Zero out top and bottom slices along Z
+    if num_axial_slices > 0:
+        recon = recon.at[:, :, :num_axial_slices].set(0)
+        recon = recon.at[:, :, -num_axial_slices:].set(0)
+
+    return recon
