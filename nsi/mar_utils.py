@@ -183,16 +183,17 @@ def recon_BH_plastic_metal(ct_model, sino, weights, num_BH_iterations=3, stop_th
 
     return recon
 
-def apply_cylindrical_mask(recon: jnp.ndarray, radial_margin: int, num_axial_slices: int):
+def apply_cylindrical_mask(recon, radial_margin, num_top_slices, num_bottom_slices):
     """
     Apply a cylindrical mask to a 3D volume:
     - In each (row, col) slice, zero out pixels outside a centered circular region.
-    - Along the slice (Z) axis, zero out a fixed number of slices from both top and bottom.
+    - Along the slice (Z) axis, zero out specified number of slices from both top and bottom.
 
     Args:
         recon (jnp.ndarray): 3D volume of shape (rows, cols, slices).
         radial_margin (int): Number of pixels to subtract from the circular radius (row-col plane).
-        num_axial_slices (int): Number of slices to zero from both top and bottom along the Z-axis.
+        num_top_slices (int): Number of slices to zero from the top (beginning of Z-axis).
+        num_bottom_slices (int): Number of slices to zero from the bottom (end of Z-axis).
 
     Returns:
         jnp.ndarray: Masked volume with out-of-cylinder and edge slices set to zero.
@@ -213,8 +214,9 @@ def apply_cylindrical_mask(recon: jnp.ndarray, radial_margin: int, num_axial_sli
     recon = recon * circular_mask[:, :, None]
 
     # Zero out top and bottom slices along Z
-    if num_axial_slices > 0:
-        recon = recon.at[:, :, :num_axial_slices].set(0)
-        recon = recon.at[:, :, -num_axial_slices:].set(0)
+    if num_top_slices > 0:
+        recon = recon.at[:, :, :num_top_slices].set(0)
+    if num_bottom_slices > 0:
+        recon = recon.at[:, :, -num_bottom_slices:].set(0)
 
     return recon
