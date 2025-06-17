@@ -183,35 +183,34 @@ def recon_BH_plastic_metal(ct_model, sino, weights, num_BH_iterations=3, stop_th
 
     return recon
 
-def crop_boundary(recon: jnp.ndarray, num_pixels_circular_crop: int, num_axial_slices: int):
+def apply_cylindrical_mask(recon: jnp.ndarray, radial_margin: int, num_axial_slices: int):
     """
-    Zero out boundary regions of the reconstruction volume:
-    - In each axial (row, col) slice, zero out pixels outside a centered circular region.
-    - Along the slice (Z) axis, zero out a specified number of slices from the top and bottom.
+    Apply a cylindrical mask to a 3D volume:
+    - In each (row, col) slice, zero out pixels outside a centered circular region.
+    - Along the slice (Z) axis, zero out a fixed number of slices from both top and bottom.
 
     Args:
-        recon (jnp.ndarray): 3D volume of shape (rows, cols, slices)
-        num_pixels_circular_crop (int): Number of pixels to subtract from the circular radius
-        num_axial_slices (int): Number of slices to zero from both top and bottom along the Z-axis
+        recon (jnp.ndarray): 3D volume of shape (rows, cols, slices).
+        radial_margin (int): Number of pixels to subtract from the circular radius (row-col plane).
+        num_axial_slices (int): Number of slices to zero from both top and bottom along the Z-axis.
 
     Returns:
-        jnp.ndarray: Cropped volume.
+        jnp.ndarray: Masked volume with out-of-cylinder and edge slices set to zero.
     """
     num_recon_rows, num_recon_cols, num_slices = recon.shape
     row_center = (num_recon_rows - 1) / 2
     col_center = (num_recon_cols - 1) / 2
 
     base_radius = max(row_center, col_center)
-    radius = base_radius - num_pixels_circular_crop
+    radius = base_radius - radial_margin
 
     # Create circular mask in (row, col) plane
     row_coords, col_coords = jnp.meshgrid(jnp.arange(num_recon_rows), jnp.arange(num_recon_cols), indexing='ij')
     dist_sq = (row_coords - row_center) ** 2 + (col_coords - col_center) ** 2
     circular_mask = (dist_sq <= radius ** 2).astype(recon.dtype)
 
-    # Apply circular mask to all slices
-    mask = jnp.broadcast_to(circular_mask[:, :, None], recon.shape)
-    recon = recon * mask
+    # Apply cylindrical mask to all slices
+    recon = recon * circular_mask[:, :, None]
 
     # Zero out top and bottom slices along Z
     if num_axial_slices > 0:
