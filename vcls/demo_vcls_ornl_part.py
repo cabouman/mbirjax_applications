@@ -21,9 +21,9 @@ if __name__ == '__main__':
     # managed by UT - Battelle, LLC for the U.S.Department of Energy under contract DE-AC05-00OR22725.
 
     # path or URL to CT scan in h5 format with tgz wrapper
-    dataset_url_scan = '/depot/bouman/data/ORNL/hfn_scan.tgz'
+    dataset_url_scan = 'https://www.datadepot.rcac.purdue.edu/bouman/data/hfn_scan.tgz'
     # path or URL to reference object in npy format with tgz wrapper
-    dataset_url_reference = '/depot/bouman/data/ORNL/hfn_reference_object.tgz'
+    dataset_url_reference = 'https://www.datadepot.rcac.purdue.edu/bouman/data/hfn_reference_object.tgz'
     # path to directory for storage of data
     download_dir = './demo_data/'
 
