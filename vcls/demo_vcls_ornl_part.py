@@ -12,6 +12,14 @@ if __name__ == '__main__':
     #######################
     # Sets pointers to data
     #######################
+
+    # Please cite the following source when using this data:
+    #     Amir Ziabari, Obaidullah Rahman,  Singanallur Venkatakrishnan, and Ryan Dehoff,
+    #     “X-ray Computed Tomography Data of Dense Metallic Components”,
+    #     10.13139/ORNLNCCS/2568789, release data: June 2025
+    # This work was carried out at Oak Ridge National Laboratory,
+    # managed by UT - Battelle, LLC for the U.S.Department of Energy under contract DE-AC05-00OR22725.
+
     # path or URL to CT scan in h5 format with tgz wrapper
     dataset_url_scan = '/depot/bouman/data/ORNL/hfn_scan.tgz'
     # path or URL to reference object in npy format with tgz wrapper
