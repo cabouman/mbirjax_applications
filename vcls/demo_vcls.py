@@ -86,12 +86,14 @@ if __name__ == '__main__':
     # Do a recon with optimal angles
     ct_model_opt = mjp.copy_ct_model(ct_model, optimal_angles)
     sinogram_optimal_angles = ct_model_opt.forward_project(reference_object)
-    recon_optimal_angles, recon_params = ct_model_opt.recon(sinogram_optimal_angles)
+    recon_optimal_angles, recon_dict_optimal = ct_model_opt.recon(sinogram_optimal_angles)
 
     angles = jnp.linspace(start_angle, end_angle, len(optimal_angles), endpoint=False)
     ct_model_uniform = mjp.copy_ct_model(ct_model, angles)
     sinogram_uniform = ct_model_uniform.forward_project(reference_object)
-    recon_uniform, recon_params_uniform = ct_model_uniform.recon(sinogram_uniform)
+    recon_uniform, recon_dict_uniform = ct_model_uniform.recon(sinogram_uniform)
 
-    mj.slice_viewer(reference_object, recon_uniform, recon_optimal_angles, slice_label=['Ref object', 'Uniform Angles', 'VCLS Angles'],
+    mj.slice_viewer(reference_object, recon_uniform, recon_optimal_angles,
+                    attribute_dicts=[None, recon_dict_uniform, recon_dict_optimal],
+                    slice_label=['Ref object', 'Uniform Angles', 'VCLS Angles'],
                     title='Reference object (left) plus Recons from \nuniformly spaced angles (middle) and optimal angles (right)')

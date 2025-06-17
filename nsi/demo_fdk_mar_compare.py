@@ -92,7 +92,7 @@ if __name__ == "__main__":
     print("\n*******************************************************",
           "\n******** Perform MBIR recon with MAR weights **********",
           "\n*******************************************************")
-    recon_mar, recon_params = ct_model.recon(sino, weights=weights_mar)
+    recon_mar, recon_dict_mar = ct_model.recon(sino, weights=weights_mar)
 
 
     # #### Display results
@@ -102,5 +102,5 @@ if __name__ == "__main__":
 
     vmin = 0
     vmax = downsample_factor[0] * 0.025
-    mj.slice_viewer(fdk_recon, recon_mar, vmin=0, vmax=vmax, slice_label= ["FDK", "MBIR MAR"], title='Comparison')
+    mj.slice_viewer(fdk_recon, recon_mar, attribute_dicts=[None, recon_dict_mar], vmin=0, vmax=vmax, slice_label= ["FDK", "MBIR MAR"], title='Comparison')
 

@@ -53,7 +53,7 @@ if __name__ == '__main__':
     ct_model.set_params(sharpness=sharpness, snr_db=snr_db)
 
     # Do a recon with the full sinogram
-    recon, recon_params = ct_model.recon(full_sino, max_iterations=max_iterations)
+    recon, recon_dict = ct_model.recon(full_sino, max_iterations=max_iterations)
     # mj.slice_viewer(recon, slice_axis=2)
 
     # Zero out distorted marginal slices at both ends
