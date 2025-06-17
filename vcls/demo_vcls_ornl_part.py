@@ -84,7 +84,7 @@ if __name__ == '__main__':
     # Display reference object cross-section with selected angles
     formatted = np.array2string(optimal_angles, precision=3, suppress_small=True, separator=', ')
     print('chosen angles: ' + formatted)
-    middle_index = reference_object.shape[2] // 2
+    middle_index = reference_object.shape[2] // 2 + 2
     mjp.show_image_with_projection_rays(reference_object[:, :, middle_index], rotation_angles_rad=optimal_angles, title='Reference Object with Selected View Angles')
 
     # Display reference object Fourier transform along with selected angles
