@@ -94,6 +94,6 @@ if __name__ == '__main__':
     recon_uniform, recon_dict_uniform = ct_model_uniform.recon(sinogram_uniform)
 
     mj.slice_viewer(reference_object, recon_uniform, recon_optimal_angles,
-                    attribute_dicts=[None, recon_dict_uniform, recon_dict_optimal],
+                    data_dicts=[None, recon_dict_uniform, recon_dict_optimal],
                     slice_label=['Ref object', 'Uniform Angles', 'VCLS Angles'],
                     title='Reference object (left) plus Recons from \nuniformly spaced angles (middle) and optimal angles (right)')
