@@ -12,10 +12,18 @@ if __name__ == '__main__':
     #######################
     # Sets pointers to data
     #######################
+
+    # Please cite the following source when using this data:
+    #     Amir Ziabari, Obaidullah Rahman,  Singanallur Venkatakrishnan, and Ryan Dehoff,
+    #     “X-ray Computed Tomography Data of Dense Metallic Components”,
+    #     10.13139/ORNLNCCS/2568789, release data: June 2025
+    # This work was carried out at Oak Ridge National Laboratory,
+    # managed by UT - Battelle, LLC for the U.S.Department of Energy under contract DE-AC05-00OR22725.
+
     # path or URL to CT scan in h5 format with tgz wrapper
-    dataset_url_scan = '/depot/bouman/data/ORNL/hfn_scan.tgz'
+    dataset_url_scan = 'https://www.datadepot.rcac.purdue.edu/bouman/data/hfn_scan.tgz'
     # path or URL to reference object in npy format with tgz wrapper
-    dataset_url_reference = '/depot/bouman/data/ORNL/hfn_reference_object.tgz'
+    dataset_url_reference = 'https://www.datadepot.rcac.purdue.edu/bouman/data/hfn_reference_object.tgz'
     # path to directory for storage of data
     download_dir = './demo_data/'
 
@@ -76,7 +84,7 @@ if __name__ == '__main__':
     # Display reference object cross-section with selected angles
     formatted = np.array2string(optimal_angles, precision=3, suppress_small=True, separator=', ')
     print('chosen angles: ' + formatted)
-    middle_index = reference_object.shape[2] // 2
+    middle_index = reference_object.shape[2] // 2 + 2
     mjp.show_image_with_projection_rays(reference_object[:, :, middle_index], rotation_angles_rad=optimal_angles, title='Reference Object with Selected View Angles')
 
     # Display reference object Fourier transform along with selected angles
