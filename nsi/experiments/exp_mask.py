@@ -1,5 +1,6 @@
 import jax.numpy as jnp
 import mbirjax as mj
+import numpy as np
 from nsi.mar_utils import apply_cylindrical_mask  # Adjust if your function is in a different module
 
 # Create a 3D volume of ones with shape (rows, cols, slices)
@@ -18,6 +19,9 @@ masked_volume = apply_cylindrical_mask(
     num_top_slices=num_top_slices,
     num_bottom_slices=num_bottom_slices
 )
+
+all_ones_volume = np.transpose(all_ones_volume, (2, 0, 1))
+masked_volume = np.transpose(masked_volume, (2, 0, 1))
 
 # Display original and masked volume side by side
 mj.slice_viewer(all_ones_volume, masked_volume,
