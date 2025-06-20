@@ -7,7 +7,6 @@ import scipy
 import mbirjax as mj
 import mbirjax.preprocess as mjp
 
-import mar_utils
 import pprint
 
 pp = pprint.PrettyPrinter(indent=4)
