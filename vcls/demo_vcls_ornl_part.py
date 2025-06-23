@@ -107,6 +107,6 @@ if __name__ == '__main__':
     sino_uniform = full_sino[uniform_index_list]
     recon_uniform, recon_dict_uniform = ct_model_uniform.recon(sino_uniform)
 
-    mj.slice_viewer(recon_uniform, recon_opt, attribute_dicts=[recon_dict_uniform, recon_dict_opt], slice_label=['Uniform: Slice', 'VCLS optimal: Slice'],
+    mj.slice_viewer(recon_uniform, recon_opt, data_dicts=[recon_dict_uniform, recon_dict_opt], slice_label=['Uniform: Slice', 'VCLS optimal: Slice'],
                     title='Recons from {} views: \nuniformly spaced angles (left) and optimal angles (right)'.format(num_selected_views), vmin=0.0, vmax=0.05)
 

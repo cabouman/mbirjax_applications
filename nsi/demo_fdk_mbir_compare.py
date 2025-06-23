@@ -110,4 +110,4 @@ if __name__ == "__main__":
     # Display FDK versus MBIR
     vmin = 0
     vmax = downsample_factor[0] * 0.025
-    mj.slice_viewer(fdk_recon, mbir_recon, attribute_dicts=[None, mbir_recon_dict], vmin=0, vmax=vmax, slice_label= ["FDK Recon", "MBIR Recon"], title='Axial Slice')
+    mj.slice_viewer(fdk_recon, mbir_recon, data_dicts=[None, mbir_recon_dict], vmin=0, vmax=vmax, slice_label= ["FDK Recon", "MBIR Recon"], title='Axial Slice')
