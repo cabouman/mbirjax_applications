@@ -7,7 +7,6 @@ import scipy
 import mbirjax as mj
 import mbirjax.preprocess as mjp
 
-import mar_utils
 import pprint
 
 pp = pprint.PrettyPrinter(indent=4)
@@ -102,5 +101,5 @@ if __name__ == "__main__":
 
     vmin = 0
     vmax = downsample_factor[0] * 0.025
-    mj.slice_viewer(fdk_recon, recon_mar, attribute_dicts=[None, recon_dict_mar], vmin=0, vmax=vmax, slice_label= ["FDK", "MBIR MAR"], title='Comparison')
+    mj.slice_viewer(fdk_recon, recon_mar, data_dicts=[None, recon_dict_mar], vmin=0, vmax=vmax, slice_label= ["FDK", "MBIR MAR"], title='Comparison')
 

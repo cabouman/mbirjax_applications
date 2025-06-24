@@ -165,6 +165,6 @@ if __name__ == "__main__":
 
     # Display results
     title = 'Standard VCD recon (left) and residual with 2 halves stitched VCD Recon (right) \nThe residual is (stitched recon) - (standard recon).'
-    mbirjax.slice_viewer(recon, attribute_dicts=recon_dict, title=title)
+    mbirjax.slice_viewer(recon, data_dicts=recon_dict, title=title)
 
     """**Next:** Try changing some of the parameters and re-running or try [some of the other demos](https://mbirjax.readthedocs.io/en/latest/demos_and_faqs.html).  """

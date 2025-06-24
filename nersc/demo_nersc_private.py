@@ -155,4 +155,4 @@ if __name__ == "__main__":
     parallel_model.save_recon_hdf5(filepath=output_path, recon=recon, recon_dict=recon_dict)
 
     # Display the results
-    mj.slice_viewer(recon, attributes_dict=recon_dict, vmin = 0, vmax = 10, title=f'MBIR Reconstruction for {dataset} data')
+    mj.slice_viewer(recon, data_dicts=recon_dict, vmin = 0, vmax = 10, title=f'MBIR Reconstruction for {dataset} data')
