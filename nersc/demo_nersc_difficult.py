@@ -68,6 +68,10 @@ if __name__ == "__main__":
         blank_scan = data['exchange/data_white'][:]
         dark_scan = data['exchange/data_dark'][:]
 
+    # Print out the angles in degrees
+    angles_degrees = -np.rad2deg(angles)
+    print("Rotation angles in degree: \n", angles_degrees)
+
     # Set reconstruction parameters
     warnings.warn("No center of rotation provided. Using detector midpoint as default.")
     center_of_rotation = num_det_channels / 2
@@ -114,8 +118,8 @@ if __name__ == "__main__":
 
     # Padding the reconstruction size
     recon_shape = parallel_model.get_params("recon_shape")
-    recon_row_scale = 1.0
-    recon_col_scale = 1.0
+    recon_row_scale = 1.2
+    recon_col_scale = 1.2
     parallel_model.scale_recon_shape(row_scale=recon_row_scale, col_scale=recon_col_scale)
 
     # Print out model parameters
