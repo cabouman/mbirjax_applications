@@ -37,18 +37,22 @@ if __name__ == "__main__":
         'public': {
             'url': 'https://drive.google.com/file/d/1CpsiceN7zAjmeb07TKL4SbkW_5SHpgJS/view?usp=drive_link',
             'det_channel_offset': 0.0,
+            'ROR_scale': 1.2,
         },
         'fuelcell': {
             'url': '/depot/bouman/data/nersc/demo_nersc_fuelcell.tgz',
             'det_channel_offset': 3.0,
+            'ROR_scale': 1.2,
         },
         'permafrost': {
             'url': '/depot/bouman/data/nersc/demo_nersc_permafrost.tgz',
             'det_channel_offset': -71.125,
+            'ROR_scale': 1.2,
         },
         'difficult': {
             'url': '/depot/bouman/data/nersc/nersc_difficult_data.tgz',
             'det_channel_offset': 0.0,
+            'ROR_scale': 1.3,
         },
 
     }
@@ -68,14 +72,14 @@ if __name__ == "__main__":
         print("Invalid selection.")
         sys.exit(1)
 
+    # Set values of data set specific parameters
     dataset_url = available_datasets[dataset]['url']
     det_channel_offset = available_datasets[dataset]['det_channel_offset']
+    ROR_scale = available_datasets[dataset]['ROR_scale']
 
     # Set reconstruction parameters
     sharpness = 1.0
     num_slices = 4
-    recon_row_scale = 1.2
-    recon_col_scale = 1.2
 
     # Download data
     download_dir = './demo_data/'
@@ -119,8 +123,8 @@ if __name__ == "__main__":
     # Set reconstruction parameter values
     ct_model.set_params(sharpness=sharpness, det_channel_offset=det_channel_offset, verbose=1)
 
-    # Padding the reconstruction size
-    pad_size = ct_model.scale_recon_shape(row_scale=recon_row_scale, col_scale=recon_col_scale)
+    # Scale the region of reconstruction (ROR) to reduce artifacts
+    pad_size = ct_model.scale_recon_shape(row_scale=ROR_scale, col_scale=ROR_scale)
     print(f"Padding applied to rows, cols, and slices: {pad_size}")
 
     # Print out model parameters
