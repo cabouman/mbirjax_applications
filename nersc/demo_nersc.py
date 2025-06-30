@@ -32,22 +32,39 @@ pp = pprint.PrettyPrinter(indent=4)
 if __name__ == "__main__":
     print('This script is a demonstration of the MBIR reconstruction workflow.\n')
 
-    # Choose dataset
-    dataset = 'permafrost' # 'fuelcell' or 'permafrost'
+    # Define available datasets and parameters
+    available_datasets = {
+        'fuelcell': {
+            'url': '/depot/bouman/data/nersc/demo_nersc_fuelcell.tgz',
+            'det_channel_offset': 3.0,
+        },
+        'permafrost': {
+            'url': '/depot/bouman/data/nersc/demo_nersc_permafrost.tgz',
+            'det_channel_offset': -71.125,
+        },
+        'public': {
+            'url': 'https://drive.google.com/file/d/1CpsiceN7zAjmeb07TKL4SbkW_5SHpgJS/view?usp=drive_link',
+            'det_channel_offset': 0.0,
+        },
+    }
 
-    # NERSC file path
-    if dataset == 'public':
-        dataset_url = 'https://drive.google.com/file/d/1CpsiceN7zAjmeb07TKL4SbkW_5SHpgJS/view?usp=drive_link'
-        det_channel_offset = 0.0  # No center of rotation is provided
-    if dataset == 'fuelcell':
-        dataset_url = '/depot/bouman/data/nersc/demo_nersc_fuelcell.tgz'
-        det_channel_offset = 3.0
-    if dataset == 'permafrost':
-        dataset_url = '/depot/bouman/data/nersc/demo_nersc_permafrost.tgz'
-        det_channel_offset = -71.125
+    # Prompt user for dataset selection using a numbered menu
+    dataset_names = list(available_datasets.keys())
+    print("Available datasets:")
+    for i, name in enumerate(dataset_names, 1):
+        print(f"{i}. {name}")
+    try:
+        selection = int(input("Enter the number of the dataset to reconstruct: "))
+        if 1 <= selection <= len(dataset_names):
+            dataset = dataset_names[selection - 1]
+        else:
+            raise ValueError
+    except ValueError:
+        print("Invalid selection.")
+        sys.exit(1)
 
-    # Set directory to store data
-    download_dir = './demo_data/'
+    dataset_url = available_datasets[dataset]['url']
+    det_channel_offset = available_datasets[dataset]['det_channel_offset']
 
     # Set reconstruction parameters
     sharpness = 1.0
@@ -56,6 +73,7 @@ if __name__ == "__main__":
     recon_col_scale = 1.2
 
     # Download data
+    download_dir = './demo_data/'
     dataset_dir = mj.download_and_extract(dataset_url, download_dir)
 
     # Load reconstruction parameters from data.
@@ -116,8 +134,8 @@ if __name__ == "__main__":
     recon = mjp.apply_cylindrical_mask(recon, radial_margin=0, top_margin=0, bottom_margin=0)
 
     # Save reconstruction results
-    output_path = f'./demo_data/output/mbir_recon.h5'
+    output_path = f'./demo_data/output/mbir_recon_{dataset}.h5'
     ct_model.save_recon_hdf5(filepath=output_path, recon=recon, recon_dict=recon_dict)
 
     # Display the results
-    mj.slice_viewer(recon, data_dicts=recon_dict, vmin = 0, vmax = 10, title=f'MBIR Reconstruction')
+    mj.slice_viewer(recon, data_dicts=recon_dict, vmin = 0, vmax = 10, title=f'MBIR Reconstruction - {dataset}')
