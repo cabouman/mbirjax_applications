@@ -92,10 +92,11 @@ if __name__ == "__main__":
 
     # Padding the reconstruction size
     recon_shape_old = parallel_model.get_params('recon_shape')
-    print(f"Reconstruction shape before scaling: {recon_shape_old}")
     parallel_model.scale_recon_shape(row_scale=recon_row_scale, col_scale=recon_col_scale)
     recon_shape = parallel_model.get_params('recon_shape')
-    print(f"Reconstruction shape after scaling: {recon_shape}")
+    recon_shape_change = np.array(recon_shape) - np.array(recon_shape_old)
+    pad_size = int(np.max(recon_shape_change[:2]) // 2)
+    print(f"Padding applied to rows/cols: {pad_size}")
 
     # Print out model parameters
     parallel_model.print_params()
