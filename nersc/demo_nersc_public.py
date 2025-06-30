@@ -1,54 +1,39 @@
-"""
-Demo for private NERSC Dataset
+import sys
+import subprocess
+import importlib.util
 
-This script demonstrates a basic workflow for running MBIR reconstructions on public NERSC datasets stored on Google Drive:
-https://drive.google.com/drive/folders/1uGg5GXibZvnkEaAx6f36a-cJjFFHmIac
-"""
+# Install necessary packages
+required_packages = ['gdown', 'pywavelets']
+for package in required_packages:
+    if importlib.util.find_spec(package) is None:
+        print(f"{package} not found. Installing...")
+        try:
+            subprocess.check_call([sys.executable, "-m", "pip", "install", package])
+            print(f"Successfully installed {package}")
+        except subprocess.CalledProcessError:
+            print(f"Failed to install {package}. Please install it manually.")
+            sys.exit(1)
+    else:
+        print(f"{package} is already installed.")
+
+import gdown
+import pywt
+
 
 import numpy as np
 import jax.numpy as jnp
 import pprint
-import sys
 import mbirjax as mj
 import mbirjax.preprocess as mjp
 import nersc_utils
 import ring_utils
 import h5py
-import subprocess
-import importlib.util
 import warnings
 
 pp = pprint.PrettyPrinter(indent=4)
 
 if __name__ == "__main__":
-    print('This script is a demonstration of the MBIR reconstruction workflow using public NERSC datasets stored on Google Drive.\
-    \n Demo functionality includes:\
-    \n\t * Installing necessary dependencies;\
-    \n\t * Downloading NERSC datasets from specified urls;\
-    \n\t * Loading reconstruction parameters from the dataset;\
-    \n\t * Setting reconstruction parameters;\
-    \n\t * Selecting a subset of slices for reconstruction;\
-    \n\t * Computing sinogram data;\
-    \n\t * Removing stripes artifacts from sinogram data;\
-    \n\t * Displaying the sinogram;\
-    \n\t * Computing the MBIR reconstruction;\
-    \n\t * Saving the reconstruction results;\
-    \n\t * Displaying the reconstruction results;\n')
-    # ###################### User defined params. Change the parameters below for your own use case.
-
-    # Install necessary packages
-    required_packages = ['gdown', 'pywavelets']
-    for package in required_packages:
-        if importlib.util.find_spec(package) is None:
-            print(f"{package} not found. Installing...")
-            try:
-                subprocess.check_call([sys.executable, "-m", "pip", "install", package])
-                print(f"Successfully installed {package}")
-            except subprocess.CalledProcessError:
-                print(f"Failed to install {package}. Please install it manually.")
-                sys.exit(1)
-        else:
-            print(f"{package} is already installed.")
+    print('This script is a demonstration of the MBIR reconstruction workflow using public NERSC datasets.\n')
 
     # NERSC dataset Google Drive share link
     dataset_url = 'https://drive.google.com/file/d/1CpsiceN7zAjmeb07TKL4SbkW_5SHpgJS/view?usp=drive_link'
@@ -75,7 +60,7 @@ if __name__ == "__main__":
     det_channel_offset = (center_of_rotation - num_det_channels / 2)
 
     # Select a subset of slices for reconstruction
-    num_slices = 10
+    num_slices = 3
     mid_slice = num_det_rows // 2
     sino_used = (mid_slice - num_slices // 2, mid_slice + num_slices // 2)
     # Define sino_used = (0, num_slices) for full recon
