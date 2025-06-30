@@ -41,13 +41,15 @@ if __name__ == "__main__":
     sharpness = 1.0
     det_channel_offset = 0.0    # No center of rotation is provided
     num_slices = 3
+    recon_row_scale = 1.3
+    recon_col_scale = 1.3
 
     # Download data
     dataset_dir = mj.download_and_extract(dataset_url, download_dir)
 
     # Load reconstruction parameters from data.
     with h5py.File(dataset_dir, "r") as data:
-        # What are the units of pixel size?
+        # Get pixel size in units of cm
         pixel_size = data['/measurement/instrument/detector/pixel_size'][0] / 10.0
         angles = -np.deg2rad(data['exchange/theta'])
         obj_scan = data['exchange/data'][:]
@@ -64,20 +66,17 @@ if __name__ == "__main__":
     num_slices = np.minimum(num_det_rows, num_slices)
     crop_pixels = (num_det_rows - num_slices) // 2
 
-    # Crop out desired region of views
+    print("\n********** Crop out desired region of views **************")
     obj_scan, blank_scan, dark_scan, _ = mjp.crop_view_data(
         obj_scan, blank_scan, dark_scan,
         crop_pixels_sides=0, crop_pixels_top=crop_pixels, crop_pixels_bottom=crop_pixels,
         defective_pixel_array=()
     )
 
-    print("\n*******************************************************",
-          "\n************** NERSC dataset preprocessing **************",
-          "\n*******************************************************")
-    # Compute sinogram data
+    print("\n********** Compute sinogram **************")
     sinogram = mjp.compute_sino_transmission(obj_scan, blank_scan, dark_scan)
 
-    # Remove stripe artifacts from sinogram
+    print("\n********** Remove stripe artifacts **************")
     sinogram = jnp.array(sinogram)
     sinogram = ring_utils.remove_stripe(sinogram)
     sinogram = ring_utils.remove_stripe_wavelet_fourier(sinogram)
@@ -85,32 +84,20 @@ if __name__ == "__main__":
     # Display the sinogram
     mj.slice_viewer(sinogram.transpose((0, 2, 1)), title='Original sinogram')
 
-    print("\n*******************************************************",
-          "\n***************** Set up MBIRJAX model ****************",
-          "\n*******************************************************")
+    print("\n********** Construct parallel beam model **************")
     # ParallelBeamModel constructor
     parallel_model = mj.ParallelBeamModel(sinogram_shape=sinogram.shape, angles=angles)
-
     # Set reconstruction parameter values
     parallel_model.set_params(sharpness=sharpness, det_channel_offset=det_channel_offset, verbose=1)
-
     # Padding the reconstruction size
-    recon_shape = parallel_model.get_params("recon_shape")
-    recon_row_scale = 1.3
-    recon_col_scale = 1.3
     parallel_model.scale_recon_shape(row_scale=recon_row_scale, col_scale=recon_col_scale)
 
     # Print out model parameters
     parallel_model.print_params()
 
-    print("\n*******************************************************",
-          "\n************* Perform MBIR Reconstruction *************",
-          "\n*******************************************************")
-
+    print("\n********** Perform MBIR reconstruction **************")
     recon, recon_dict = parallel_model.recon(sinogram)
-
-    # Convert reconstruction values to units of 1/cm
-    recon /= pixel_size
+    recon /= pixel_size # convert to units of 1/cm
 
     # Undo padding of reconstruction
     center_x, center_y = recon.shape[0] // 2, recon.shape[1] // 2
