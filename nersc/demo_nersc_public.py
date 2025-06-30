@@ -89,8 +89,13 @@ if __name__ == "__main__":
     parallel_model = mj.ParallelBeamModel(sinogram_shape=sinogram.shape, angles=angles)
     # Set reconstruction parameter values
     parallel_model.set_params(sharpness=sharpness, det_channel_offset=det_channel_offset, verbose=1)
+
     # Padding the reconstruction size
+    recon_shape_old = parallel_model.get_params('recon_shape')
+    print(f"Reconstruction shape before scaling: {recon_shape_old}")
     parallel_model.scale_recon_shape(row_scale=recon_row_scale, col_scale=recon_col_scale)
+    recon_shape = parallel_model.get_params('recon_shape')
+    print(f"Reconstruction shape after scaling: {recon_shape}")
 
     # Print out model parameters
     parallel_model.print_params()
@@ -99,14 +104,8 @@ if __name__ == "__main__":
     recon, recon_dict = parallel_model.recon(sinogram)
     recon /= pixel_size # convert to units of 1/cm
 
-    # Undo padding of reconstruction
-    center_x, center_y = recon.shape[0] // 2, recon.shape[1] // 2
-    crop_size = num_det_channels // 2
-    recon = recon[center_y - crop_size:center_y + crop_size, center_x - crop_size:center_x + crop_size]
-
-    # Masking the reconstruction to display the circular ROR region
-    circular_mask = nersc_utils.create_circular_mask(recon.shape[0], recon.shape[1]).astype(int)
-    recon = recon * circular_mask[:, :, np.newaxis]
+    # Mask out Region of Interest (ROI)
+    recon = mjp.apply_cylindrical_mask(recon, radial_margin=0, top_margin=0, bottom_margin=0)
 
     # Save reconstruction results
     output_path = f'./demo_data/output/mbir_recon.h5'
