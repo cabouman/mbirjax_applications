@@ -31,7 +31,7 @@ if __name__ == '__main__':
     # Download Data
     ###############
     # Download and extract data
-    dataset_dir_scan = mj.download_and_extract_tar(dataset_url_scan, download_dir)
+    dataset_dir_scan = mj.download_and_extract(dataset_url_scan, download_dir)
 
     #################
     # Construct model

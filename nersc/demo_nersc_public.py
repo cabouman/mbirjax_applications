@@ -40,7 +40,7 @@ if __name__ == "__main__":
     # Destination path to download the NERSC data
     download_dir = './demo_data/'
     # Path to NERSC data directory
-    dataset_dir = nersc_utils.download_and_extract(dataset_url, download_dir)
+    dataset_dir = mj.download_and_extract(dataset_url, download_dir)
 
     # Load reconstruction parameters from data.
     with h5py.File(dataset_dir, "r") as data:
