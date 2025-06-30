@@ -3,7 +3,7 @@ import subprocess
 import importlib.util
 
 # Install necessary packages
-required_packages = ['gdown', 'pywavelets']
+required_packages = ['pywavelets']
 for package in required_packages:
     if importlib.util.find_spec(package) is None:
         print(f"{package} not found. Installing...")
@@ -15,9 +15,6 @@ for package in required_packages:
             sys.exit(1)
     else:
         print(f"{package} is already installed.")
-
-import gdown
-import pywt
 
 
 import numpy as np
