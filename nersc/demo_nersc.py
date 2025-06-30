@@ -33,23 +33,25 @@ if __name__ == "__main__":
     print('This script is a demonstration of the MBIR reconstruction workflow.\n')
 
     # Choose dataset
-    dataset = 'public' # 'fuelcell' or 'permafrost'
+    dataset = 'permafrost' # 'fuelcell' or 'permafrost'
 
     # NERSC file path
     if dataset == 'public':
         dataset_url = 'https://drive.google.com/file/d/1CpsiceN7zAjmeb07TKL4SbkW_5SHpgJS/view?usp=drive_link'
+        det_channel_offset = 0.0  # No center of rotation is provided
     if dataset == 'fuelcell':
         dataset_url = '/depot/bouman/data/nersc/demo_nersc_fuelcell.tgz'
+        det_channel_offset = 3.0
     if dataset == 'permafrost':
         dataset_url = '/depot/bouman/data/nersc/demo_nersc_permafrost.tgz'
+        det_channel_offset = -71.125
 
     # Set directory to store data
     download_dir = './demo_data/'
 
     # Set reconstruction parameters
     sharpness = 1.0
-    det_channel_offset = 0.0    # No center of rotation is provided
-    num_slices = 3
+    num_slices = 4
     recon_row_scale = 1.2
     recon_col_scale = 1.2
 
@@ -83,19 +85,19 @@ if __name__ == "__main__":
     )
 
     print("\n********** Compute sinogram **************")
-    sinogram = mjp.compute_sino_transmission(obj_scan, blank_scan, dark_scan)
+    sino = mjp.compute_sino_transmission(obj_scan, blank_scan, dark_scan)
 
     print("\n********** Remove stripe artifacts **************")
-    sinogram = jnp.array(sinogram)
-    sinogram = ring_utils.remove_stripe(sinogram)
-    sinogram = ring_utils.remove_stripe_wavelet_fourier(sinogram)
+    sino = jnp.array(sino)
+    sino = ring_utils.remove_stripe(sino)
+    sino = ring_utils.remove_stripe_wavelet_fourier(sino)
 
     # Display the sinogram
-    mj.slice_viewer(sinogram.transpose((0, 2, 1)), title='Original sinogram')
+    mj.slice_viewer(sino, slice_axis=1, title='Original sinogram')
 
     print("\n********** Construct parallel beam model **************")
     # ParallelBeamModel constructor
-    ct_model = mj.ParallelBeamModel(sinogram_shape=sinogram.shape, angles=angles)
+    ct_model = mj.ParallelBeamModel(sinogram_shape=sino.shape, angles=angles)
     # Set reconstruction parameter values
     ct_model.set_params(sharpness=sharpness, det_channel_offset=det_channel_offset, verbose=1)
 
@@ -107,7 +109,7 @@ if __name__ == "__main__":
     ct_model.print_params()
 
     print("\n********** Perform MBIR reconstruction **************")
-    recon, recon_dict = ct_model.recon(sinogram)
+    recon, recon_dict = ct_model.recon(sino)
     recon /= pixel_size # convert to units of 1/cm
 
     # Mask out Region of Interest (ROI)
