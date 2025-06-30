@@ -41,8 +41,8 @@ if __name__ == "__main__":
     sharpness = 1.0
     det_channel_offset = 0.0    # No center of rotation is provided
     num_slices = 3
-    recon_row_scale = 1.3
-    recon_col_scale = 1.3
+    recon_row_scale = 1.2
+    recon_col_scale = 1.2
 
     # Download data
     dataset_dir = mj.download_and_extract(dataset_url, download_dir)
@@ -86,23 +86,19 @@ if __name__ == "__main__":
 
     print("\n********** Construct parallel beam model **************")
     # ParallelBeamModel constructor
-    parallel_model = mj.ParallelBeamModel(sinogram_shape=sinogram.shape, angles=angles)
+    ct_model = mj.ParallelBeamModel(sinogram_shape=sinogram.shape, angles=angles)
     # Set reconstruction parameter values
-    parallel_model.set_params(sharpness=sharpness, det_channel_offset=det_channel_offset, verbose=1)
+    ct_model.set_params(sharpness=sharpness, det_channel_offset=det_channel_offset, verbose=1)
 
     # Padding the reconstruction size
-    recon_shape_old = parallel_model.get_params('recon_shape')
-    parallel_model.scale_recon_shape(row_scale=recon_row_scale, col_scale=recon_col_scale)
-    recon_shape = parallel_model.get_params('recon_shape')
-    recon_shape_change = np.array(recon_shape) - np.array(recon_shape_old)
-    pad_size = int(np.max(recon_shape_change[:2]) // 2)
-    print(f"Padding applied to rows/cols: {pad_size}")
+    pad_size = ct_model.scale_recon_shape(row_scale=recon_row_scale, col_scale=recon_col_scale)
+    print(f"Padding applied to rows, cols, and slices: {pad_size}")
 
     # Print out model parameters
-    parallel_model.print_params()
+    ct_model.print_params()
 
     print("\n********** Perform MBIR reconstruction **************")
-    recon, recon_dict = parallel_model.recon(sinogram)
+    recon, recon_dict = ct_model.recon(sinogram)
     recon /= pixel_size # convert to units of 1/cm
 
     # Mask out Region of Interest (ROI)
@@ -110,7 +106,7 @@ if __name__ == "__main__":
 
     # Save reconstruction results
     output_path = f'./demo_data/output/mbir_recon.h5'
-    parallel_model.save_recon_hdf5(filepath=output_path, recon=recon, recon_dict=recon_dict)
+    ct_model.save_recon_hdf5(filepath=output_path, recon=recon, recon_dict=recon_dict)
 
     # Display the results
     mj.slice_viewer(recon, data_dicts=recon_dict, vmin = 0, vmax = 10, title=f'MBIR Reconstruction')
