@@ -34,6 +34,10 @@ if __name__ == "__main__":
 
     # Define available datasets and parameters
     available_datasets = {
+        'public': {
+            'url': 'https://drive.google.com/file/d/1CpsiceN7zAjmeb07TKL4SbkW_5SHpgJS/view?usp=drive_link',
+            'det_channel_offset': 0.0,
+        },
         'fuelcell': {
             'url': '/depot/bouman/data/nersc/demo_nersc_fuelcell.tgz',
             'det_channel_offset': 3.0,
@@ -42,10 +46,11 @@ if __name__ == "__main__":
             'url': '/depot/bouman/data/nersc/demo_nersc_permafrost.tgz',
             'det_channel_offset': -71.125,
         },
-        'public': {
-            'url': 'https://drive.google.com/file/d/1CpsiceN7zAjmeb07TKL4SbkW_5SHpgJS/view?usp=drive_link',
+        'difficult': {
+            'url': '/depot/bouman/data/nersc/nersc_difficult_data.tgz',
             'det_channel_offset': 0.0,
         },
+
     }
 
     # Prompt user for dataset selection using a numbered menu
@@ -85,13 +90,8 @@ if __name__ == "__main__":
         blank_scan = data['exchange/data_white'][:]
         dark_scan = data['exchange/data_dark'][:]
 
-    # Print out sinogram shape
-    num_views, num_det_rows, num_det_channels = obj_scan.shape
-    print(f"Number of views: {num_views}")
-    print(f"Number of detector rows: {num_det_rows}")
-    print(f"Number of detector channels: {num_det_channels}")
-
     # Determine number of detector rows to crop from top and bottom
+    num_views, num_det_rows, num_det_channels = obj_scan.shape
     num_slices = np.minimum(num_det_rows, num_slices)
     crop_pixels = (num_det_rows - num_slices) // 2
 
