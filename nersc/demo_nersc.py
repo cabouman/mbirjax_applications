@@ -22,7 +22,6 @@ import jax.numpy as jnp
 import pprint
 import mbirjax as mj
 import mbirjax.preprocess as mjp
-import nersc_utils
 import ring_utils
 import h5py
 import warnings
