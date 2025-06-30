@@ -32,42 +32,42 @@ pp = pprint.PrettyPrinter(indent=4)
 if __name__ == "__main__":
     print('This script is a demonstration of the MBIR reconstruction workflow using public NERSC datasets.\n')
 
-    # NERSC dataset Google Drive share link
+    # Set path to NERSC data set
     dataset_url = 'https://drive.google.com/file/d/1CpsiceN7zAjmeb07TKL4SbkW_5SHpgJS/view?usp=drive_link'
-    # Destination path to download the NERSC data
+    # Set directory to store data
     download_dir = './demo_data/'
-    # Path to NERSC data directory
+
+    # Set reconstruction parameters
+    sharpness = 1.0
+    det_channel_offset = 0.0    # No center of rotation is provided
+    num_slices = 3
+
+    # Download data
     dataset_dir = mj.download_and_extract(dataset_url, download_dir)
 
     # Load reconstruction parameters from data.
     with h5py.File(dataset_dir, "r") as data:
-        num_det_rows = int(data['/measurement/instrument/detector/dimension_y'][0])
-        num_det_channels = int(data['/measurement/instrument/detector/dimension_x'][0])
-        num_views = int(data['/process/acquisition/rotation/num_angles'][0])
+        # What are the units of pixel size?
         pixel_size = data['/measurement/instrument/detector/pixel_size'][0] / 10.0
         angles = -np.deg2rad(data['exchange/theta'])
         obj_scan = data['exchange/data'][:]
         blank_scan = data['exchange/data_white'][:]
         dark_scan = data['exchange/data_dark'][:]
 
-    # Set reconstruction parameters
-    warnings.warn("No center of rotation provided. Using detector midpoint as default.")
-    center_of_rotation = num_det_channels / 2
-    sharpness = 1.0
-    det_channel_offset = (center_of_rotation - num_det_channels / 2)
+    # Print out sinogram shape
+    num_views, num_det_rows, num_det_channels = obj_scan.shape
+    print(f"Number of views: {num_views}")
+    print(f"Number of detector rows: {num_det_rows}")
+    print(f"Number of detector channels: {num_det_channels}")
 
-    # Select a subset of slices for reconstruction
-    num_slices = 3
-    mid_slice = num_det_rows // 2
-    sino_used = (mid_slice - num_slices // 2, mid_slice + num_slices // 2)
-    # Define sino_used = (0, num_slices) for full recon
+    # Determine number of detector rows to crop from top and bottom
+    num_slices = np.minimum(num_det_rows, num_slices)
+    crop_pixels = (num_det_rows - num_slices) // 2
 
-    # Get (subsetted) object, blank, and dark scans
+    # Crop out desired region of views
     obj_scan, blank_scan, dark_scan, _ = mjp.crop_view_data(
         obj_scan, blank_scan, dark_scan,
-        crop_pixels_sides=0,
-        crop_pixels_top=sino_used[0],
-        crop_pixels_bottom=obj_scan.shape[1] - sino_used[1],
+        crop_pixels_sides=0, crop_pixels_top=crop_pixels, crop_pixels_bottom=crop_pixels,
         defective_pixel_array=()
     )
 
