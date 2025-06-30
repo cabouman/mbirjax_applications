@@ -30,10 +30,19 @@ import warnings
 pp = pprint.PrettyPrinter(indent=4)
 
 if __name__ == "__main__":
-    print('This script is a demonstration of the MBIR reconstruction workflow using public NERSC datasets.\n')
+    print('This script is a demonstration of the MBIR reconstruction workflow.\n')
 
-    # Set path to NERSC data set
-    dataset_url = 'https://drive.google.com/file/d/1CpsiceN7zAjmeb07TKL4SbkW_5SHpgJS/view?usp=drive_link'
+    # Choose dataset
+    dataset = 'public' # 'fuelcell' or 'permafrost'
+
+    # NERSC file path
+    if dataset == 'public':
+        dataset_url = 'https://drive.google.com/file/d/1CpsiceN7zAjmeb07TKL4SbkW_5SHpgJS/view?usp=drive_link'
+    if dataset == 'fuelcell':
+        dataset_url = '/depot/bouman/data/nersc/demo_nersc_fuelcell.tgz'
+    if dataset == 'permafrost':
+        dataset_url = '/depot/bouman/data/nersc/demo_nersc_permafrost.tgz'
+
     # Set directory to store data
     download_dir = './demo_data/'
 
