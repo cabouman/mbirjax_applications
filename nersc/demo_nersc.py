@@ -51,12 +51,12 @@ if __name__ == "__main__":
             'det_channel_offset': -71.125,
             'ROR_scale': 1.2,
             'slice_number': None,
-            'apply_mask': False,
+            'apply_mask': True,
         },
         'HPcell': {
             'url': '/depot/bouman/data/nersc/nersc_HPcell_data.tgz',
             'det_channel_offset': 0.0,
-            'ROR_scale': 1.3,
+            'ROR_scale': 1.2,
             'slice_number': None,
             'apply_mask': True,
         },
@@ -147,7 +147,7 @@ if __name__ == "__main__":
     recon /= pixel_size # convert to units of 1/cm
 
     # Mask out Region of Interest (ROI)
-    radial_margin = max(pad_size[0], pad_size[1])
+    radial_margin = max(pad_size[0], pad_size[1])//2
     if available_datasets[dataset].get('apply_mask', False):
         recon = mjp.apply_cylindrical_mask(recon, radial_margin=radial_margin, top_margin=0, bottom_margin=0)
 
