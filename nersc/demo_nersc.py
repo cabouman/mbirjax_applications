@@ -37,24 +37,28 @@ if __name__ == "__main__":
             'det_channel_offset': 0.0,
             'ROR_scale': 1.2,
             'slice_number': None,
+            'apply_mask': False,
         },
         'fuelcell': {
             'url': '/depot/bouman/data/nersc/demo_nersc_fuelcell.tgz',
             'det_channel_offset': 3.0,
             'ROR_scale': 1.2,
             'slice_number': 154,
+            'apply_mask': True,
         },
         'permafrost': {
             'url': '/depot/bouman/data/nersc/demo_nersc_permafrost.tgz',
             'det_channel_offset': -71.125,
             'ROR_scale': 1.2,
             'slice_number': None,
+            'apply_mask': False,
         },
         'difficult': {
             'url': '/depot/bouman/data/nersc/nersc_difficult_data.tgz',
             'det_channel_offset': 0.0,
             'ROR_scale': 1.3,
             'slice_number': None,
+            'apply_mask': False,
         },
 
     }
@@ -108,10 +112,8 @@ if __name__ == "__main__":
         crop_pixels_bottom = num_det_rows - (slice_number + num_slices // 2)
 
     print("\n********** Crop out desired region of views **************")
-    obj_scan, blank_scan, dark_scan, _ = mjp.crop_view_data(
-        obj_scan, blank_scan, dark_scan,
-        crop_pixels_sides=0, crop_pixels_top=crop_pixels_top, crop_pixels_bottom=crop_pixels_bottom,
-        defective_pixel_array=()
+    obj_scan, blank_scan, dark_scan, _ = mjp.crop_view_data(obj_scan, blank_scan, dark_scan,
+        crop_pixels_sides=0, crop_pixels_top=crop_pixels_top, crop_pixels_bottom=crop_pixels_bottom, defective_pixel_array=()
     )
 
     print("\n********** Compute sinogram **************")
@@ -143,7 +145,9 @@ if __name__ == "__main__":
     recon /= pixel_size # convert to units of 1/cm
 
     # Mask out Region of Interest (ROI)
-    recon = mjp.apply_cylindrical_mask(recon, radial_margin=0, top_margin=0, bottom_margin=0)
+    radial_margin = max(pad_size[0], pad_size[1])
+    if available_datasets[dataset].get('apply_mask', False):
+        recon = mjp.apply_cylindrical_mask(recon, radial_margin=radial_margin, top_margin=0, bottom_margin=0)
 
     # Save reconstruction results
     output_path = f'./demo_data/output/mbir_recon_{dataset}.h5'
