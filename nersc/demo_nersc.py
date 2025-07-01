@@ -53,8 +53,8 @@ if __name__ == "__main__":
             'slice_number': None,
             'apply_mask': False,
         },
-        'difficult': {
-            'url': '/depot/bouman/data/nersc/nersc_difficult_data.tgz',
+        'HPcell': {
+            'url': '/depot/bouman/data/nersc/nersc_HPcell_data.tgz',
             'det_channel_offset': 0.0,
             'ROR_scale': 1.3,
             'slice_number': None,
