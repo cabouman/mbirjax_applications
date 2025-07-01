@@ -114,7 +114,7 @@ if __name__ == "__main__":
     print("\n********** Crop out desired region of views **************")
     obj_scan, blank_scan, dark_scan, _ = mjp.crop_view_data(
         obj_scan, blank_scan, dark_scan,
-        crop_pixels_sides=0, crop_pixels_top=crop_pixels, crop_pixels_bottom=crop_pixels,
+        crop_pixels_sides=0, crop_pixels_top=crop_pixels_top, crop_pixels_bottom=crop_pixels_bottom,
         defective_pixel_array=()
     )
 
