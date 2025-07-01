@@ -58,7 +58,7 @@ if __name__ == "__main__":
             'det_channel_offset': 0.0,
             'ROR_scale': 1.3,
             'slice_number': None,
-            'apply_mask': False,
+            'apply_mask': True,
         },
 
     }
