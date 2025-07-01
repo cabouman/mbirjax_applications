@@ -24,7 +24,6 @@ import mbirjax as mj
 import mbirjax.preprocess as mjp
 import ring_utils
 import h5py
-import warnings
 
 pp = pprint.PrettyPrinter(indent=4)
 
@@ -37,21 +36,25 @@ if __name__ == "__main__":
             'url': 'https://drive.google.com/file/d/1CpsiceN7zAjmeb07TKL4SbkW_5SHpgJS/view?usp=drive_link',
             'det_channel_offset': 0.0,
             'ROR_scale': 1.2,
+            'slice_number': None,
         },
         'fuelcell': {
             'url': '/depot/bouman/data/nersc/demo_nersc_fuelcell.tgz',
             'det_channel_offset': 3.0,
             'ROR_scale': 1.2,
+            'slice_number': 154,
         },
         'permafrost': {
             'url': '/depot/bouman/data/nersc/demo_nersc_permafrost.tgz',
             'det_channel_offset': -71.125,
             'ROR_scale': 1.2,
+            'slice_number': None,
         },
         'difficult': {
             'url': '/depot/bouman/data/nersc/nersc_difficult_data.tgz',
             'det_channel_offset': 0.0,
             'ROR_scale': 1.3,
+            'slice_number': None,
         },
 
     }
@@ -75,6 +78,7 @@ if __name__ == "__main__":
     dataset_url = available_datasets[dataset]['url']
     det_channel_offset = available_datasets[dataset]['det_channel_offset']
     ROR_scale = available_datasets[dataset]['ROR_scale']
+    slice_number = available_datasets[dataset]['slice_number']
 
     # Set reconstruction parameters
     sharpness = 1.0
@@ -96,12 +100,17 @@ if __name__ == "__main__":
     # Determine number of detector rows to crop from top and bottom
     num_views, num_det_rows, num_det_channels = obj_scan.shape
     num_slices = np.minimum(num_det_rows, num_slices)
-    crop_pixels = (num_det_rows - num_slices) // 2
+    if slice_number is None:
+        crop_pixels_top = (num_det_rows - num_slices) // 2
+        crop_pixels_bottom = (num_det_rows - num_slices) // 2
+    else:
+        crop_pixels_top = slice_number - num_slices // 2
+        crop_pixels_bottom = num_det_rows - (slice_number + num_slices // 2)
 
     print("\n********** Crop out desired region of views **************")
     obj_scan, blank_scan, dark_scan, _ = mjp.crop_view_data(
         obj_scan, blank_scan, dark_scan,
-        crop_pixels_sides=0, crop_pixels_top=crop_pixels, crop_pixels_bottom=crop_pixels,
+        crop_pixels_sides=0, crop_pixels_top=crop_pixels_top, crop_pixels_bottom=crop_pixels_bottom,
         defective_pixel_array=()
     )
 
