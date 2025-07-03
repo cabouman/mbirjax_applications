@@ -262,7 +262,7 @@ def remove_dead_fluctuating_stripes_interpolation(sino, snr, filter_size, index_
 
     return corrected_sino
 
-def remove_stripe(sino, snr=3, large_filter_size=61, small_filter_size=21):
+def remove_all_stripe(sino, snr=3, large_filter_size=61, small_filter_size=21):
     """
     To remove all types of stripes from the sinogram, including partial, full, fluctuating, and unresponsive stripes, this approach builds on the tomopy.remove_all_stripes method. It combines three algorithms:
     1.    A sorting-based algorithm for small to medium partial and full stripes.
@@ -273,7 +273,7 @@ def remove_stripe(sino, snr=3, large_filter_size=61, small_filter_size=21):
     This code is based on the method described in:
     [Nghia T. Vo et al., 2018] - "Superior techniques for eliminating ring artifacts in x-ray micro-tomography"
 
-    This code is adapted from the Tomopy library:
+    This code is adapted from the Tomopy library function `remove_all_stripe()`:
     https://github.com/tomopy/tomopy.git
 
     References:
@@ -311,7 +311,7 @@ def remove_stripe(sino, snr=3, large_filter_size=61, small_filter_size=21):
     return jax.device_put(result)
 
 
-def remove_stripe_wavelet_fourier(sino, wavelet_filter_name="db5", sigma=2):
+def remove_stripe_fw(sino, wavelet_filter_name="db5", sigma=2):
     """
     Remove vertical stripes from the sinogram by combining 2D Discret Wavelet Transform and 2D Fourier Transform.
     This approach builds based on tomopy.remove_stripe_fw().
@@ -319,7 +319,7 @@ def remove_stripe_wavelet_fourier(sino, wavelet_filter_name="db5", sigma=2):
     This code is based on the method described in:
     [Beat Munch et al. 2009] - "Stripe and ring artifact removal with combined wavelet — Fourier filtering"
 
-    This code is adapted from the Tomopy library:
+    This code is adapted from the Tomopy library function `remove_stripe_fw()`:
     https://github.com/tomopy/tomopy.git
 
     Args:
