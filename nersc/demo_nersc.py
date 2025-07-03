@@ -36,6 +36,7 @@ if __name__ == "__main__":
             'url': 'https://drive.google.com/file/d/1CpsiceN7zAjmeb07TKL4SbkW_5SHpgJS/view?usp=drive_link',
             'det_channel_offset': 0.0,
             'ROR_scale': 1.2,
+            'sharpness': 1.0,
             'slice_number': None,
             'apply_mask': False,
         },
@@ -43,6 +44,7 @@ if __name__ == "__main__":
             'url': '/depot/bouman/data/nersc/demo_nersc_fuelcell.tgz',
             'det_channel_offset': 3.0,
             'ROR_scale': 1.2,
+            'sharpness': 0.0,
             'slice_number': 154,
             'apply_mask': True,
         },
@@ -50,6 +52,7 @@ if __name__ == "__main__":
             'url': '/depot/bouman/data/nersc/demo_nersc_permafrost.tgz',
             'det_channel_offset': -71.125,
             'ROR_scale': 1.2,
+            'sharpness': 1.0,
             'slice_number': None,
             'apply_mask': True,
         },
@@ -57,6 +60,7 @@ if __name__ == "__main__":
             'url': '/depot/bouman/data/nersc/nersc_HPcell_data.tgz',
             'det_channel_offset': 0.0,
             'ROR_scale': 1.2,
+            'sharpness': 1.0,
             'slice_number': None,
             'apply_mask': True,
         },
@@ -83,9 +87,9 @@ if __name__ == "__main__":
     det_channel_offset = available_datasets[dataset]['det_channel_offset']
     ROR_scale = available_datasets[dataset]['ROR_scale']
     slice_number = available_datasets[dataset]['slice_number']
+    sharpness = available_datasets[dataset]['sharpness']
 
     # Set reconstruction parameters
-    sharpness = 1.0
     num_slices = 4
 
     # Download data
