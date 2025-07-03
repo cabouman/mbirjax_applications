@@ -137,6 +137,7 @@ if __name__ == "__main__":
     ct_model = mj.ParallelBeamModel(sinogram_shape=sino.shape, angles=angles)
     # Set reconstruction parameter values
     ct_model.set_params(sharpness=sharpness, det_channel_offset=det_channel_offset, verbose=1)
+    weights = ct_model.gen_weights(sino, weight_type='transmission_root')
 
     # Scale the region of reconstruction (ROR) to reduce artifacts
     pad_size = ct_model.scale_recon_shape(row_scale=ROR_scale, col_scale=ROR_scale)
@@ -146,7 +147,7 @@ if __name__ == "__main__":
     ct_model.print_params()
 
     print("\n********** Perform MBIR reconstruction **************")
-    recon, recon_dict = ct_model.recon(sino)
+    recon, recon_dict = ct_model.recon(sino, weights=weights)
     recon /= pixel_size # convert to units of 1/cm
 
     # Mask out Region of Interest (ROI)
