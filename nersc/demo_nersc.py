@@ -22,7 +22,6 @@ import jax.numpy as jnp
 import pprint
 import mbirjax as mj
 import mbirjax.preprocess as mjp
-import stripe
 import h5py
 
 pp = pprint.PrettyPrinter(indent=4)
@@ -123,8 +122,8 @@ if __name__ == "__main__":
 
     print("\n********** Remove stripe artifacts **************")
     sino = jnp.array(sino)
-    sino = stripe.remove_all_stripe(sino)
-    sino = stripe.remove_stripe_fw(sino)
+    sino = mjp.remove_all_stripe(sino)
+    sino = mjp.remove_stripe_fw(sino)
 
     # Display the sinogram
     mj.slice_viewer(sino, slice_axis=1, title='Original sinogram')
