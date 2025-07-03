@@ -123,8 +123,8 @@ if __name__ == "__main__":
 
     print("\n********** Remove stripe artifacts **************")
     sino = jnp.array(sino)
-    sino = ring_utils.remove_all_stripe(sino)
-    sino = ring_utils.remove_stripe_fw(sino)
+    sino = stripe.remove_all_stripe(sino)
+    sino = stripe.remove_stripe_fw(sino)
 
     # Display the sinogram
     mj.slice_viewer(sino, slice_axis=1, title='Original sinogram')
