@@ -22,7 +22,7 @@ import jax.numpy as jnp
 import pprint
 import mbirjax as mj
 import mbirjax.preprocess as mjp
-import ring_utils
+import stripe
 import h5py
 
 pp = pprint.PrettyPrinter(indent=4)
