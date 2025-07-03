@@ -58,7 +58,7 @@ if __name__ == "__main__":
         'HPcell': {
             'url': '/depot/bouman/data/nersc/nersc_HPcell_data.tgz',
             'det_channel_offset': 0.0,
-            'ROR_scale': 1.2,
+            'ROR_scale': 1.3,
             'sharpness': 1.0,
             'slice_number': None,
             'apply_mask': True,
