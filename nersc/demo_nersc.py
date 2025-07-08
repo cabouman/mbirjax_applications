@@ -26,6 +26,32 @@ import h5py
 
 pp = pprint.PrettyPrinter(indent=4)
 
+
+def remove_sino_offset(sino):
+    """
+    Remove additive offsets in the sinogram caused by material outside the field of view.
+
+    It corrects the sinogram so that for each row, the sum over the channels is constant,
+    and it takes on its minimum value across views.
+
+    Args:
+        sino (array-like): Sinogram of shape [num_views, num_rows, num_channels].
+
+    Returns:
+        array-like: Corrected sinogram of the same shape.
+    """
+    # Compute the average over channels: shape [view, row]
+    sino_channel_avg = jnp.mean(sino, axis=2)
+
+    # Compute the minimum of the channel average across views: shape [row]
+    sino_min_channel_avg = jnp.min(sino_channel_avg, axis=0)
+
+    # Compute corrected sinogram
+    sino_corrected = sino - sino_channel_avg[:, :, None] + sino_min_channel_avg[None, :, None]
+
+    return sino_corrected
+
+
 if __name__ == "__main__":
     print('This script is a demonstration of the MBIR reconstruction workflow.\n')
 
@@ -122,9 +148,9 @@ if __name__ == "__main__":
     )
 
     # Print out object, blank, and dark scan shapes
-    print("Shape of object scan",obj_scan.shape)
-    print("Shape of blank scan",blank_scan.shape)
-    print("Shape of dark scan",dark_scan.shape)
+    print("Shape of object scan", obj_scan.shape)
+    print("Shape of blank scan", blank_scan.shape)
+    print("Shape of dark scan", dark_scan.shape)
 
     print("\n********** Compute sinogram **************")
     sino = mjp.compute_sino_transmission(obj_scan, blank_scan, dark_scan)
@@ -133,6 +159,9 @@ if __name__ == "__main__":
     sino = jnp.array(sino)
     sino = mjp.remove_all_stripe(sino)
     sino = mjp.remove_stripe_fw(sino)
+
+    # Correct sinogram offset due to material outside FOV
+    sino = remove_sino_offset(sino)
 
     # Display the sinogram
     mj.slice_viewer(sino, slice_axis=1, title='Sinogram after Stripe Removal')
