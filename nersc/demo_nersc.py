@@ -135,7 +135,7 @@ if __name__ == "__main__":
     sino = mjp.remove_stripe_fw(sino)
 
     # Display the sinogram
-    mj.slice_viewer(sino, slice_axis=1, title='Original sinogram')
+    mj.slice_viewer(sino, slice_axis=1, title='Sinogram after Stripe Removal')
 
     print("\n********** Construct parallel beam model **************")
     # ParallelBeamModel constructor
