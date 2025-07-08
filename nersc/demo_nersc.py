@@ -1,22 +1,4 @@
 import sys
-import subprocess
-import importlib.util
-
-# Install necessary packages
-required_packages = ['pywavelets']
-for package in required_packages:
-    if importlib.util.find_spec(package) is None:
-        print(f"{package} not found. Installing...")
-        try:
-            subprocess.check_call([sys.executable, "-m", "pip", "install", package])
-            print(f"Successfully installed {package}")
-        except subprocess.CalledProcessError:
-            print(f"Failed to install {package}. Please install it manually.")
-            sys.exit(1)
-    else:
-        print(f"{package} is already installed.")
-
-
 import numpy as np
 import jax.numpy as jnp
 import pprint
