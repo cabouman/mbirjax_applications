@@ -63,7 +63,7 @@ if __name__ == "__main__":
             'ROR_scale': 1.2,
             'sharpness': 1.0,
             'slice_number': None,
-            'apply_mask': False,
+            'apply_mask': True,
         },
         'fuelcell': {
             'url': '/depot/bouman/data/nersc/demo_nersc_fuelcell.tgz',
@@ -147,11 +147,6 @@ if __name__ == "__main__":
         defective_pixel_array=()
     )
 
-    # Print out object, blank, and dark scan shapes
-    print("Shape of object scan", obj_scan.shape)
-    print("Shape of blank scan", blank_scan.shape)
-    print("Shape of dark scan", dark_scan.shape)
-
     print("\n********** Compute sinogram **************")
     sino = mjp.compute_sino_transmission(obj_scan, blank_scan, dark_scan)
 
@@ -160,18 +155,19 @@ if __name__ == "__main__":
     sino = mjp.remove_all_stripe(sino)
     sino = mjp.remove_stripe_fw(sino)
 
-    # Correct sinogram offset due to material outside FOV
-    sino = remove_sino_offset(sino)
-
-    # Display the sinogram
-    mj.slice_viewer(sino, slice_axis=1, title='Sinogram after Stripe Removal')
-
     print("\n********** Construct parallel beam model **************")
     # ParallelBeamModel constructor
     ct_model = mj.ParallelBeamModel(sinogram_shape=sino.shape, angles=angles)
     # Set reconstruction parameter values
     ct_model.set_params(sharpness=sharpness, det_channel_offset=det_channel_offset, verbose=1)
     weights = ct_model.gen_weights(sino, weight_type='transmission_root')
+
+    print("\n********** Remove sinogram offset due to material outside FOV **************")
+    # This must be done after the weights are computed
+    sino = remove_sino_offset(sino)
+
+    # Display the sinogram
+    mj.slice_viewer(sino, slice_axis=1, title='Sinogram after Stripe and Offset Removal')
 
     # Scale the region of reconstruction (ROR) to reduce artifacts
     pad_size = ct_model.scale_recon_shape(row_scale=ROR_scale, col_scale=ROR_scale)
