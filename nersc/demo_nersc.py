@@ -104,7 +104,7 @@ if __name__ == "__main__":
         blank_scan = data['exchange/data_white'][:]
         dark_scan = data['exchange/data_dark'][:]
 
-    # Determine number of detector rows to crop from top and bottom
+    # Select out a typically small number of slices from the important region of the sample.
     num_views, num_det_rows, num_det_channels = obj_scan.shape
     num_slices = np.minimum(num_det_rows, num_slices)
     if slice_number is None:
@@ -114,7 +114,7 @@ if __name__ == "__main__":
         crop_pixels_top = slice_number - num_slices // 2
         crop_pixels_bottom = num_det_rows - (slice_number + num_slices // 2)
 
-    print("\n********** Crop out desired region of views **************")
+    print("\n********** Crop out desired rows from each view **************")
     obj_scan, blank_scan, dark_scan, _ = mjp.crop_view_data(
         obj_scan, blank_scan, dark_scan,
         crop_pixels_sides=0, crop_pixels_top=crop_pixels_top, crop_pixels_bottom=crop_pixels_bottom,
