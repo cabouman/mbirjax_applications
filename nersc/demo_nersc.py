@@ -121,6 +121,11 @@ if __name__ == "__main__":
         defective_pixel_array=()
     )
 
+    # Print out object, blank, and dark scan shapes
+    print("Shape of object scan",obj_scan.shape)
+    print("Shape of blank scan",blank_scan.shape)
+    print("Shape of dark scan",dark_scan.shape)
+
     print("\n********** Compute sinogram **************")
     sino = mjp.compute_sino_transmission(obj_scan, blank_scan, dark_scan)
 
