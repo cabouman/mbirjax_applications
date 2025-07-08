@@ -11,19 +11,19 @@ This repository contains scripts that demonstrate the usage of [MBIRJAX](https:/
 then replace `pip install mbirjax[cuda12]` with `pip install mbirjax`
 
 Available applications include:
-   * Cone-beam CT reconstruction with NorthStar Instrument (NSI) system:
+   * Cone-beam CT reconstruction using NorthStar Instrument (NSI) data:
      ```
      pip install mbirjax[cuda12]
      cd mbirjax_applications/nsi
      python demo_fdk_mbir_compare.py
      ```
-   * View Selection using VCL:
+   * View Selection using VCL as published in ICCP/PAMI 2025:
      ```
      pip install mbirjax[cuda12]
      cd mbirjax_applications/vcls
      python demo_vcls.py
      ```
-   * NERSC:
+   * Parallel-beam CT reconstruction using NERSC/Advanced Light Source (ALS) data:
      ```
      pip install mbirjax[cuda12]
      cd mbirjax_applications/nersc

@@ -33,7 +33,7 @@ if __name__ == "__main__":
     # destination path to download and extract the NSI data and metadata.
     download_dir = './demo_data/'
     # Path to NSI scan directory.
-    dataset_dir = mj.download_and_extract_tar(dataset_url, download_dir)
+    dataset_dir = mj.download_and_extract(dataset_url, download_dir)
 
     # preprocessing parameters
     downsample_factor = [4, 4]  # downsample factor of scan images along detector rows and detector columns.
