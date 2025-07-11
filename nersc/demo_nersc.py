@@ -46,6 +46,30 @@ if __name__ == "__main__":
             'slice_number': None,
             'apply_mask': True,
         },
+        'HPcell 193 projections': {
+            'url': '/depot/bouman/data/nersc/nersc_HPcell_193proj.tgz',
+            'det_channel_offset': 0.0,
+            'ROR_scale': 1.3,
+            'sharpness': 1.0,
+            'slice_number': None,
+            'apply_mask': True,
+        },
+        'HPcell 385 projections': {
+            'url': '/depot/bouman/data/nersc/nersc_HPcell_385proj.tgz',
+            'det_channel_offset': 0.0,
+            'ROR_scale': 1.3,
+            'sharpness': 1.0,
+            'slice_number': None,
+            'apply_mask': True,
+        },
+        'HPcell 1313 projections': {
+            'url': '/depot/bouman/data/nersc/nersc_HPcell_1313proj.tgz',
+            'det_channel_offset': 0.0,
+            'ROR_scale': 1.3,
+            'sharpness': 1.0,
+            'slice_number': None,
+            'apply_mask': True,
+        },
 
     }
 
