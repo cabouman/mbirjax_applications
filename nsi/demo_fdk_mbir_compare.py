@@ -73,7 +73,7 @@ if __name__ == "__main__":
     print("\n*******************************************************",
           "\n************** Calculate sinogram weights *************",
           "\n*******************************************************")
-    weights = ct_model.gen_weights(sino, weight_type='transmission_root')
+    weights = mj.gen_weights(sino, weight_type='transmission_root')
 
     print("\n******************************************************",
           "\n************** Perform FDK reconstruction ************",
