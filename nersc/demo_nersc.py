@@ -141,7 +141,7 @@ if __name__ == "__main__":
     ct_model = mj.ParallelBeamModel(sinogram_shape=sino.shape, angles=angles)
     # Set reconstruction parameter values
     ct_model.set_params(sharpness=sharpness, det_channel_offset=det_channel_offset, verbose=1)
-    weights = ct_model.gen_weights(sino, weight_type='transmission_root')
+    weights = mj.gen_weights(sino, weight_type='transmission_root')
 
     print("\n********** Remove sinogram offset due to material outside FOV **************")
     # This must be done after the weights are computed
