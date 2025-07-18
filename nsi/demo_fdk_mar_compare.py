@@ -75,7 +75,7 @@ if __name__ == "__main__":
     print("\n*******************************************************",
           "\n***** Calculate transmission_root sinogram weights ****",
           "\n*******************************************************")
-    weights = ct_model.gen_weights(sino, weight_type='transmission_root')
+    weights = mj.gen_weights(sino, weight_type='transmission_root')
 
     print("\n*******************************************************",
           "\n********* Perform initial FDK reconstruction **********",
@@ -85,7 +85,7 @@ if __name__ == "__main__":
     print("\n*******************************************************",
           "\n************ Calculate MAR sinogram weights ***********",
           "\n*******************************************************")
-    weights_mar = ct_model.gen_weights_mar(sino, init_recon=fdk_recon, beta=1.0, gamma=3.0)
+    weights_mar = mj.gen_weights_mar(ct_model, sino, init_recon=fdk_recon, beta=1.0, gamma=3.0)
     mj.slice_viewer(weights_mar, jnp.abs(sino), vmin=0, vmax=2.0, slice_axis=[0, 0], slice_label= ["Weights", "Sinogram"])
 
     print("\n*******************************************************",

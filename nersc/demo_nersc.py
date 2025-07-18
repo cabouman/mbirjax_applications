@@ -9,31 +9,6 @@ import h5py
 pp = pprint.PrettyPrinter(indent=4)
 
 
-def remove_sino_offset(sino):
-    """
-    Remove additive offsets in the sinogram caused by material outside the field of view.
-
-    It corrects the sinogram so that for each row, the sum over the channels is constant,
-    and it takes on its minimum value across views.
-
-    Args:
-        sino (array-like): Sinogram of shape [num_views, num_rows, num_channels].
-
-    Returns:
-        array-like: Corrected sinogram of the same shape.
-    """
-    # Compute the average over channels: shape [view, row]
-    sino_channel_avg = jnp.mean(sino, axis=2)
-
-    # Compute the minimum of the channel average across views: shape [row]
-    sino_min_channel_avg = jnp.min(sino_channel_avg, axis=0)
-
-    # Compute corrected sinogram
-    sino_corrected = sino - sino_channel_avg[:, :, None] + sino_min_channel_avg[None, :, None]
-
-    return sino_corrected
-
-
 if __name__ == "__main__":
     print('This script is a demonstration of the MBIR reconstruction workflow.\n')
 
@@ -65,6 +40,30 @@ if __name__ == "__main__":
         },
         'HPcell': {
             'url': '/depot/bouman/data/nersc/nersc_HPcell_data.tgz',
+            'det_channel_offset': 0.0,
+            'ROR_scale': 1.3,
+            'sharpness': 1.0,
+            'slice_number': None,
+            'apply_mask': True,
+        },
+        'HPcell 193 projections': {
+            'url': '/depot/bouman/data/nersc/nersc_HPcell_193proj.tgz',
+            'det_channel_offset': 0.0,
+            'ROR_scale': 1.3,
+            'sharpness': 1.0,
+            'slice_number': None,
+            'apply_mask': True,
+        },
+        'HPcell 385 projections': {
+            'url': '/depot/bouman/data/nersc/nersc_HPcell_385proj.tgz',
+            'det_channel_offset': 0.0,
+            'ROR_scale': 1.3,
+            'sharpness': 1.0,
+            'slice_number': None,
+            'apply_mask': True,
+        },
+        'HPcell 1313 projections': {
+            'url': '/depot/bouman/data/nersc/nersc_HPcell_1313proj.tgz',
             'det_channel_offset': 0.0,
             'ROR_scale': 1.3,
             'sharpness': 1.0,
@@ -142,11 +141,11 @@ if __name__ == "__main__":
     ct_model = mj.ParallelBeamModel(sinogram_shape=sino.shape, angles=angles)
     # Set reconstruction parameter values
     ct_model.set_params(sharpness=sharpness, det_channel_offset=det_channel_offset, verbose=1)
-    weights = ct_model.gen_weights(sino, weight_type='transmission_root')
+    weights = mj.gen_weights(sino, weight_type='transmission_root')
 
     print("\n********** Remove sinogram offset due to material outside FOV **************")
     # This must be done after the weights are computed
-    sino = remove_sino_offset(sino)
+    sino = mjp.remove_sino_offset(sino)
 
     # Display the sinogram
     mj.slice_viewer(sino, slice_axis=1, title='Sinogram after Stripe and Offset Removal')
