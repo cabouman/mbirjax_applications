@@ -40,7 +40,7 @@ if __name__ == "__main__":
     download_dir = './demo_data/'
 
     # Download data to directory.
-    dataset_dir = mj.download_and_extract_tar(dataset_url, download_dir)
+    dataset_dir = mj.download_and_extract(dataset_url, download_dir)
 
     # #### preprocessing parameters
     downsample_rate = [4, 4]  # downsample factor of scan images along detector rows and detector columns.
