@@ -17,7 +17,7 @@ if __name__ == "__main__":
     os.makedirs(output_path, exist_ok=True)  # mkdir if directory does not exist
 
     # === Choose dataset ===
-    dataset_choice = "AI"
+    dataset_choice = "CAI_vertical"
     # Options:
     #   "AI"             -> Autoinjector HighRes Horizontal
     #   "CAI_horizontal" -> Connected Autoinjector Horizontal
@@ -35,21 +35,21 @@ if __name__ == "__main__":
     else:
         raise ValueError(f"Unknown dataset choice: {dataset_choice}")
 
-
-    # destination path to download and extract the NSI data and metadata.
+    # Destination path to download and extract the NSI data and metadata.
     download_dir = './demo_data/'
 
     # Download data to directory.
     dataset_dir = mj.download_and_extract(dataset_url, download_dir)
 
-    # #### preprocessing parameters
+    # === Preprocessing parameters ===
     downsample_rate = [4, 4]  # downsample factor of scan images along detector rows and detector columns.
     subsample_view_factor = 4 # view subsample factor.
 
-    # #### recon parameters
+    # === MBIR Recon parameters ===
     sharpness = 1.0
-    alpha = [1.0, 0.0, 0.0]  # beam_hardening_correction coefficient
-    order = (3, 4)
+    num_metal = 2                     # Number of distinct metal materials
+    alpha = [1.0, 0.0, 0.0]           # beam_hardening_correction coefficient
+
     verbose = 1
 
     print("\n************** NSI dataset preprocessing **************")
@@ -66,21 +66,24 @@ if __name__ == "__main__":
 
     # Set additional geometry arguments
     ct_model.set_params(**optional_params)
-
-    # Set reconstruction parameter values
-    ct_model.set_params(sharpness=sharpness, verbose=1, positivity_flag=True)
+    ct_model.set_params(sharpness=sharpness, verbose=verbose, positivity_flag=True)
     weights_trans = ct_model.gen_weights(sino, weight_type='transmission_root')
 
     # Print out model parameters
     ct_model.print_params()
 
     print("\n*************** Compute MAR reconstruction ***************")
-    # Compute MAR reconstructions and plastic/metal segmentations
-    recon = mjp.recon_BH_plastic_metal(ct_model, sino, weights_trans, order=order, verbose=verbose)
-    plastic_mask, metal_mask, plastic_scale, metal_scale = mjp.segment_plastic_metal(recon)
+    recon = mjp.recon_BH_plastic_metal(ct_model, sino, weights_trans, num_metal=num_metal, verbose=verbose)
 
-    print("\n*********** view plastic and metal masks *************")
-    mj.slice_viewer(plastic_mask, metal_mask, vmin=0, vmax=1.0, slice_axis=0, slice_label=['Plastic Mask', 'Metal Mask'], title="Final Plastic and Metal Masks")
+    print("\n*********** Segment plastic and metal masks *************")
+    plastic_mask, metal_masks, plastic_scale, metal_scales = \
+        mjp.segment_plastic_metal(recon, num_metal=num_metal)
+
+    # Visualize masks
+    if(verbose >= 2):
+        labels = ['Plastic Mask'] + [f'Metal {i+1} Mask' for i in range(len(metal_masks))]
+        mj.slice_viewer(plastic_mask, *metal_masks, vmin=0, vmax=1.0, slice_axis=0,
+                        slice_label=labels, title="Final Plastic and Metal Masks")
 
     # Compute FDK reconstruction
     recon_fdk = ct_model.direct_recon(sino)
@@ -90,7 +93,8 @@ if __name__ == "__main__":
     mj.export_recon_hdf5(os.path.join(output_path, f"recon_{dataset_tag}_mar.h5"), recon, recon_dict=None)
     mj.export_recon_hdf5(os.path.join(output_path, f"recon_{dataset_tag}_fdk.h5"), recon_fdk, recon_dict=None)
 
-    print("\n*********** view original and corrected reconstruction *************")
-    vmin = 0
-    vmax = downsample_rate[0] * 0.025
-    mj.slice_viewer(recon_fdk, recon, vmin=0, vmax=vmax, slice_axis=0, slice_label=['FDK', 'MBIR MAR'], title='Comparison between the original and corrected reconstruction')
+    if(verbose >= 2):
+        print("\n*********** view original and corrected reconstruction *************")
+        vmin = 0
+        vmax = downsample_rate[0] * 0.025
+        mj.slice_viewer(recon_fdk, recon, vmin=0, vmax=vmax, slice_axis=0, slice_label=['FDK', 'MBIR MAR'], title='Comparison between the original and corrected reconstruction')
