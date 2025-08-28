@@ -10,18 +10,22 @@ import mbirjax.preprocess as mjp
 pp = pprint.PrettyPrinter(indent=4)
 
 if __name__ == "__main__":
-    print('This script is a demonstration of the mbirjax metal artifact reduction (MAR) capability.\n')
+    print('This script demonstrates mbirjax metal-plastic reconstruction.\n')
+
+    # Change this to point to your own data and set dataset_choice="existing_data" below
+    existing_directory = "/depot/bouman/data/Lilly/Autoinjector_HighRes_Horizontal"
 
     # Output path
     output_path = './output/lilly/'   # path to store output recon images
     os.makedirs(output_path, exist_ok=True)  # mkdir if directory does not exist
 
     # === Choose dataset ===
-    dataset_choice = "CAI_vertical"
+    dataset_choice = "existing_data"
     # Options:
     #   "AI"             -> Autoinjector HighRes Horizontal
     #   "CAI_horizontal" -> Connected Autoinjector Horizontal
     #   "CAI_vertical"   -> Connected Autoinjector Vertical
+    #   "existing_data"  -> Use uncompressed scan data in the folder pointed to by existing_directory
 
     if dataset_choice == "AI":
         dataset_url = '/depot/bouman/data/Lilly/Autoinjector_HighRes_Horizontal.tgz'
@@ -32,6 +36,9 @@ if __name__ == "__main__":
     elif dataset_choice == "CAI_vertical":
         dataset_url = '/depot/bouman/data/Lilly/Connected_Autoinjector_Vertical.tgz'
         dataset_tag = 'cai_v'
+    elif dataset_choice == "existing_data":
+        dataset_url = None
+        dataset_tag = 'existing_data'
     else:
         raise ValueError(f"Unknown dataset choice: {dataset_choice}")
 
@@ -39,7 +46,10 @@ if __name__ == "__main__":
     download_dir = './demo_data/'
 
     # Download data to directory.
-    dataset_dir = mj.download_and_extract(dataset_url, download_dir)
+    if dataset_choice == "existing_data":
+        dataset_dir = existing_directory
+    else:
+        dataset_dir = mj.download_and_extract_tar(dataset_url, download_dir)
 
     # === Preprocessing parameters ===
     downsample_rate = [4, 4]  # downsample factor of scan images along detector rows and detector columns.
@@ -80,7 +90,7 @@ if __name__ == "__main__":
         mjp.segment_plastic_metal(recon, num_metal=num_metal)
 
     # Visualize masks
-    if(verbose >= 2):
+    if verbose >= 2:
         labels = ['Plastic Mask'] + [f'Metal {i+1} Mask' for i in range(len(metal_masks))]
         mj.slice_viewer(plastic_mask, *metal_masks, vmin=0, vmax=1.0, slice_axis=0,
                         slice_label=labels, title="Final Plastic and Metal Masks")
@@ -90,10 +100,14 @@ if __name__ == "__main__":
 
     # Save recon to hdf5
     print("\n*********** save mar and fdk recon in h5 format *************")
-    mj.export_recon_hdf5(os.path.join(output_path, f"recon_{dataset_tag}_mar.h5"), recon, recon_dict=None)
-    mj.export_recon_hdf5(os.path.join(output_path, f"recon_{dataset_tag}_fdk.h5"), recon_fdk, recon_dict=None)
+    mar_path = os.path.join(output_path, f"recon_{dataset_tag}_mar.h5")
+    mj.export_recon_hdf5(mar_path, recon, recon_dict=None)
+    fdk_path = os.path.join(output_path, f"recon_{dataset_tag}_fdk.h5")
+    mj.export_recon_hdf5(fdk_path, recon_fdk, recon_dict=None)
+    print("Metal artifact reduction recon saved to {}".format(mar_path))
+    print("FDK artifact reduction recon saved to {}".format(fdk_path))
 
-    if(verbose >= 2):
+    if verbose >= 2:
         print("\n*********** view original and corrected reconstruction *************")
         vmin = 0
         vmax = downsample_rate[0] * 0.025
