@@ -77,7 +77,7 @@ if __name__ == "__main__":
     # Set additional geometry arguments
     ct_model.set_params(**optional_params)
     ct_model.set_params(sharpness=sharpness, verbose=verbose, positivity_flag=True)
-    weights_trans = ct_model.gen_weights(sino, weight_type='transmission_root')
+    weights_trans = mj.gen_weights(sino, weight_type='transmission_root')
 
     # Print out model parameters
     ct_model.print_params()
