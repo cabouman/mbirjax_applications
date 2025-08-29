@@ -38,7 +38,7 @@ if __name__ == "__main__":
         dataset_tag = 'cai_v'
     elif dataset_choice == "existing_data":
         dataset_url = None
-        dataset_tag = 'existing_data'
+        dataset_tag = os.path.basename(existing_directory)
     else:
         raise ValueError(f"Unknown dataset choice: {dataset_choice}")
 
@@ -104,8 +104,8 @@ if __name__ == "__main__":
     mj.export_recon_hdf5(mar_path, recon, recon_dict=None)
     fdk_path = os.path.join(output_path, f"recon_{dataset_tag}_fdk.h5")
     mj.export_recon_hdf5(fdk_path, recon_fdk, recon_dict=None)
-    print("Metal artifact reduction recon saved to {}".format(mar_path))
-    print("FDK artifact reduction recon saved to {}".format(fdk_path))
+    print("Metal artifact reduction recon saved to {}".format(os.path.abspath(mar_path)))
+    print("FDK recon saved to {}".format(os.path.abspath(fdk_path)))
 
     if verbose >= 2:
         print("\n*********** view original and corrected reconstruction *************")
