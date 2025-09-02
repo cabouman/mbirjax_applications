@@ -184,9 +184,9 @@ if __name__ == "__main__":
     # Blend the two halves along slice axis
     recon_full = quilt_slices(recon_top_half, recon_bot_half, recon_overlap_slices)
     print("Quilted (blended) recon shape:", recon_full.shape)
-    mj.slice_viewer(recon_full, title="Blended Recon")
+    mj.slice_viewer(recon_full, slice_axis=[1,1], title="Blended Recon")
 
     # Put the two half recons along a new axis and show side-by-side
     title = "Top half recon (left) vs Bottom half recon (right)"
 
-    mj.slice_viewer(recon_top_half, recon_bot_half, data_dicts=[recon_top_dict, recon_bot_dict], title=title)
+    mj.slice_viewer(recon_top_half, recon_bot_half, data_dicts=[recon_top_dict, recon_bot_dict], slice_axis=[1,1], title=title)
