@@ -155,9 +155,10 @@ if __name__ == "__main__":
     bot_recon_shape = ct_model_bot_half.get_params('recon_shape')
     print(f"Bottom-half recon shape: {bot_recon_shape}")
 
-    # ToDo: Figure out why the program crashs when 122 is changed to 124
-    half_recon_shape = (187, 187, 122)
-    print(f"Max recon shape: {half_recon_shape}")
+    # ToDo: Figure out why the program crashs when 122 is changed to 124 with downsample_factor = [8, 8] and subsample_view_factor = 8
+    #half_recon_shape = (187, 187, 122)
+    half_recon_shape = tuple(min(t, b) for t, b in zip(top_recon_shape, bot_recon_shape))
+    print(f"Half recon shape: {half_recon_shape}")
 
     # Set recon shape of top and bottom half the same
     ct_model_top_half.set_params(recon_shape=half_recon_shape)
