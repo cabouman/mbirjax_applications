@@ -81,24 +81,19 @@ def recon_half_sino(ct_model, sino, weights=None, overlap=5):
     if not isinstance(ct_model, mj.ConeBeamModel):
         raise TypeError("ct_model must be an mbirjax ConeBeamModel.")
 
-    # -------- Pull full-geometry parameters from the provided model --------
+    # -------- parameters that will be use to create top and bottom models --------
     delta_det_row = ct_model.get_params('delta_det_row')
     det_row_offset = ct_model.get_params('det_row_offset')
     delta_voxel = ct_model.get_params('delta_voxel')
+
+    # -------- Required parameters for cone beam geometry --------
+    angles = ct_model.get_params('angles')
     source_detector_dist = ct_model.get_params('source_detector_dist')
     source_iso_dist = ct_model.get_params('source_iso_dist')
-    angles = ct_model.get_params('angles')
 
     # Optional but commonly present; guard each individually.
     optional_copy = {}
-    for k in ('det_channel_offset', 'delta_det_channel', 'recon_slice_offset'):
-        try:
-            optional_copy[k] = ct_model.get_params(k)
-        except Exception:
-            pass
-
-    # User-level settings to carry over if present.
-    for k in ('sharpness', 'snr_db', 'verbose'):
+    for k in ('delta_det_channel', 'delta_det_row', 'det_row_offset', 'det_channel_offset', 'delta_voxel', 'positivity_flag', 'snr_db', 'sharpness', 'verbose'):
         try:
             optional_copy[k] = ct_model.get_params(k)
         except Exception:
@@ -161,7 +156,7 @@ def recon_half_sino(ct_model, sino, weights=None, overlap=5):
     # -------- Harmonize recon shapes --------
     top_recon_shape = ct_model_top_half.get_params('recon_shape')
     bot_recon_shape = ct_model_bot_half.get_params('recon_shape')
-    half_recon_shape = tuple(min(t, b) for t, b in zip(top_recon_shape, bot_recon_shape))
+    half_recon_shape = tuple(max(t, b) for t, b in zip(top_recon_shape, bot_recon_shape))
 
     ct_model_top_half.set_params(recon_shape=half_recon_shape)
     ct_model_bot_half.set_params(recon_shape=half_recon_shape)
@@ -238,4 +233,4 @@ if __name__ == "__main__":
     t1 = time.time()
     print(f"Quilted recon shape: {recon_full.shape}   (elapsed: {t1 - t0:.1f}s)")
     print("Quilted (blended) recon shape:", recon_full.shape)
-    mj.slice_viewer(recon_full, slice_axis=[1,1], title="Blended Recon")
+    mj.slice_viewer(recon_full, slice_axis=[1, 1], title="Blended Recon")
