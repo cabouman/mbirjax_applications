@@ -6,6 +6,39 @@ import mbirjax as mj
 import mbirjax.preprocess as mjp
 import os
 
+
+def quilt_slices(top, bottom, num_overlap_slices):
+    """Quilt two reconstruction volumes along the slice (last) axis.
+
+    This function discards the last ``num_overlap_slices`` slices from
+    ``top`` and the first ``num_overlap_slices`` slices from ``bottom``,
+    then concatenates the results to form a continuous volume.
+
+    Args:
+        top (jnp.ndarray): First ("top") half of the reconstruction.
+            Must have shape [..., S].
+        bottom (jnp.ndarray): Second ("bottom") half of the reconstruction.
+            Must have the same shape as ``top``.
+        num_overlap_slices (int): Number of overlapping slices to discard
+            from each half before concatenation.
+
+    Returns:
+        jnp.ndarray: Quilted reconstruction with shape
+        ``[..., 2*S - 2*num_overlap_slices]`` along the last axis.
+    """
+    assert top.shape[:-1] == bottom.shape[:-1], "XY (non-slice) dims must match"
+    S = top.shape[-1]
+    ov = int(num_overlap_slices)
+    assert 0 < ov <= S, f"num_overlap_slices must be in [1, {S}]"
+
+    # Non-overlap parts
+    top_main = top[..., :S - ov]
+    bot_main = bottom[..., ov:]
+
+    return jnp.concatenate([top_main, bot_main], axis=-1)
+
+
+
 if __name__ == "__main__":
     print('This script demonstrates half-sinogram reconstruction.\n')
 
@@ -68,7 +101,9 @@ if __name__ == "__main__":
     det_center_row_index = int(np.round(det_center_row_float))
     det_center_row_index -= det_center_row_index % 2  # force even
 
+    # Set amount of overlap in detector and recon space
     det_overlap_rows = 5  # overlap on each side
+    recon_overlap_slices = 5  # overlap on each side
 
     # Calculate row ranges for top and bottom sinogram halves
     top_lo = 0
@@ -121,16 +156,16 @@ if __name__ == "__main__":
     print(f"Bottom-half recon shape: {bot_recon_shape}")
 
     # ToDo: Figure out why the program crashs when 122 is changed to 124
-    max_shape = (187, 187, 122)
-    print(f"Max recon shape: {max_shape}")
+    half_recon_shape = (187, 187, 122)
+    print(f"Max recon shape: {half_recon_shape}")
 
     # Set recon shape of top and bottom half the same
-    ct_model_top_half.set_params(recon_shape=max_shape)
-    ct_model_bot_half.set_params(recon_shape=max_shape)
+    ct_model_top_half.set_params(recon_shape=half_recon_shape)
+    ct_model_bot_half.set_params(recon_shape=half_recon_shape)
 
     # Compute slice offsets for each sinogram half
-    top_recon_slice_offset = 0
-    bot_recon_slice_offset = 0
+    top_recon_slice_offset = (-(half_recon_shape[2]/2) + recon_overlap_slices) * delta_voxel
+    bot_recon_slice_offset = ((half_recon_shape[2]/2) - recon_overlap_slices) * delta_voxel
 
     # Set recon slice offsets for top and bottom half
     ct_model_top_half.set_params(recon_slice_offset=top_recon_slice_offset)
@@ -146,13 +181,12 @@ if __name__ == "__main__":
     print(f"Top-half recon shape: {recon_top_half.shape}   (elapsed: {t1 - t0:.1f}s)")
     print(f"Bottom-half recon shape: {recon_bot_half.shape} (elapsed: {t2 - t1:.1f}s)")
 
-    # Combine the two reconstructions
-    recon_combined = recon_top_half + recon_bot_half
+    # Blend the two halves along slice axis
+    recon_full = quilt_slices(recon_top_half, recon_bot_half, recon_overlap_slices)
+    print("Quilted (blended) recon shape:", recon_full.shape)
+    mj.slice_viewer(recon_full, title="Blended Recon")
 
     # Put the two half recons along a new axis and show side-by-side
     title = "Top half recon (left) vs Bottom half recon (right)"
 
     mj.slice_viewer(recon_top_half, recon_bot_half, data_dicts=[recon_top_dict, recon_bot_dict], title=title)
-    mj.slice_viewer(recon_combined, title="Combined recon")
-
-
