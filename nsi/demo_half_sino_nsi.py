@@ -61,19 +61,20 @@ if __name__ == "__main__":
     source_detector_dist = ct_model.get_params('source_detector_dist')
     source_iso_dist = ct_model.get_params('source_iso_dist')
     angles = ct_model.get_params('angles')
+    magnification = ct_model.get_magnification()
 
     # choose an even detector row nearest isocenter
     det_center_row_float = ((num_rows - 1) / 2.0) + (det_row_offset / delta_det_row)
     det_center_row_index = int(np.round(det_center_row_float))
     det_center_row_index -= det_center_row_index % 2  # force even
 
-    num_extra_rows = 5  # overlap on each side
+    det_overlap_rows = 5  # overlap on each side
 
     # Calculate row ranges for top and bottom sinogram halves
     top_lo = 0
-    top_hi = min(det_center_row_index + num_extra_rows, num_rows)
+    top_hi = min(det_center_row_index + det_overlap_rows, num_rows)
 
-    bot_lo = max(det_center_row_index - num_extra_rows, 0)
+    bot_lo = max(det_center_row_index - det_overlap_rows, 0)
     bot_hi = num_rows
 
     # Construct sinogram halves
@@ -103,6 +104,8 @@ if __name__ == "__main__":
     ct_model_top_half.set_params(**optional_params)
     ct_model_top_half.set_params(det_row_offset=top_det_row_offset)
     ct_model_top_half.set_params(sharpness=sharpness, snr_db=snr_db, verbose=1)
+    top_recon_shape = ct_model_top_half.get_params('recon_shape')
+    print(f"Top-half recon shape: {top_recon_shape}")
 
     # Construct model for lower sinogram half
     ct_model_bot_half = mj.ConeBeamModel(
@@ -114,6 +117,24 @@ if __name__ == "__main__":
     ct_model_bot_half.set_params(**optional_params)
     ct_model_bot_half.set_params(det_row_offset=bot_det_row_offset)
     ct_model_bot_half.set_params(sharpness=sharpness, snr_db=snr_db, verbose=1)
+    bot_recon_shape = ct_model_bot_half.get_params('recon_shape')
+    print(f"Bottom-half recon shape: {bot_recon_shape}")
+
+    # ToDo: Figure out why the program crashs when 122 is changed to 124
+    max_shape = (187, 187, 122)
+    print(f"Max recon shape: {max_shape}")
+
+    # Set recon shape of top and bottom half the same
+    ct_model_top_half.set_params(recon_shape=max_shape)
+    ct_model_bot_half.set_params(recon_shape=max_shape)
+
+    # Compute slice offsets for each sinogram half
+    top_recon_slice_offset = 0
+    bot_recon_slice_offset = 0
+
+    # Set recon slice offsets for top and bottom half
+    ct_model_top_half.set_params(recon_slice_offset=top_recon_slice_offset)
+    ct_model_bot_half.set_params(recon_slice_offset=bot_recon_slice_offset)
 
     print("\n***************** Reconstruct top/bottom halves ****************")
     t0 = time.time()
@@ -125,9 +146,13 @@ if __name__ == "__main__":
     print(f"Top-half recon shape: {recon_top_half.shape}   (elapsed: {t1 - t0:.1f}s)")
     print(f"Bottom-half recon shape: {recon_bot_half.shape} (elapsed: {t2 - t1:.1f}s)")
 
+    # Combine the two reconstructions
+    recon_combined = recon_top_half + recon_bot_half
+
     # Put the two half recons along a new axis and show side-by-side
     title = "Top half recon (left) vs Bottom half recon (right)"
 
     mj.slice_viewer(recon_top_half, recon_bot_half, data_dicts=[recon_top_dict, recon_bot_dict], title=title)
+    mj.slice_viewer(recon_combined, title="Combined recon")
 
 
