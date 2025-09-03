@@ -82,12 +82,12 @@ def recon_half_sino(ct_model, sino, weights=None, overlap=5):
     if not isinstance(ct_model, mj.ConeBeamModel):
         raise TypeError("ct_model must be an mbirjax ConeBeamModel.")
 
-    # -------- parameters that will be use to create top and bottom models --------
+    # -------- Get parameters needed for top and bottom models --------
     delta_det_row = ct_model.get_params('delta_det_row')
     det_row_offset = ct_model.get_params('det_row_offset')
     delta_voxel = ct_model.get_params('delta_voxel')
 
-    # -------- Required parameters for cone beam geometry --------
+    # -------- Get parameters required for cone beam geometry --------
     angles = ct_model.get_params('angles')
     source_detector_dist = ct_model.get_params('source_detector_dist')
     source_iso_dist = ct_model.get_params('source_iso_dist')
@@ -100,18 +100,17 @@ def recon_half_sino(ct_model, sino, weights=None, overlap=5):
         except Exception:
             pass
 
-    # -------- Choose an even detector row nearest isocenter --------
-    det_center_row_float = ((num_rows - 1) / 2.0) + (det_row_offset / delta_det_row)
-    det_center_row_index = int(np.round(det_center_row_float))
-    det_center_row_index -= det_center_row_index % 2  # force even
+    # -------- Choose the detector row nearest to iso-center --------
+    det_iso_row_float = ((num_rows - 1) / 2.0) + (det_row_offset / delta_det_row)
+    det_iso_row_index = int(np.round(det_iso_row_float))
 
-    # -------- Row ranges for top and bottom sinogram halves --------
+    # -------- Compute row ranges for top and bottom sinograms --------
     top_lo = 0
-    top_hi = min(det_center_row_index + overlap, num_rows)
-    bot_lo = max(det_center_row_index - overlap, 0)
+    top_hi = min(det_iso_row_index + overlap, num_rows)
+    bot_lo = max(det_iso_row_index - overlap, 0)
     bot_hi = num_rows
 
-    # -------- Slice sinogram (and weights) halves --------
+    # -------- Compute top and bottom halfs of sinogram (and weights) --------
     sino_top_half = sino[:, top_lo:top_hi, :]
     sino_bot_half = sino[:, bot_lo:bot_hi, :]
 
@@ -121,14 +120,15 @@ def recon_half_sino(ct_model, sino, weights=None, overlap=5):
         weights_top_half = weights[:, top_lo:top_hi, :]
         weights_bot_half = weights[:, bot_lo:bot_hi, :]
 
-    # -------- Shapes and detector-row center alignment --------
-    top_shape = (num_views, top_hi - top_lo, num_cols)
-    bot_shape = (num_views, bot_hi - bot_lo, num_cols)
+    # -------- Calculate shapes and detector-row centers --------
+    top_shape = tuple(sino_top_half.shape)
+    bot_shape = tuple(sino_bot_half.shape)
 
     det_center = (num_rows - 1) / 2.0
     top_det_center = (top_shape[1] - 1) / 2.0
     bot_det_center = (bot_shape[1] - 1) / 2.0
 
+    # -------- Calculate row offsets required for top and bottom models --------
     top_det_row_offset = det_row_offset + ((det_center - top_lo) - top_det_center) * delta_det_row
     bot_det_row_offset = det_row_offset + ((det_center - bot_lo) - bot_det_center) * delta_det_row
 
