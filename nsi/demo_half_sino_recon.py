@@ -157,19 +157,15 @@ def recon_half_sino(ct_model, sino, weights=None, overlap=5):
     # -------- Harmonize recon shapes --------
     top_recon_shape = ct_model_top_half.get_params('recon_shape')
     bot_recon_shape = ct_model_bot_half.get_params('recon_shape')
-    half_recon_shape = tuple(max(t, b) for t, b in zip(top_recon_shape, bot_recon_shape))
-
-    ct_model_top_half.set_params(recon_shape=half_recon_shape)
-    ct_model_bot_half.set_params(recon_shape=half_recon_shape)
 
     # Validate overlap value against recon slice dimension for quilting
-    recon_slices = int(half_recon_shape[2])
+    recon_slices = int(min(top_recon_shape[2], bot_recon_shape[2]))
     if not (0 < overlap < recon_slices):
         raise ValueError(f"overlap must satisfy 0 < overlap < recon_slices ({recon_slices}).")
 
     # -------- Slice offsets for quilting --------
-    top_recon_slice_offset = (-(half_recon_shape[2] / 2) + overlap) * delta_voxel
-    bot_recon_slice_offset = ((half_recon_shape[2] / 2) - overlap) * delta_voxel
+    top_recon_slice_offset = (-(top_recon_shape[2] / 2) + overlap) * delta_voxel
+    bot_recon_slice_offset = ((bot_recon_shape[2] / 2) - overlap) * delta_voxel
 
     ct_model_top_half.set_params(recon_slice_offset=top_recon_slice_offset)
     ct_model_bot_half.set_params(recon_slice_offset=bot_recon_slice_offset)
