@@ -22,9 +22,9 @@ def stitch_slices(top, bottom, num_overlap_slices):
     assert top.shape[:-1] == bottom.shape[:-1], "XY (non-slice) dims must match"
 
     # Define variables
-    num_slices = top.shape[-1]               # Number of top slices
-    ov = int(num_overlap_slices)    # Number of overlapping slices per side
-    bl = int(ov/2)                 # Number of blended slices per side
+    num_slices = top.shape[-1]  # Number of top slices
+    ov = int(num_overlap_slices)  # Number of overlapping slices per side
+    bl = int(ov / 2)  # Number of blended slices per side
 
     top_main = top[..., :num_slices - (ov + bl)]
     top_blended = top[..., num_slices - (ov + bl):num_slices - (ov - bl)]
@@ -82,35 +82,23 @@ def recon_half_sino(ct_model, sino, weights=None, overlap=5):
     if not isinstance(ct_model, mj.ConeBeamModel):
         raise TypeError("ct_model must be an mbirjax ConeBeamModel.")
 
-    # -------- Get parameters needed for top and bottom models --------
+    # -------- parameters needed to create top and bottom models --------
     delta_det_row = ct_model.get_params('delta_det_row')
     det_row_offset = ct_model.get_params('det_row_offset')
     delta_voxel = ct_model.get_params('delta_voxel')
 
-    # -------- Get parameters required for cone beam geometry --------
-    angles = ct_model.get_params('angles')
-    source_detector_dist = ct_model.get_params('source_detector_dist')
-    source_iso_dist = ct_model.get_params('source_iso_dist')
+    # -------- Choose an even detector row nearest isocenter --------
+    det_center_row_float = ((num_rows - 1) / 2.0) + (det_row_offset / delta_det_row)
+    det_center_row_index = int(np.round(det_center_row_float))
+    det_center_row_index -= det_center_row_index % 2  # force even
 
-    # Optional but commonly present; guard each individually.
-    optional_copy = {}
-    for k in ('delta_det_channel', 'delta_det_row', 'det_row_offset', 'det_channel_offset', 'delta_voxel', 'positivity_flag', 'snr_db', 'sharpness', 'verbose'):
-        try:
-            optional_copy[k] = ct_model.get_params(k)
-        except Exception:
-            pass
-
-    # -------- Choose the detector row nearest to iso-center --------
-    det_iso_row_float = ((num_rows - 1) / 2.0) + (det_row_offset / delta_det_row)
-    det_iso_row_index = int(np.round(det_iso_row_float))
-
-    # -------- Compute row ranges for top and bottom sinograms --------
+    # -------- Row ranges for top and bottom sinogram halves --------
     top_lo = 0
-    top_hi = min(det_iso_row_index + overlap, num_rows)
-    bot_lo = max(det_iso_row_index - overlap, 0)
+    top_hi = min(det_center_row_index + overlap, num_rows)
+    bot_lo = max(det_center_row_index - overlap, 0)
     bot_hi = num_rows
 
-    # -------- Compute top and bottom halfs of sinogram (and weights) --------
+    # -------- Slice sinogram (and weights) halves --------
     sino_top_half = sino[:, top_lo:top_hi, :]
     sino_bot_half = sino[:, bot_lo:bot_hi, :]
 
@@ -120,45 +108,29 @@ def recon_half_sino(ct_model, sino, weights=None, overlap=5):
         weights_top_half = weights[:, top_lo:top_hi, :]
         weights_bot_half = weights[:, bot_lo:bot_hi, :]
 
-    # -------- Calculate shapes and detector-row centers --------
-    top_shape = tuple(sino_top_half.shape)
-    bot_shape = tuple(sino_bot_half.shape)
+    # -------- Shapes and detector-row center alignment --------
+    top_num_rows = top_hi - top_lo
+    bot_num_rows = bot_hi - bot_lo
 
     det_center = (num_rows - 1) / 2.0
-    top_det_center = (top_shape[1] - 1) / 2.0
-    bot_det_center = (bot_shape[1] - 1) / 2.0
+    top_det_center = (top_num_rows - 1) / 2.0
+    bot_det_center = (bot_num_rows - 1) / 2.0
 
     # -------- Calculate row offsets required for top and bottom models --------
     top_det_row_offset = det_row_offset + ((det_center - top_lo) - top_det_center) * delta_det_row
     bot_det_row_offset = det_row_offset + ((det_center - bot_lo) - bot_det_center) * delta_det_row
 
     # -------- Build top-half model --------
-    ct_model_top_half = mj.ConeBeamModel(
-        top_shape,
-        angles=angles,
-        source_detector_dist=source_detector_dist,
-        source_iso_dist=source_iso_dist,
-    )
-    if optional_copy:
-        ct_model_top_half.set_params(**optional_copy)
+    ct_model_top_half = mjp.copy_ct_model(ct_model, new_num_det_rows=top_num_rows)
     ct_model_top_half.set_params(det_row_offset=top_det_row_offset)
 
     # -------- Build bottom-half model --------
-    ct_model_bot_half = mj.ConeBeamModel(
-        bot_shape,
-        angles=angles,
-        source_detector_dist=source_detector_dist,
-        source_iso_dist=source_iso_dist,
-    )
-    if optional_copy:
-        ct_model_bot_half.set_params(**optional_copy)
+    ct_model_bot_half = mjp.copy_ct_model(ct_model, new_num_det_rows=bot_num_rows)
     ct_model_bot_half.set_params(det_row_offset=bot_det_row_offset)
 
-    # -------- Harmonize recon shapes --------
+    # Validate overlap value against recon slice dimension for quilting
     top_recon_shape = ct_model_top_half.get_params('recon_shape')
     bot_recon_shape = ct_model_bot_half.get_params('recon_shape')
-
-    # Validate overlap value against recon slice dimension for quilting
     recon_slices = int(min(top_recon_shape[2], bot_recon_shape[2]))
     if not (0 < overlap < recon_slices):
         raise ValueError(f"overlap must satisfy 0 < overlap < recon_slices ({recon_slices}).")
@@ -171,23 +143,31 @@ def recon_half_sino(ct_model, sino, weights=None, overlap=5):
     ct_model_bot_half.set_params(recon_slice_offset=bot_recon_slice_offset)
 
     # -------- Reconstruct halves (pass weights if provided) --------
-    recon_top_half, _ = ct_model_top_half.recon(sino_top_half, weights=weights_top_half)
-    recon_bot_half, _ = ct_model_bot_half.recon(sino_bot_half, weights=weights_bot_half)
+    recon_top_half, recon_top_dict = ct_model_top_half.recon(sino_top_half, weights=weights_top_half)
+    recon_bot_half, recon_bot_dict = ct_model_bot_half.recon(sino_bot_half, weights=weights_bot_half)
 
     # -------- Quilt and return --------
     recon_full = stitch_slices(recon_top_half, recon_bot_half, overlap)
-    return recon_full
-
+    recon_full_dict = {'recon_params_top': recon_top_dict['recon_params'],
+                       'recon_params_bottom': recon_bot_dict['recon_params'],
+                       'recon_log_top': recon_top_dict['recon_log'],
+                       'recon_log_bottom': recon_bot_dict['recon_log'],
+                       'notes_top': recon_top_dict['notes'],
+                       'notes_bottom': recon_bot_dict['notes'],
+                       'model_params_top': recon_top_dict['model_params'],
+                       'model_params_bottom': recon_bot_dict['model_params'], }
+    return recon_full, recon_full_dict
 
 
 if __name__ == "__main__":
     print('This script demonstrates half-sinogram reconstruction.\n')
 
-    output_path = './results'
+    output_path = './output'
     if not os.path.exists(output_path):
         os.makedirs(output_path, exist_ok=True)
-        warnings.warn(f'Created output directory {output_path}. For faster I/O on clusters, consider symlinking to scratch, e.g.,\n'
-                      f'  ln -s /scratch/gautschi/<username>/results {output_path}')
+        warnings.warn(
+            f'Created output directory {output_path}. For faster I/O on clusters, consider symlinking to scratch, e.g.,\n'
+            f'  ln -s /scratch/gautschi/<username>/results {output_path}')
 
     # path to store and extract the NSI data and metadata.
     download_dir = './demo_data/'
@@ -208,8 +188,8 @@ if __name__ == "__main__":
 
     print("\n************** NSI dataset preprocessing **************")
     sino, cone_beam_params, optional_params = mjp.nsi.compute_sino_and_params(dataset_dir,
-                                                downsample_factor=downsample_factor,
-                                                subsample_view_factor=subsample_view_factor)
+                                                                              downsample_factor=downsample_factor,
+                                                                              subsample_view_factor=subsample_view_factor)
 
     print("\n***************** Set up MBIRJAX model ****************")
     # Construct cone beam object using NSI parameters
@@ -226,7 +206,7 @@ if __name__ == "__main__":
 
     print("\n***************** Reconstruct top/bottom halves ****************")
     t0 = time.time()
-    recon_full = recon_half_sino(ct_model, sino)  # weights can be passed as third arg if available
+    recon, recon_dict = recon_half_sino(ct_model, sino)  # weights can be passed as third arg if available
     t1 = time.time()
-    print(f"Stitched recon shape: {recon_full.shape}   (elapsed: {t1 - t0:.1f}s)")
-    mj.slice_viewer(recon_full, slice_axis=[1, 1], title="Blended Recon")
+    print(f"Stitched recon shape: {recon.shape}   (elapsed: {t1 - t0:.1f}s)")
+    mj.slice_viewer(recon, data_dicts=recon_dict, slice_axis=1, title="Blended Recon")
