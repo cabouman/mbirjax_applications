@@ -7,41 +7,42 @@ import mbirjax.preprocess as mjp
 import os
 
 
-def quilt_slices(top, bottom, num_overlap_slices):
-    """Quilt two reconstruction volumes along the slice (last) axis.
-
-    This function discards the last ``num_overlap_slices`` slices from
-    ``top`` and the first ``num_overlap_slices`` slices from ``bottom``,
-    then concatenates the results to form a continuous volume.
+def stitch_slices(top, bottom, num_overlap_slices):
+    """Stitch two reconstruction volumes along the slice (last) axis with blending.
 
     Args:
         top (jnp.ndarray): First ("top") half of the reconstruction.
-            Must have shape [..., S].
         bottom (jnp.ndarray): Second ("bottom") half of the reconstruction.
-            Must have the same shape as ``top``.
-        num_overlap_slices (int): Number of overlapping slices to discard
-            from each half before concatenation.
+        num_overlap_slices (int): Number of slices to overlap on each side.
 
     Returns:
         jnp.ndarray: Quilted reconstruction with shape
         ``[..., 2*S - 2*num_overlap_slices]`` along the last axis.
     """
     assert top.shape[:-1] == bottom.shape[:-1], "XY (non-slice) dims must match"
-    S = top.shape[-1]
-    ov = int(num_overlap_slices)
-    assert 0 < ov < S, f"num_overlap_slices must be in [1, {S-1}]"
 
-    # Non-overlap parts
-    top_main = top[..., :S - ov]
-    bot_main = bottom[..., ov:]
+    # Define variables
+    num_slices = top.shape[-1]               # Number of top slices
+    ov = int(num_overlap_slices)    # Number of overlapping slices per side
+    bl = int(ov/2)                 # Number of blended slices per side
 
-    return jnp.concatenate([top_main, bot_main], axis=-1)
+    top_main = top[..., :num_slices - (ov + bl)]
+    top_blended = top[..., num_slices - (ov + bl):num_slices - (ov - bl)]
+
+    bot_main = bottom[..., ov + bl:]
+    bot_blended = bottom[..., ov - bl: ov + bl]
+
+    n = top_blended.shape[-1]
+    w = jnp.linspace(1.0, 0.0, n).reshape((1,) * (top.ndim - 1) + (n,))
+    blended = w * top_blended + (1.0 - w) * bot_blended
+
+    return jnp.concatenate([top_main, blended, bot_main], axis=-1)
 
 
 def recon_half_sino(ct_model, sino, weights=None, overlap=5):
     """Reconstruct from a full sinogram by splitting detector rows into two overlapping halves,
     reconstructing each half with its own ConeBeamModel, and quilting the halves along the
-    slice axis using `quilt_slices`.
+    slice axis using `stitch_slices`.
 
     Args:
         ct_model (mj.ConeBeamModel): A *full-geometry* ConeBeam model already configured
@@ -178,7 +179,7 @@ def recon_half_sino(ct_model, sino, weights=None, overlap=5):
     recon_bot_half, _ = ct_model_bot_half.recon(sino_bot_half, weights=weights_bot_half)
 
     # -------- Quilt and return --------
-    recon_full = quilt_slices(recon_top_half, recon_bot_half, overlap)
+    recon_full = stitch_slices(recon_top_half, recon_bot_half, overlap)
     return recon_full
 
 
@@ -231,6 +232,5 @@ if __name__ == "__main__":
     t0 = time.time()
     recon_full = recon_half_sino(ct_model, sino)  # weights can be passed as third arg if available
     t1 = time.time()
-    print(f"Quilted recon shape: {recon_full.shape}   (elapsed: {t1 - t0:.1f}s)")
-    print("Quilted (blended) recon shape:", recon_full.shape)
+    print(f"Stitched recon shape: {recon_full.shape}   (elapsed: {t1 - t0:.1f}s)")
     mj.slice_viewer(recon_full, slice_axis=[1, 1], title="Blended Recon")
