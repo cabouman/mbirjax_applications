@@ -89,11 +89,11 @@ def recon_half_sino(ct_model, sino, weights=None, half_overlap=5):
     bot_det_row_offset = det_row_offset + ((det_center - bot_lo) - bot_det_center) * delta_det_row
 
     # -------- Build top-half model --------
-    ct_model_top_half = mjp.copy_ct_model(ct_model, new_num_det_rows=top_num_rows)
+    ct_model_top_half = mj.copy_ct_model(ct_model, new_num_det_rows=top_num_rows)
     ct_model_top_half.set_params(det_row_offset=top_det_row_offset)
 
     # -------- Build bottom-half model --------
-    ct_model_bot_half = mjp.copy_ct_model(ct_model, new_num_det_rows=bot_num_rows)
+    ct_model_bot_half = mj.copy_ct_model(ct_model, new_num_det_rows=bot_num_rows)
     ct_model_bot_half.set_params(det_row_offset=bot_det_row_offset)
 
     # Validate half_overlap value against recon slice dimension for quilting
