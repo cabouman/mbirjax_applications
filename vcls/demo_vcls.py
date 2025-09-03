@@ -61,7 +61,7 @@ if __name__ == '__main__':
     angle_candidates = jnp.linspace(start_angle, end_angle, num_views, endpoint=False)
 
     # Create the model to contain all the geometry information
-    ct_model = mjp.get_ct_model(geometry_type, sinogram_shape, angle_candidates, source_detector_dist, source_iso_dist)
+    ct_model = mj.get_ct_model(geometry_type, sinogram_shape, angle_candidates, source_detector_dist, source_iso_dist)
 
     ##############################################
     # Run VCLS to Select Views and Display Results
@@ -84,12 +84,12 @@ if __name__ == '__main__':
     mjp.show_image_with_projection_rays(np.log10(1e-2 + np.abs(ref_fft)), rotation_angles_rad=angles_perp, title='FFT of Reference Object\n with Selected View Angles')
 
     # Do a recon with optimal angles
-    ct_model_opt = mjp.copy_ct_model(ct_model, optimal_angles)
+    ct_model_opt = mj.copy_ct_model(ct_model, optimal_angles)
     sinogram_optimal_angles = ct_model_opt.forward_project(reference_object)
     recon_optimal_angles, recon_dict_optimal = ct_model_opt.recon(sinogram_optimal_angles)
 
     angles = jnp.linspace(start_angle, end_angle, len(optimal_angles), endpoint=False)
-    ct_model_uniform = mjp.copy_ct_model(ct_model, angles)
+    ct_model_uniform = mj.copy_ct_model(ct_model, angles)
     sinogram_uniform = ct_model_uniform.forward_project(reference_object)
     recon_uniform, recon_dict_uniform = ct_model_uniform.recon(sinogram_uniform)
 

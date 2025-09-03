@@ -95,7 +95,7 @@ if __name__ == '__main__':
 
     # Compute mbir recon with optimal angles
     optimal_angles = angle_candidates[optimal_angle_inds]
-    ct_model_opt = mjp.copy_ct_model(ct_model, optimal_angles)
+    ct_model_opt = mj.copy_ct_model(ct_model, optimal_angles)
     sinogram_opt = full_sino[optimal_angle_inds]
     recon_opt, recon_dict_opt = ct_model_opt.recon(sinogram_opt)
 
@@ -111,7 +111,7 @@ if __name__ == '__main__':
     uniform_angles = angle_candidates[uniform_index_list]
 
     # Compute mbir recon for uniformly sampled short scan
-    ct_model_uniform = mjp.copy_ct_model(ct_model, uniform_angles)
+    ct_model_uniform = mj.copy_ct_model(ct_model, uniform_angles)
     sino_uniform = full_sino[uniform_index_list]
     recon_uniform, recon_dict_uniform = ct_model_uniform.recon(sino_uniform)
 
