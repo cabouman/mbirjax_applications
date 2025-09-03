@@ -115,7 +115,7 @@ def recon_half_sino(ct_model, sino, weights=None, half_overlap=5):
     recon_bot_half, recon_bot_dict = ct_model_bot_half.recon(sino_bot_half, weights=weights_bot_half)
 
     # -------- Stitch together top and bottom reconstructions --------
-    recon_full = mj.stitch_arrays([recon_top_half, recon_bot_half], overlap_length=2 * half_overlap, axis=2)
+    recon_full = mj.stitch_arrays([recon_top_half, recon_bot_half], overlap=2 * half_overlap, axis=2)
 
     # -------- Construct full reconstruction dictionary --------
     recon_full_dict = {'recon_params_top': recon_top_dict['recon_params'],
@@ -150,8 +150,8 @@ if __name__ == "__main__":
     dataset_dir = mj.download_and_extract(dataset_url, download_dir)
 
     # preprocessing parameters
-    downsample_factor = [8, 8]  # downsample factor of scan view images along detector rows and detector columns.
-    subsample_view_factor = 8  # view subsample factor.
+    downsample_factor = [16, 16]  # downsample factor of scan view images along detector rows and detector columns.
+    subsample_view_factor = 16  # view subsample factor.
 
     # recon parameters
     sharpness = 1.0
