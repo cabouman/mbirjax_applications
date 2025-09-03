@@ -7,39 +7,7 @@ import mbirjax.preprocess as mjp
 import os
 
 
-def stitch_slices(top, bottom, num_overlap_slices):
-    """Stitch two reconstruction volumes along the slice (last) axis with blending.
-
-    Args:
-        top (jnp.ndarray): First ("top") half of the reconstruction.
-        bottom (jnp.ndarray): Second ("bottom") half of the reconstruction.
-        num_overlap_slices (int): Number of slices to overlap on each side.
-
-    Returns:
-        jnp.ndarray: Quilted reconstruction with shape
-        ``[..., 2*S - 2*num_overlap_slices]`` along the last axis.
-    """
-    assert top.shape[:-1] == bottom.shape[:-1], "XY (non-slice) dims must match"
-
-    # Define variables
-    num_slices = top.shape[-1]  # Number of top slices
-    ov = int(num_overlap_slices)  # Number of overlapping slices per side
-    bl = int(ov / 2)  # Number of blended slices per side
-
-    top_main = top[..., :num_slices - (ov + bl)]
-    top_blended = top[..., num_slices - (ov + bl):num_slices - (ov - bl)]
-
-    bot_main = bottom[..., ov + bl:]
-    bot_blended = bottom[..., ov - bl: ov + bl]
-
-    n = top_blended.shape[-1]
-    w = jnp.linspace(1.0, 0.0, n).reshape((1,) * (top.ndim - 1) + (n,))
-    blended = w * top_blended + (1.0 - w) * bot_blended
-
-    return jnp.concatenate([top_main, blended, bot_main], axis=-1)
-
-
-def recon_half_sino(ct_model, sino, weights=None, overlap=5):
+def recon_half_sino(ct_model, sino, weights=None, half_overlap=5):
     """Reconstruct from a full sinogram by splitting detector rows into two overlapping halves,
     reconstructing each half with its own ConeBeamModel, and quilting the halves along the
     slice axis using `stitch_slices`.
@@ -50,8 +18,8 @@ def recon_half_sino(ct_model, sino, weights=None, overlap=5):
         sino (jnp.ndarray | np.ndarray): Full sinogram shaped (num_views, num_rows, num_cols).
         weights (jnp.ndarray | np.ndarray, optional): Optional sinogram weights with the same
             shape as `sino`. If provided, they are split consistently and passed to recon.
-        overlap (int): Number of overlapping detector rows and recon slices.
-            Must satisfy 0 < overlap < num_rows, and later 0 < overlap < recon_slices for quilting.
+        half_overlap (int): Number of overlapping detector rows and recon slices per half. (total overlap = 2*half_overlap)
+            Must satisfy 0 < half_overlap < num_rows, and later 0 < half_overlap < recon_slices for quilting.
 
     Returns:
         jnp.ndarray: Final quilted reconstruction volume.
@@ -72,11 +40,11 @@ def recon_half_sino(ct_model, sino, weights=None, overlap=5):
 
     num_views, num_rows, num_cols = sino.shape
 
-    # Validate overlap value for detector-row split
-    if not isinstance(overlap, (int, np.integer)):
-        raise TypeError("overlap must be an integer.")
-    if not (0 < overlap < num_rows):
-        raise ValueError(f"overlap must satisfy 0 < overlap < num_rows ({num_rows}).")
+    # Validate half_overlap value for detector-row split
+    if not isinstance(half_overlap, (int, np.integer)):
+        raise TypeError("half_overlap must be an integer.")
+    if not (0 < half_overlap < num_rows):
+        raise ValueError(f"half_overlap must satisfy 0 < half_overlap < num_rows ({num_rows}).")
 
     # Test that model is cone beam geometry
     if not isinstance(ct_model, mj.ConeBeamModel):
@@ -94,8 +62,8 @@ def recon_half_sino(ct_model, sino, weights=None, overlap=5):
 
     # -------- Row ranges for top and bottom sinogram halves --------
     top_lo = 0
-    top_hi = min(det_center_row_index + overlap, num_rows)
-    bot_lo = max(det_center_row_index - overlap, 0)
+    top_hi = min(det_center_row_index + half_overlap, num_rows)
+    bot_lo = max(det_center_row_index - half_overlap, 0)
     bot_hi = num_rows
 
     # -------- Slice sinogram (and weights) halves --------
@@ -128,16 +96,16 @@ def recon_half_sino(ct_model, sino, weights=None, overlap=5):
     ct_model_bot_half = mjp.copy_ct_model(ct_model, new_num_det_rows=bot_num_rows)
     ct_model_bot_half.set_params(det_row_offset=bot_det_row_offset)
 
-    # Validate overlap value against recon slice dimension for quilting
+    # Validate half_overlap value against recon slice dimension for quilting
     top_recon_shape = ct_model_top_half.get_params('recon_shape')
     bot_recon_shape = ct_model_bot_half.get_params('recon_shape')
     recon_slices = int(min(top_recon_shape[2], bot_recon_shape[2]))
-    if not (0 < overlap < recon_slices):
-        raise ValueError(f"overlap must satisfy 0 < overlap < recon_slices ({recon_slices}).")
+    if not (0 < half_overlap < recon_slices):
+        raise ValueError(f"half_overlap must satisfy 0 < half_overlap < recon_slices ({recon_slices}).")
 
     # -------- Slice offsets for quilting --------
-    top_recon_slice_offset = (-(top_recon_shape[2] / 2) + overlap) * delta_voxel
-    bot_recon_slice_offset = ((bot_recon_shape[2] / 2) - overlap) * delta_voxel
+    top_recon_slice_offset = (-(top_recon_shape[2] / 2) + half_overlap) * delta_voxel
+    bot_recon_slice_offset = ((bot_recon_shape[2] / 2) - half_overlap) * delta_voxel
 
     ct_model_top_half.set_params(recon_slice_offset=top_recon_slice_offset)
     ct_model_bot_half.set_params(recon_slice_offset=bot_recon_slice_offset)
@@ -146,8 +114,10 @@ def recon_half_sino(ct_model, sino, weights=None, overlap=5):
     recon_top_half, recon_top_dict = ct_model_top_half.recon(sino_top_half, weights=weights_top_half)
     recon_bot_half, recon_bot_dict = ct_model_bot_half.recon(sino_bot_half, weights=weights_bot_half)
 
-    # -------- Quilt and return --------
-    recon_full = stitch_slices(recon_top_half, recon_bot_half, overlap)
+    # -------- Stitch together top and bottom reconstructions --------
+    recon_full = mj.stitch_arrays([recon_top_half, recon_bot_half], overlap_length=2 * half_overlap, axis=2)
+
+    # -------- Construct full reconstruction dictionary --------
     recon_full_dict = {'recon_params_top': recon_top_dict['recon_params'],
                        'recon_params_bottom': recon_bot_dict['recon_params'],
                        'recon_log_top': recon_top_dict['recon_log'],
@@ -156,6 +126,7 @@ def recon_half_sino(ct_model, sino, weights=None, overlap=5):
                        'notes_bottom': recon_bot_dict['notes'],
                        'model_params_top': recon_top_dict['model_params'],
                        'model_params_bottom': recon_bot_dict['model_params'], }
+
     return recon_full, recon_full_dict
 
 
