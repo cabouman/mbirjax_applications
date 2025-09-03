@@ -7,10 +7,10 @@ import mbirjax.preprocess as mjp
 import os
 
 
-def recon_half_sino(ct_model, sino, weights=None, half_overlap=5):
+def recon_split_sino(ct_model, sino, weights=None, half_overlap=5):
     """Reconstruct from a full sinogram by splitting detector rows into two overlapping halves,
     reconstructing each half with its own ConeBeamModel, and quilting the halves along the
-    slice axis using `stitch_slices`.
+    slice axis using `stitch_slices`. This reduces memory usage relative to standard MBIR reconstruction.
 
     Args:
         ct_model (mj.ConeBeamModel): A *full-geometry* ConeBeam model already configured
@@ -177,7 +177,7 @@ if __name__ == "__main__":
 
     print("\n***************** Reconstruct top/bottom halves ****************")
     t0 = time.time()
-    recon, recon_dict = recon_half_sino(ct_model, sino)  # weights can be passed as third arg if available
+    recon, recon_dict = recon_split_sino(ct_model, sino)  # weights can be passed as third arg if available
     t1 = time.time()
     print(f"Stitched recon shape: {recon.shape}   (elapsed: {t1 - t0:.1f}s)")
     mj.slice_viewer(recon, data_dicts=recon_dict, slice_axis=1, title="Blended Recon")
