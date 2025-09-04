@@ -8,7 +8,11 @@ import os
 
 
 if __name__ == "__main__":
-    print('This script demonstrates half-sinogram reconstruction.\n')
+    print('This script demonstrates split-sino reconstruction.\n')
+
+    # Set user determined parameters
+    display_comparison = True
+    recon_slice_offset = 0
 
     output_path = './output'
     if not os.path.exists(output_path):
@@ -49,12 +53,22 @@ if __name__ == "__main__":
     # Set user determined parameter values
     ct_model.set_params(sharpness=sharpness, snr_db=snr_db, verbose=1)
 
+    ct_model.set_params(recon_slice_offset=recon_slice_offset)
+
     # Print out model parameters
     ct_model.print_params()
 
-    print("\n***************** Reconstruct top/bottom halves ****************")
+    if display_comparison:
+        print("\n***************** Compute standard recon ****************")
+        recon_std, recon_dict_std = ct_model.recon(sino)  # weights can be passed as third arg if available
+
+    print("\n***************** Compute split sino recon ****************")
     t0 = time.time()
     recon, recon_dict = ct_model.recon_split_sino(sino)  # weights can be passed as third arg if available
     t1 = time.time()
-    print(f"Stitched recon shape: {recon.shape}   (elapsed: {t1 - t0:.1f}s)")
-    mj.slice_viewer(recon, data_dicts=recon_dict, slice_axis=1, title="Blended Recon")
+
+    if display_comparison:
+        print(f"Stitched recon shape: {recon.shape}   (elapsed: {t1 - t0:.1f}s)")
+        mj.slice_viewer(recon, recon_std, data_dicts=[recon_dict, recon_dict_std], slice_axis=1, title="Split Sino Recon (left) vs Standard Recon (right)")
+    else:
+        mj.slice_viewer(recon, data_dicts=recon_dict, slice_axis=1, title="Split Sino Recon")
