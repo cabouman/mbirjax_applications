@@ -55,6 +55,14 @@ if __name__ == "__main__":
 
     ct_model.set_params(recon_slice_offset=recon_slice_offset)
 
+    # For debugging purposes, I'm going to make the number of slices even
+    # This way, I can directly compare the standard and split-sino reconstructions
+    # because the voxels for both will be aligned.
+    recon_shape = ct_model.get_params("recon_shape")
+    if recon_shape[2] % 2 != 0:
+        recon_shape = (recon_shape[0], recon_shape[1], recon_shape[2] + 1)
+        ct_model.set_params(recon_shape=recon_shape)
+
     # Print out model parameters
     ct_model.print_params()
 
