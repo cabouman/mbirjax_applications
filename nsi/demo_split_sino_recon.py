@@ -13,6 +13,7 @@ if __name__ == "__main__":
     # Set user determined parameters
     display_comparison = True
     recon_slice_offset = 0.0
+    downsample = 8
 
     output_path = './output'
     if not os.path.exists(output_path):
@@ -31,8 +32,8 @@ if __name__ == "__main__":
     dataset_dir = mj.download_and_extract(dataset_url, download_dir)
 
     # preprocessing parameters
-    downsample_factor = [16, 16]  # downsample factor of scan view images along detector rows and detector columns.
-    subsample_view_factor = 16  # view subsample factor.
+    downsample_factor = [downsample, downsample]  # downsample factor of scan view images along detector rows and detector columns.
+    subsample_view_factor = downsample  # view subsample factor.
 
     # recon parameters
     sharpness = 1.0
