@@ -11,9 +11,9 @@ if __name__ == "__main__":
     print('This script demonstrates split-sino reconstruction.\n')
 
     # Set user determined parameters
-    display_comparison = True
+    display_comparison = False
     recon_slice_offset = 0.0
-    downsample = 8
+    downsample = 16
 
     output_path = './output'
     if not os.path.exists(output_path):
@@ -65,7 +65,7 @@ if __name__ == "__main__":
 
     print("\n***************** Compute split sino recon ****************")
     t0 = time.time()
-    recon, recon_dict = ct_model.recon_split_sino(sino)  # weights can be passed as third arg if available
+    recon, recon_dict = ct_model.split_sino_recon(sino)  # weights can be passed as third arg if available
     t1 = time.time()
 
     if display_comparison:
