@@ -13,6 +13,9 @@ vcls/recon_bases_data
 vcls/recon_bases_data/polygon_data
 nersc/logs
 
+slurm*
+
+
 
 # ignore jupyter notebook files
 .ipynb_checkpoints/
