@@ -56,6 +56,8 @@ if __name__ == "__main__":
 
     ct_model.set_params(recon_slice_offset=recon_slice_offset)
 
+    weights_trans = ct_model.gen_weights(sino, weight_type='transmission_root')
+
     # Print out model parameters
     ct_model.print_params()
 
@@ -65,7 +67,7 @@ if __name__ == "__main__":
 
     print("\n***************** Compute split sino recon ****************")
     t0 = time.time()
-    recon, recon_dict = ct_model.split_sino_recon(sino)  # weights can be passed as third arg if available
+    recon, recon_dict = ct_model.split_sino_recon(sino, weights_trans)  # weights can be passed as third arg if available
     t1 = time.time()
 
     print(f"Stitched recon shape: {recon.shape}   (elapsed: {t1 - t0:.1f}s)")
