@@ -13,7 +13,7 @@ if __name__ == "__main__":
     # Set user determined parameters
     display_comparison = False
     recon_slice_offset = 0.0
-    downsample = 16
+    downsample = 1
 
     output_path = './output'
     if not os.path.exists(output_path):
