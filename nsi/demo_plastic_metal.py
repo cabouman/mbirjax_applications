@@ -14,7 +14,7 @@ if __name__ == "__main__":
 
     # Change this to point to your own data and set dataset_choice="existing_data" below
     #existing_directory = "/depot/bouman/data/Lilly/Autoinjector_HighRes_Horizontal"
-    existing_directory = "/home/c268681/mbirjax_applications/CAI_Horizontal"
+    existing_directory = "./demo_data/CAI_Horizontal"
 
     # Output path
     output_path = './output/lilly/'   # path to store output recon images
