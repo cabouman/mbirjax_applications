@@ -52,7 +52,6 @@ if __name__ == "__main__":
         dataset_tag = 'cai_v'
     elif dataset_choice == "existing_data":
         dataset_url = None
-        dataset_tag = os.path.basename(existing_directory)
     else:
         raise ValueError(f"Unknown dataset choice: {dataset_choice}")
 
