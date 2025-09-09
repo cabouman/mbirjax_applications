@@ -23,17 +23,12 @@ if __name__ == "__main__":
                         help="Downsampling factor (sets detector and view downsampling).")
     args = parser.parse_args()
 
-    # ----------------------------
-    # Defaults (unchanged behavior if no args)
-    # existing_directory = "/depot/bouman/data/Lilly/Autoinjector_HighRes_Horizontal"
-    existing_directory = "./demo_data/CAI_Horizontal"
-
     # Output path
     output_path = './output/lilly/'   # path to store output recon images
     os.makedirs(output_path, exist_ok=True)  # mkdir if directory does not exist
 
     # === Choose dataset ===
-    dataset_choice = "existing_data"
+    dataset_choice = "AI"
 
     # Options:
     #   "AI"             -> Autoinjector HighRes Horizontal
@@ -50,8 +45,6 @@ if __name__ == "__main__":
     elif dataset_choice == "CAI_vertical":
         dataset_url = '/depot/bouman/data/Lilly/Connected_Autoinjector_Vertical.tgz'
         dataset_tag = 'cai_v'
-    elif dataset_choice == "existing_data":
-        dataset_url = None
     else:
         raise ValueError(f"Unknown dataset choice: {dataset_choice}")
 
@@ -63,13 +56,8 @@ if __name__ == "__main__":
     if args.data_path is not None:
         dataset_dir = args.data_path
         dataset_tag = os.path.basename(dataset_dir.rstrip("/"))
-
-    # Download/extract or use existing directory
-    elif dataset_choice == "existing_data":
-        dataset_dir = existing_directory
-        dataset_tag = os.path.basename(dataset_dir.rstrip("/"))
     else:
-        dataset_dir = mj.download_and_extract_tar(dataset_url, download_dir)
+        dataset_dir = mj.download_and_extract(dataset_url, download_dir)
 
     # === Preprocessing parameters ===
     if args.downsampling is not None:
