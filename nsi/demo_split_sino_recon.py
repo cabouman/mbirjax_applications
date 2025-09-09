@@ -12,7 +12,6 @@ if __name__ == "__main__":
 
     # Set user determined parameters
     verbose = 1
-    display_comparison = False
     recon_slice_offset = 0.0
     downsample = 1
 
@@ -62,24 +61,13 @@ if __name__ == "__main__":
     # Print out model parameters
     ct_model.print_params()
 
-    if verbose > 1:
-        if display_comparison:
-            print("\n***************** Compute standard recon ****************")
-            recon_std, recon_dict_std = ct_model.recon(sino)  # weights can be passed as third arg if available
-
     print("\n***************** Compute split sino recon ****************")
     t0 = time.time()
     recon, recon_dict = ct_model.split_sino_recon(sino, weights=weights_trans)  # weights can be passed as third arg if available
     t1 = time.time()
-
     print(f"Stitched recon shape: {recon.shape}   (elapsed: {t1 - t0:.1f}s)")
-
-    if verbose > 1:
-        if display_comparison:
-            mj.slice_viewer(recon, recon_std, data_dicts=[recon_dict, recon_dict_std], slice_axis=1, title="Split Sino Recon (left) vs Standard Recon (right)")
-        else:
-            mj.slice_viewer(recon, data_dicts=recon_dict, slice_axis=1, title="Split Sino Recon")
 
     # Save recon to hdf5
     print("\n*********** save split sino recon in h5 format *************")
     mar_path = os.path.join(output_path, f"recon_split_sino.h5")
+    mj.export_recon_hdf5(mar_path, recon, recon_dict=None)
