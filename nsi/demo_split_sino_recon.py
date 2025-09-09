@@ -33,7 +33,7 @@ if __name__ == "__main__":
 
     # preprocessing parameters
     downsample_factor = [downsample, downsample]  # downsample factor of scan view images along detector rows and detector columns.
-    subsample_view_factor = downsample  # view subsample factor.
+    subsample_view_factor = 2*downsample  # view subsample factor.
 
     # recon parameters
     sharpness = 1.0
@@ -53,10 +53,10 @@ if __name__ == "__main__":
 
     # Set user determined parameter values
     ct_model.set_params(sharpness=sharpness, snr_db=snr_db, verbose=verbose)
-
     ct_model.set_params(recon_slice_offset=recon_slice_offset)
 
-    weights_trans = ct_model.gen_weights(sino, weight_type='transmission_root')
+    # Generate weights
+    weights_trans = mj.gen_weights(sino, weight_type='transmission_root')
 
     # Print out model parameters
     ct_model.print_params()
