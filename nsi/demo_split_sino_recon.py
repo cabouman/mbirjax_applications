@@ -11,6 +11,7 @@ if __name__ == "__main__":
     print('This script demonstrates split-sino reconstruction.\n')
 
     # Set user determined parameters
+    verbose = 1
     display_comparison = False
     recon_slice_offset = 0.0
     downsample = 1
@@ -52,7 +53,7 @@ if __name__ == "__main__":
     ct_model.set_params(**optional_params)
 
     # Set user determined parameter values
-    ct_model.set_params(sharpness=sharpness, snr_db=snr_db, verbose=1)
+    ct_model.set_params(sharpness=sharpness, snr_db=snr_db, verbose=verbose)
 
     ct_model.set_params(recon_slice_offset=recon_slice_offset)
 
@@ -61,9 +62,10 @@ if __name__ == "__main__":
     # Print out model parameters
     ct_model.print_params()
 
-    if display_comparison:
-        print("\n***************** Compute standard recon ****************")
-        recon_std, recon_dict_std = ct_model.recon(sino)  # weights can be passed as third arg if available
+    if verbose > 1:
+        if display_comparison:
+            print("\n***************** Compute standard recon ****************")
+            recon_std, recon_dict_std = ct_model.recon(sino)  # weights can be passed as third arg if available
 
     print("\n***************** Compute split sino recon ****************")
     t0 = time.time()
@@ -72,7 +74,12 @@ if __name__ == "__main__":
 
     print(f"Stitched recon shape: {recon.shape}   (elapsed: {t1 - t0:.1f}s)")
 
-    if display_comparison:
-        mj.slice_viewer(recon, recon_std, data_dicts=[recon_dict, recon_dict_std], slice_axis=1, title="Split Sino Recon (left) vs Standard Recon (right)")
-    else:
-        mj.slice_viewer(recon, data_dicts=recon_dict, slice_axis=1, title="Split Sino Recon")
+    if verbose > 1:
+        if display_comparison:
+            mj.slice_viewer(recon, recon_std, data_dicts=[recon_dict, recon_dict_std], slice_axis=1, title="Split Sino Recon (left) vs Standard Recon (right)")
+        else:
+            mj.slice_viewer(recon, data_dicts=recon_dict, slice_axis=1, title="Split Sino Recon")
+
+    # Save recon to hdf5
+    print("\n*********** save split sino recon in h5 format *************")
+    mar_path = os.path.join(output_path, f"recon_split_sino.h5")
