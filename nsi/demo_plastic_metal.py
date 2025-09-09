@@ -58,13 +58,17 @@ if __name__ == "__main__":
 
     # Destination path to download and extract the NSI data and metadata.
     download_dir = './demo_data/'
+
+    if args.data_path is not None and not os.path.isdir(args.data_path):
+        raise FileNotFoundError(f"--data_path does not exist or is not a directory: {args.data_path}")
     if args.data_path is not None:
         dataset_dir = args.data_path
-        dataset_tag = os.path.basename(dataset_dir)
+        dataset_tag = os.path.basename(dataset_dir.rstrip("/"))
 
     # Download/extract or use existing directory
     elif dataset_choice == "existing_data":
         dataset_dir = existing_directory
+        dataset_tag = os.path.basename(dataset_dir.rstrip("/"))
     else:
         dataset_dir = mj.download_and_extract_tar(dataset_url, download_dir)
 
