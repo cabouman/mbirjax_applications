@@ -18,32 +18,56 @@ if __name__ == "__main__":
     # ----------------------------
     parser = argparse.ArgumentParser(description="MBIRJAX Plastic-Metal Reconstruction Demo")
     parser.add_argument("--data_path", type=str, default=None,
-                        help="Path to existing data directory (overrides dataset_choice=existing_data).")
+                        help="Path to existing data directory.")
     parser.add_argument("--downsampling", type=int, default=None,
-                        help="Downsampling factor (sets both detector downsampling and view subsampling).")
+                        help="Downsampling factor (sets detector and view downsampling).")
     args = parser.parse_args()
 
-    # Default configuration
+    # ----------------------------
+    # Defaults (unchanged behavior if no args)
+    # existing_directory = "/depot/bouman/data/Lilly/Autoinjector_HighRes_Horizontal"
     existing_directory = "./demo_data/CAI_Horizontal"
-    output_path = './output/lilly/'
-    os.makedirs(output_path, exist_ok=True)
 
+    # Output path
+    output_path = './output/lilly/'   # path to store output recon images
+    os.makedirs(output_path, exist_ok=True)  # mkdir if directory does not exist
+
+    # === Choose dataset ===
     dataset_choice = "existing_data"
-    dataset_url = None
-    dataset_tag = os.path.basename(existing_directory)
 
-    # Override with command-line arguments if provided
-    if args.data_path is not None:
-        dataset_choice = "existing_data"
-        existing_directory = args.data_path
+    # Options:
+    #   "AI"             -> Autoinjector HighRes Horizontal
+    #   "CAI_horizontal" -> Connected Autoinjector Horizontal
+    #   "CAI_vertical"   -> Connected Autoinjector Vertical
+    #   "existing_data"  -> Use uncompressed scan data in the folder pointed to by existing_directory
+
+    if dataset_choice == "AI":
+        dataset_url = '/depot/bouman/data/Lilly/Autoinjector_HighRes_Horizontal.tgz'
+        dataset_tag = 'ai'
+    elif dataset_choice == "CAI_horizontal":
+        dataset_url = '/depot/bouman/data/Lilly/Connected_Autoinjector_Horizontal.tgz'
+        dataset_tag = 'cai_h'
+    elif dataset_choice == "CAI_vertical":
+        dataset_url = '/depot/bouman/data/Lilly/Connected_Autoinjector_Vertical.tgz'
+        dataset_tag = 'cai_v'
+    elif dataset_choice == "existing_data":
+        dataset_url = None
+        dataset_tag = os.path.basename(existing_directory)
+
+        if args.data_path is not None:
+            existing_directory = args.data_path
         dataset_tag = os.path.basename(existing_directory.rstrip("/"))
+    else:
+        raise ValueError(f"Unknown dataset choice: {dataset_choice}")
 
+    # Destination path to download and extract the NSI data and metadata.
+    download_dir = './demo_data/'
+
+    # Download/extract or use existing directory
     if dataset_choice == "existing_data":
         dataset_dir = existing_directory
     else:
-        raise ValueError(f"Unsupported dataset choice {dataset_choice} when using arguments.")
-
-    download_dir = './demo_data/'
+        dataset_dir = mj.download_and_extract_tar(dataset_url, download_dir)
 
     # === Preprocessing parameters ===
     if args.downsampling is not None:
@@ -82,6 +106,7 @@ if __name__ == "__main__":
     plastic_mask, metal_masks, plastic_scale, metal_scales = \
         mjp.segment_plastic_metal(recon, num_metal=num_metal)
 
+    # Visualize masks
     if verbose >= 2:
         labels = ['Plastic Mask'] + [f'Metal {i+1} Mask' for i in range(len(metal_masks))]
         mj.slice_viewer(plastic_mask, *metal_masks, vmin=0, vmax=1.0, slice_axis=0,
@@ -90,6 +115,7 @@ if __name__ == "__main__":
     # Compute FDK reconstruction
     recon_fdk = ct_model.direct_recon(sino)
 
+    # Save recon to hdf5
     print("\n*********** save mar and fdk recon in h5 format *************")
     mar_path = os.path.join(output_path, f"recon_{dataset_tag}_mar.h5")
     mj.export_recon_hdf5(mar_path, recon, recon_dict=None)
