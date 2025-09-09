@@ -53,18 +53,17 @@ if __name__ == "__main__":
     elif dataset_choice == "existing_data":
         dataset_url = None
         dataset_tag = os.path.basename(existing_directory)
-
-        if args.data_path is not None:
-            existing_directory = args.data_path
-        dataset_tag = os.path.basename(existing_directory.rstrip("/"))
     else:
         raise ValueError(f"Unknown dataset choice: {dataset_choice}")
 
     # Destination path to download and extract the NSI data and metadata.
     download_dir = './demo_data/'
+    if args.data_path is not None:
+        dataset_dir = args.data_path
+        dataset_tag = os.path.basename(dataset_dir)
 
     # Download/extract or use existing directory
-    if dataset_choice == "existing_data":
+    elif dataset_choice == "existing_data":
         dataset_dir = existing_directory
     else:
         dataset_dir = mj.download_and_extract_tar(dataset_url, download_dir)
