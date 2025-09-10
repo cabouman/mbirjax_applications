@@ -73,11 +73,13 @@ if __name__ == "__main__":
     weights = mj.gen_weights(sino, weight_type='transmission_root')
 
     print("\n************** Perform initial FDK reconstruction **************")
-    recon_fdk = ct_model.recon_fdk(sino)
+    recon_fdk = ct_model.fdk_recon(sino)
 
     print("\n************** Calculate MAR sinogram weights **************")
     weights_mar = mj.gen_weights_mar(ct_model, sino, init_recon=recon_fdk, beta=1.0, gamma=3.0)
-    mj.slice_viewer(weights_mar, jnp.abs(sino), vmin=0, vmax=2.0, slice_axis=[0, 0], slice_label= ["Weights", "Sinogram"])
+
+    if verbose > 1:
+        mj.slice_viewer(weights_mar, jnp.abs(sino), vmin=0, vmax=2.0, slice_axis=[0, 0], slice_label= ["Weights", "Sinogram"])
 
     print("\n************** Perform MBIR recon **************")
     recon_mar, recon_dict_mar = ct_model.recon(sino, weights=weights_mar)
