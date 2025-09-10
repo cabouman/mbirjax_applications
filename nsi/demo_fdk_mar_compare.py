@@ -14,6 +14,13 @@ pp = pprint.PrettyPrinter(indent=4)
 if __name__ == "__main__":
     print('This script is a simple demonstration of the mbirjax metal artifact reduction (MAR).\n')
 
+    # recon parameters
+    sharpness = 1.0
+    snr_db = 30.0
+    alpha = [1.0, 0.0, 0.0]  # BH_correction coefficient
+    downsample = 4
+    verbose = 1              # Print, but do not display plots
+
     # User defined params.
     output_path = './output/nsi_demo_mar/'  # path to store output recon images
     os.makedirs(output_path, exist_ok=True)  # mkdir if directory does not exist
@@ -36,18 +43,10 @@ if __name__ == "__main__":
     dataset_dir = mj.download_and_extract(dataset_url, download_dir)
 
     # preprocessing parameters
-    downsample_factor = [4, 4]  # downsample factor of scan images along detector rows and detector columns.
-    subsample_view_factor = 8  # view subsample factor.
+    downsample_factor = [downsample, downsample]  # downsample factor of scan images along detector rows and detector columns.
+    subsample_view_factor = 2*downsample  # view subsample factor.
 
-    # recon parameters
-    sharpness = 1.0
-    snr_db = 30.0
-    alpha = [1.0, 0.0, 0.0]  # BH_correction coefficient
-
-
-    print("\n*******************************************************",
-          "\n************** NSI dataset preprocessing **************",
-          "\n*******************************************************")
+    print("\n************** NSI dataset preprocessing **************")
     sino, cone_beam_params, optional_params = \
         mj.preprocess.nsi.compute_sino_and_params(dataset_dir,
                                                        downsample_factor=downsample_factor,
@@ -57,9 +56,7 @@ if __name__ == "__main__":
     sino = jnp.maximum(sino, 0.0)
     sino = mjp.BH_correction(sino, alpha=alpha)
 
-    print("\n*******************************************************",
-          "\n***************** Set up MBIRJAX model ****************",
-          "\n*******************************************************")
+    print("\n************** Set up MBIRJAX model **************")
     # ConeBeamModel constructor
     ct_model = mj.ConeBeamModel(**cone_beam_params)
 
@@ -72,34 +69,28 @@ if __name__ == "__main__":
     # Print out model parameters
     ct_model.print_params()
 
-    print("\n*******************************************************",
-          "\n***** Calculate transmission_root sinogram weights ****",
-          "\n*******************************************************")
+    print("\n************** Calculate transmission_root sinogram weights **************")
     weights = mj.gen_weights(sino, weight_type='transmission_root')
 
-    print("\n*******************************************************",
-          "\n********* Perform initial FDK reconstruction **********",
-          "\n*******************************************************")
-    fdk_recon = ct_model.fdk_recon(sino)
+    print("\n************** Perform initial FDK reconstruction **************")
+    recon_fdk = ct_model.recon_fdk(sino)
 
-    print("\n*******************************************************",
-          "\n************ Calculate MAR sinogram weights ***********",
-          "\n*******************************************************")
-    weights_mar = mj.gen_weights_mar(ct_model, sino, init_recon=fdk_recon, beta=1.0, gamma=3.0)
+    print("\n************** Calculate MAR sinogram weights **************")
+    weights_mar = mj.gen_weights_mar(ct_model, sino, init_recon=recon_fdk, beta=1.0, gamma=3.0)
     mj.slice_viewer(weights_mar, jnp.abs(sino), vmin=0, vmax=2.0, slice_axis=[0, 0], slice_label= ["Weights", "Sinogram"])
 
-    print("\n*******************************************************",
-          "\n******** Perform MBIR recon with MAR weights **********",
-          "\n*******************************************************")
+    print("\n************** Perform MBIR recon **************")
     recon_mar, recon_dict_mar = ct_model.recon(sino, weights=weights_mar)
 
+    # Save recon to hdf5
+    print("\n*********** save recon in h5 format *************")
+    mar_path = os.path.join(output_path, f"recon_fdk.h5")
+    mj.export_recon_hdf5(mar_path, recon_fdk, recon_dict=None)
+    mar_path = os.path.join(output_path, f"recon_mar.h5")
+    mj.export_recon_hdf5(mar_path, recon_mar, recon_dict=None)
 
-    # #### Display results
-    # change the image data shape to (slices, rows, cols)
-    fdk_recon = np.transpose(fdk_recon, axes=(2, 0, 1))
-    recon_mar = np.transpose(recon_mar, axes=(2, 0, 1))
-
-    vmin = 0
-    vmax = downsample_factor[0] * 0.025
-    mj.slice_viewer(fdk_recon, recon_mar, data_dicts=[None, recon_dict_mar], vmin=0, vmax=vmax, slice_label= ["FDK", "MBIR MAR"], title='Comparison')
+    if verbose > 1:
+        vmin = 0
+        vmax = downsample_factor[0] * 0.025
+        mj.slice_viewer(recon_fdk, recon_mar, data_dicts=[None, recon_dict_mar], vmin=0, vmax=vmax, slice_label= ["FDK", "MBIR MAR"], title='Comparison')
 

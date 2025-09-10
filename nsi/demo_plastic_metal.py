@@ -13,6 +13,13 @@ pp = pprint.PrettyPrinter(indent=4)
 if __name__ == "__main__":
     print('This script demonstrates mbirjax metal-plastic reconstruction.\n')
 
+    # === MBIR Recon parameters ===
+    sharpness = 1.0
+    num_metal = 2                     # Number of distinct metal materials
+    alpha = [1.0, 0.0, 0.0]           # beam_hardening_correction coefficient
+    downsample = 4                    # Default down sampling rate
+    verbose = 1                       # Print, but do not display
+
     # ----------------------------
     # Parse command line arguments
     # ----------------------------
@@ -59,20 +66,13 @@ if __name__ == "__main__":
     else:
         dataset_dir = mj.download_and_extract(dataset_url, download_dir)
 
-    # === Preprocessing parameters ===
+    # Override default down sampling rate if provided
     if args.downsampling is not None:
-        downsample_rate = [args.downsampling, args.downsampling]
-        subsample_view_factor = 2 * args.downsampling
-    else:
-        downsample_rate = [4, 4]   # default
-        subsample_view_factor = 4  # default
+        downsample = [args.downsampling, args.downsampling]
 
-    # === MBIR Recon parameters ===
-    sharpness = 1.0
-    num_metal = 2                     # Number of distinct metal materials
-    alpha = [1.0, 0.0, 0.0]           # beam_hardening_correction coefficient
-
-    verbose = 1
+    # Set down sampling rates
+    downsample_rate = [downsample, downsample]
+    subsample_view_factor = 2*downsample
 
     print("\n************** NSI dataset preprocessing **************")
     sino, cone_beam_params, optional_params = \

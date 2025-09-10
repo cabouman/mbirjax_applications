@@ -17,6 +17,12 @@ if __name__ == "__main__":
     print('This script is demonstrates the preprocessing and reconstruction of NSI an dataset\
     \n\t using both FDK and MBIR reconstruction.\n')
 
+    # recon parameters
+    sharpness = 1.0
+    snr_db = 30.0
+    downsample = 4
+    verbose = 1              # Print, but do not display plots
+
     # User defined params
     output_path = './output/nsi_demo/'  # path to store output recon images
     os.makedirs(output_path, exist_ok=True)  # mkdir if directory does not exist
@@ -40,24 +46,16 @@ if __name__ == "__main__":
     dataset_dir = mj.download_and_extract(dataset_url, download_dir)
 
     # preprocessing parameters
-    downsample_factor = [4, 4]  # downsample factor of scan view images along detector rows and detector columns.
-    subsample_view_factor = 8  # view subsample factor.
+    downsample_factor = [downsample, downsample]  # downsample factor of scan view images along detector rows and detector columns.
+    subsample_view_factor = 2*downsample  # view subsample factor.
 
-    # recon parameters
-    sharpness = 1.0
-    snr_db = 30.0
-
-    print("\n*******************************************************",
-          "\n************** NSI dataset preprocessing **************",
-          "\n*******************************************************")
+    print("\n************** NSI dataset preprocessing **************")
     sino, cone_beam_params, optional_params = \
         mjp.nsi.compute_sino_and_params(dataset_dir,
                                                        downsample_factor=downsample_factor,
                                                        subsample_view_factor=subsample_view_factor)
 
-    print("\n*******************************************************",
-          "\n***************** Set up MBIRJAX model ****************",
-          "\n*******************************************************")
+    print("\n************** Set up MBIRJAX model **************")
     # Construct cone beam object using NSI parameters
     ct_model = mj.ConeBeamModel(**cone_beam_params)
 
@@ -70,24 +68,16 @@ if __name__ == "__main__":
     # Print out model parameters
     ct_model.print_params()
 
-    print("\n*******************************************************",
-          "\n************** Calculate sinogram weights *************",
-          "\n*******************************************************")
+    print("\n************** Calculate sinogram weights **************")
     weights = mj.gen_weights(sino, weight_type='transmission_root')
 
-    print("\n******************************************************",
-          "\n************** Perform FDK reconstruction ************",
-          "\n******************************************************")
-
+    print("\n************** Perform FDK reconstruction **************")
     # ##########################
     # Perform FDK reconstruction
     fdk_recon = ct_model.direct_recon(sino)
     #mj.slice_viewer(fdk_recon)
 
-    print("\n*******************************************************",
-          "\n************** Perform MBIR reconstruction ************",
-          "\n*******************************************************")
-
+    print("\n************** Perform MBIR reconstruction **************")
     # #### Perform MBIR reconstruction
     time0 = time.time()
     mbir_recon, mbir_recon_dict = ct_model.recon(sino, weights=weights)
@@ -101,12 +91,8 @@ if __name__ == "__main__":
     # #### Save MBIR reconstruction to HDF5 file output
     mj.save_data_hdf5(os.path.join(output_path, "recon.h5"), mbir_recon, array_name='recon')
 
-    # #### Display results
-    # change the image data shape to (slices, rows, cols)
-    fdk_recon = np.transpose(fdk_recon, axes=(2, 0, 1))
-    mbir_recon = np.transpose(mbir_recon, axes=(2, 0, 1))
-
-    # Display FDK versus MBIR
-    vmin = 0
-    vmax = downsample_factor[0] * 0.025
-    mj.slice_viewer(fdk_recon, mbir_recon, data_dicts=[None, mbir_recon_dict], vmin=0, vmax=vmax, slice_label= ["FDK Recon", "MBIR Recon"], title='Axial Slice')
+    if verbose >1:
+        # Display FDK versus MBIR
+        vmin = 0
+        vmax = downsample_factor[0] * 0.025
+        mj.slice_viewer(fdk_recon, mbir_recon, data_dicts=[None, mbir_recon_dict], vmin=0, vmax=vmax, slice_label= ["FDK Recon", "MBIR Recon"], title='Axial Slice')
