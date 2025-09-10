@@ -23,12 +23,10 @@ if __name__ == "__main__":
     downsample = 4
     verbose = 1              # Print, but do not display plots
 
-    # User defined params
-    output_path = './output/nsi_demo/'  # path to store output recon images
+    # User defined paths
+    output_path = './output/nsi_demo_mar/'   # path to store output recon images
     os.makedirs(output_path, exist_ok=True)  # mkdir if directory does not exist
-
-    # path to store and extract the NSI data and metadata.
-    download_dir = './demo_data/'
+    download_dir = './demo_data/'            # Directory to store downloaded data
 
     # Prompt the user for dataset choice
     choice = input("Download dataset with metal? (Y/n): ").strip().lower()

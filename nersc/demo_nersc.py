@@ -1,3 +1,4 @@
+import os
 import sys
 import numpy as np
 import jax.numpy as jnp
@@ -8,9 +9,19 @@ import h5py
 
 pp = pprint.PrettyPrinter(indent=4)
 
-
 if __name__ == "__main__":
     print('This script is a demonstration of the MBIR reconstruction workflow.\n')
+
+    # recon parameters
+    sharpness = 1.0
+    verbose = 1              # Print, but do not display plots
+    num_slices = 4
+
+    # User defined paths
+    output_path = './output/nersc_demo/'   # path to store output recon images
+    os.makedirs(output_path, exist_ok=True)  # mkdir if directory does not exist
+    download_dir = './demo_data/'            # Directory to store downloaded data
+
 
     # Define available datasets and parameters
     available_datasets = {
@@ -95,11 +106,7 @@ if __name__ == "__main__":
     slice_number = available_datasets[dataset]['slice_number']
     sharpness = available_datasets[dataset]['sharpness']
 
-    # Set reconstruction parameters
-    num_slices = 4
-
     # Download data
-    download_dir = './demo_data/'
     dataset_dir = mj.download_and_extract(dataset_url, download_dir)
 
     # Load reconstruction parameters from data.
@@ -147,8 +154,9 @@ if __name__ == "__main__":
     # This must be done after the weights are computed
     sino = mjp.remove_sino_offset(sino)
 
-    # Display the sinogram
-    mj.slice_viewer(sino, slice_axis=1, title='Sinogram after Stripe and Offset Removal')
+    if verbose > 1:
+        # Display the sinogram
+        mj.slice_viewer(sino, slice_axis=1, title='Sinogram after Stripe and Offset Removal')
 
     # Scale the region of reconstruction (ROR) to reduce artifacts
     pad_size = ct_model.scale_recon_shape(row_scale=ROR_scale, col_scale=ROR_scale)
@@ -167,8 +175,9 @@ if __name__ == "__main__":
         recon = mjp.apply_cylindrical_mask(recon, radial_margin=radial_margin, top_margin=0, bottom_margin=0)
 
     # Save reconstruction results
-    output_path = f'./demo_data/output/mbir_recon_{dataset}.h5'
-    ct_model.save_recon_hdf5(filepath=output_path, recon=recon, recon_dict=recon_dict)
+    output_path = os.path.join(output_path, f'{dataset}.h5')
+    mj.export_recon_hdf5(output_path, recon, recon_dict=recon_dict, top_margin=0, bottom_margin=0)
 
-    # Display the results
-    mj.slice_viewer(recon, data_dicts=recon_dict, vmin = 0, vmax = 10, title=f'MBIR Reconstruction - {dataset}')
+    if verbose > 1:
+        # Display the results
+        mj.slice_viewer(recon, data_dicts=recon_dict, vmin = 0, vmax = 10, title=f'MBIR Reconstruction - {dataset}')
