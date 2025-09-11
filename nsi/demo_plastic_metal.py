@@ -68,7 +68,7 @@ if __name__ == "__main__":
 
     # Override default down sampling rate if provided
     if args.downsampling is not None:
-        downsample = [args.downsampling, args.downsampling]
+        downsample = args.downsampling
 
     # Set down sampling rates
     downsample_rate = [downsample, downsample]
