@@ -108,7 +108,7 @@ if __name__ == "__main__":
     # Save recon to hdf5
     print("\n*********** save mar and fdk recon in h5 format *************")
     mar_path = os.path.join(output_path, f"recon_{dataset_tag}_mar.h5")
-    mj.export_recon_hdf5(mar_path, recon, recon_dict=None)
+    mj.export_recon_hdf5(mar_path, recon, recon_dict=None, remove_flash=True)
     fdk_path = os.path.join(output_path, f"recon_{dataset_tag}_fdk.h5")
     mj.export_recon_hdf5(fdk_path, recon_fdk, recon_dict=None)
     print("Metal artifact reduction recon saved to {}".format(os.path.abspath(mar_path)))

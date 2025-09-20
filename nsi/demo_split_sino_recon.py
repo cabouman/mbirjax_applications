@@ -70,4 +70,4 @@ if __name__ == "__main__":
     # Save recon to hdf5
     print("\n*********** save split sino recon in h5 format *************")
     mar_path = os.path.join(output_path, f"recon_split_sino.h5")
-    mj.export_recon_hdf5(mar_path, recon, recon_dict=None)
+    mj.export_recon_hdf5(mar_path, recon, recon_dict=None, remove_flash=True)

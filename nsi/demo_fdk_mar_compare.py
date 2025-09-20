@@ -89,7 +89,7 @@ if __name__ == "__main__":
     mar_path = os.path.join(output_path, f"recon_fdk.h5")
     mj.export_recon_hdf5(mar_path, recon_fdk, recon_dict=None)
     mar_path = os.path.join(output_path, f"recon_mar.h5")
-    mj.export_recon_hdf5(mar_path, recon_mar, recon_dict=recon_dict_mar)
+    mj.export_recon_hdf5(mar_path, recon_mar, recon_dict=recon_dict_mar, remove_flash=True)
 
     if verbose > 1:
         vmin = 0

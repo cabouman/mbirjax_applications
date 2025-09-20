@@ -87,7 +87,7 @@ if __name__ == "__main__":
     pprint.pprint(mbir_recon_dict['recon_params'])
 
     # #### Save MBIR reconstruction to HDF5 file output
-    mj.export_recon_hdf5(os.path.join(output_path, "recon.h5"), mbir_recon, recon_dict=mbir_recon_dict)
+    mj.export_recon_hdf5(os.path.join(output_path, "recon.h5"), mbir_recon, recon_dict=mbir_recon_dict, remove_flash=True)
 
     if verbose >1:
         # Display FDK versus MBIR
