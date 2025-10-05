@@ -176,7 +176,7 @@ if __name__ == "__main__":
 
     # Save reconstruction results
     output_path = os.path.join(output_path, f'{dataset}.h5')
-    mj.export_recon_hdf5(output_path, recon, recon_dict=recon_dict, top_margin=0, bottom_margin=0)
+    mj.export_recon_hdf5(output_path, recon, recon_dict=recon_dict)
 
     if verbose > 1:
         # Display the results
