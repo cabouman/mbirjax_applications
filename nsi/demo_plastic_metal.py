@@ -28,6 +28,8 @@ if __name__ == "__main__":
                         help="Path to existing data directory.")
     parser.add_argument("--downsampling", type=int, default=None,
                         help="Downsampling factor (sets detector and view downsampling).")
+    parser.add_argument("--subsample_view_factor", type=int, default=None,
+                        help="Subsampling factor for projection views.")
     args = parser.parse_args()
 
     # Output path
@@ -72,7 +74,7 @@ if __name__ == "__main__":
 
     # Set down sampling rates
     downsample_rate = [downsample, downsample]
-    subsample_view_factor = 2*downsample
+    subsample_view_factor = args.subsample_view_factor if args.subsample_view_factor is not None else 2 * downsample
 
     print("\n************** NSI dataset preprocessing **************")
     sino, cone_beam_params, optional_params = \
