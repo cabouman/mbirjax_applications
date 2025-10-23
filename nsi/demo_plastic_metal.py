@@ -43,7 +43,6 @@ if __name__ == "__main__":
     #   "AI"             -> Autoinjector HighRes Horizontal
     #   "CAI_horizontal" -> Connected Autoinjector Horizontal
     #   "CAI_vertical"   -> Connected Autoinjector Vertical
-    #   "existing_data"  -> Use uncompressed scan data in the folder pointed to by existing_directory
 
     if dataset_choice == "AI":
         dataset_url = '/depot/bouman/data/Lilly/Autoinjector_HighRes_Horizontal.tgz'
