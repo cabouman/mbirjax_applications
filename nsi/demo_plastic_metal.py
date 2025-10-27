@@ -30,6 +30,8 @@ if __name__ == "__main__":
                         help="Downsampling factor (sets detector and view downsampling).")
     parser.add_argument("--subsample_view_factor", type=int, default=None,
                         help="Subsampling factor for projection views.")
+    parser.add_argument("--metal", type=int, default=1,
+                        help="Specify whether the dataset contains metal: 1 = with metal (MAR), 0 = without metal (straight up MBIR).")
     args = parser.parse_args()
 
     # Output path
@@ -90,33 +92,41 @@ if __name__ == "__main__":
     weights_trans = mj.gen_weights(sino, weight_type='transmission_root')
     ct_model.print_params()
 
-    print("\n*************** Compute MAR reconstruction ***************")
-    recon = mjp.recon_BH_plastic_metal(ct_model, sino, weights_trans, num_metal=num_metal, verbose=verbose)
+    # ----- Choose recon based on --metal flag -----
+    if args.metal == 0:
+        print("\n*************** Compute plain MBIR reconstruction ***************")
+        recon, recon_dict = ct_model.recon(sino, weights=weights_trans)
+        recon_label = "mbir"
 
-    print("\n*********** Segment plastic and metal masks *************")
-    plastic_mask, metal_masks, plastic_scale, metal_scales = \
-        mjp.segment_plastic_metal(recon, num_metal=num_metal)
+    elif args.metal == 1:
+        print("\n*************** Compute MAR reconstruction ***************")
+        recon = mjp.recon_BH_plastic_metal(ct_model, sino, weights_trans, num_metal=num_metal, verbose=verbose)
 
-    # Visualize masks
-    if verbose >= 2:
-        labels = ['Plastic Mask'] + [f'Metal {i+1} Mask' for i in range(len(metal_masks))]
-        mj.slice_viewer(plastic_mask, *metal_masks, vmin=0, vmax=1.0, slice_axis=0,
-                        slice_label=labels, title="Final Plastic and Metal Masks")
+        print("\n*********** Segment plastic and metal masks *************")
+        plastic_mask, metal_masks, plastic_scale, metal_scales = \
+            mjp.segment_plastic_metal(recon, num_metal=num_metal)
+
+        # Visualize masks
+        if verbose >= 2:
+            labels = ['Plastic Mask'] + [f'Metal {i+1} Mask' for i in range(len(metal_masks))]
+            mj.slice_viewer(plastic_mask, *metal_masks, vmin=0, vmax=1.0, slice_axis=0,
+                            slice_label=labels, title="Final Plastic and Metal Masks")
+        recon_label = "mar"
 
     # Compute FDK reconstruction
     recon_fdk = ct_model.direct_recon(sino)
 
     # Save recon to hdf5
-    print("\n*********** save mar and fdk recon in h5 format *************")
-    mar_path = os.path.join(output_path, f"recon_{dataset_tag}_mar.h5")
-    mj.export_recon_hdf5(mar_path, recon, recon_dict=None, remove_flash=True)
+    print("\n*********** Save reconstruction results in h5 format *************")
+    save_path = os.path.join(output_path, f"recon_{dataset_tag}_{recon_label}.h5")
+    mj.export_recon_hdf5(save_path, recon, recon_dict=None, remove_flash=True)
     fdk_path = os.path.join(output_path, f"recon_{dataset_tag}_fdk.h5")
     mj.export_recon_hdf5(fdk_path, recon_fdk, recon_dict=None)
-    print("Metal artifact reduction recon saved to {}".format(os.path.abspath(mar_path)))
-    print("FDK recon saved to {}".format(os.path.abspath(fdk_path)))
+    print(f"{recon_label.upper()} recon saved to {os.path.abspath(save_path)}")
+    print(f"FDK recon saved to {os.path.abspath(fdk_path)}")
 
     if verbose >= 2:
         vmax = downsample_rate[0] * 0.025
         mj.slice_viewer(recon_fdk, recon, vmin=0, vmax=vmax, slice_axis=0,
-                        slice_label=['FDK', 'MBIR MAR'],
-                        title='Comparison between the original and corrected reconstruction')
+                        slice_label=['FDK', 'MBIR MAR' if args.metal == 1 else 'MBIR'],
+                        title='Comparison between the FDK and MBIR MAR' if args.metal == 1 else 'Comparison between the FDK and MBIR')
