@@ -15,7 +15,6 @@ if __name__ == "__main__":
 
     # === MBIR Recon parameters ===
     sharpness = 1.0
-    num_metal = 2                     # Number of distinct metal materials
     alpha = [1.0, 0.0, 0.0]           # beam_hardening_correction coefficient
     downsample = 4                    # Default down sampling rate
     verbose = 1                       # Print, but do not display
@@ -30,6 +29,8 @@ if __name__ == "__main__":
                         help="Downsampling factor (sets detector and view downsampling).")
     parser.add_argument("--subsample_view_factor", type=int, default=None,
                         help="Subsampling factor for projection views.")
+    parser.add_argument("--num_metal", type=int, default=2,
+                        help="Number of metal types for segmentation and MAR.")
     args = parser.parse_args()
 
     # Output path
@@ -71,6 +72,8 @@ if __name__ == "__main__":
     if args.downsampling is not None:
         downsample = args.downsampling
 
+    num_metal = 0 #args.num_metal
+
     # Set down sampling rates
     downsample_rate = [downsample, downsample]
     subsample_view_factor = args.subsample_view_factor if args.subsample_view_factor is not None else 2 * downsample
@@ -90,18 +93,8 @@ if __name__ == "__main__":
     weights_trans = mj.gen_weights(sino, weight_type='transmission_root')
     ct_model.print_params()
 
-    print("\n*************** Compute MAR reconstruction ***************")
+    print("\n*************** Compute reconstruction ***************")
     recon = mjp.recon_BH_plastic_metal(ct_model, sino, weights_trans, num_metal=num_metal, verbose=verbose)
-
-    print("\n*********** Segment plastic and metal masks *************")
-    plastic_mask, metal_masks, plastic_scale, metal_scales = \
-        mjp.segment_plastic_metal(recon, num_metal=num_metal)
-
-    # Visualize masks
-    if verbose >= 2:
-        labels = ['Plastic Mask'] + [f'Metal {i+1} Mask' for i in range(len(metal_masks))]
-        mj.slice_viewer(plastic_mask, *metal_masks, vmin=0, vmax=1.0, slice_axis=0,
-                        slice_label=labels, title="Final Plastic and Metal Masks")
 
     # Compute FDK reconstruction
     recon_fdk = ct_model.direct_recon(sino)
