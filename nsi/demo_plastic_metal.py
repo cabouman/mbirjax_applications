@@ -16,7 +16,6 @@ if __name__ == "__main__":
     # === MBIR Recon parameters ===
     sharpness = 1.0
     alpha = [1.0, 0.0, 0.0]           # beam_hardening_correction coefficient
-    downsample = 4                    # Default down sampling rate
     verbose = 1                       # Print, but do not display
 
     # ----------------------------
@@ -25,9 +24,9 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="MBIRJAX Plastic-Metal Reconstruction Demo")
     parser.add_argument("--data_path", type=str, default=None,
                         help="Path to existing data directory.")
-    parser.add_argument("--downsampling", type=int, default=None,
-                        help="Downsampling factor (sets detector and view downsampling).")
-    parser.add_argument("--subsample_view_factor", type=int, default=None,
+    parser.add_argument("--downsampling", type=int, default=1,  # Perhaps change to subsample_detector_factor
+                        help="Subsampling factor for detector rows and channels.")
+    parser.add_argument("--subsample_view_factor", type=int, default=1,
                         help="Subsampling factor for projection views.")
     parser.add_argument("--num_metal", type=int, default=2,
                         help="Number of metal types for segmentation and MAR.")
@@ -69,14 +68,13 @@ if __name__ == "__main__":
         dataset_dir = mj.download_and_extract(dataset_url, download_dir)
 
     # Override default down sampling rate if provided
-    if args.downsampling is not None:
-        downsample = args.downsampling
+    downsample = args.downsampling
 
-    num_metal = 0 #args.num_metal
+    num_metal = args.num_metal
 
     # Set down sampling rates
     downsample_rate = [downsample, downsample]
-    subsample_view_factor = args.subsample_view_factor if args.subsample_view_factor is not None else 2 * downsample
+    subsample_view_factor = args.subsample_view_factor
 
     print("\n************** NSI dataset preprocessing **************")
     sino, cone_beam_params, optional_params = \
@@ -101,7 +99,7 @@ if __name__ == "__main__":
 
     # Save recon to hdf5
     print("\n*********** save mar and fdk recon in h5 format *************")
-    mar_path = os.path.join(output_path, f"recon_{dataset_tag}_mar.h5")
+    mar_path = os.path.join(output_path, f"recon_{dataset_tag}_nummetal_{num_metal}_mar.h5")
     mj.export_recon_hdf5(mar_path, recon, recon_dict=None, remove_flash=True)
     fdk_path = os.path.join(output_path, f"recon_{dataset_tag}_fdk.h5")
     mj.export_recon_hdf5(fdk_path, recon_fdk, recon_dict=None)
