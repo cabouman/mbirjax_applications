@@ -65,7 +65,7 @@ if __name__ == "__main__":
 
     if verbose>0:
         print("\n*************** Compute reconstruction ***************")
-    recon = mjp.recon_BH_plastic_metal(ct_model, sino, weights_trans, num_metal=num_metal, verbose=verbose)
+    recon = mjp.recon_plastic_metal(ct_model, sino, weights_trans, num_metal=num_metal, verbose=verbose)
 
     # Save recon to hdf5
     if verbose>0:
