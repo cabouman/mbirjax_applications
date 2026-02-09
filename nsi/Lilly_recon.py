@@ -27,7 +27,7 @@ if __name__ == "__main__":
                         help="Subsampling factor for projection views.")
     parser.add_argument("--num_metal", type=int, default=2,
                         help="Number of metal types for segmentation and MAR.")
-    parser.add_argument("sino_cropping", type=int, default=1,
+    parser.add_argument("--sino_cropping", type=int, default=1,
                         help="Flag for applying sinogram cropping")
     args = parser.parse_args()
 
