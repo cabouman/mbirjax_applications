@@ -27,6 +27,8 @@ if __name__ == "__main__":
                         help="Subsampling factor for projection views.")
     parser.add_argument("--num_metal", type=int, default=2,
                         help="Number of metal types for segmentation and MAR.")
+    parser.add_argument("sino_cropping", type=int, default=1,
+                        help="Flag for applying sinogram cropping")
     args = parser.parse_args()
 
     # Set output path
@@ -50,7 +52,11 @@ if __name__ == "__main__":
         print("\n************** NSI dataset preprocessing **************")
     sino, cone_beam_params, optional_params = \
         mjp.nsi.compute_sino_and_params(dataset_dir, downsample_factor=downsample_rate, subsample_view_factor=subsample_view_factor)
-
+    cropping = bool(args.sino_cropping)
+    if cropping:
+        sino, cone_beam_params, optional_params = mjp.auto_crop_sino_conebeam(sino, cone_beam_params, optional_params)
+        if verbose>0:
+            print("Cropping unused sinogram margins and update cone-beam geometry parameters.")
     # Clip sinogram to be positive
     sino = jnp.maximum(sino, 0.0)   # Clip sinogram to be non-negative
 
