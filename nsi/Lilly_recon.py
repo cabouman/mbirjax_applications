@@ -56,7 +56,7 @@ if __name__ == "__main__":
     if cropping:
         sino, cone_beam_params, optional_params = mjp.auto_crop_sino_conebeam(sino, cone_beam_params, optional_params)
         if verbose>0:
-            print("Cropping unused sinogram margins and update cone-beam geometry parameters.")
+            print("\n********** Cropping sinogram margins and update cone-beam geometry parameters **********")
     # Clip sinogram to be positive
     sino = jnp.maximum(sino, 0.0)   # Clip sinogram to be non-negative
 
