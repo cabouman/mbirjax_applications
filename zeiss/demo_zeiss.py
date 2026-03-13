@@ -45,6 +45,9 @@ if __name__ == "__main__":
         # Display the sinogram
         mj.slice_viewer(sinogram, slice_axis=0, title='Original sinogram')
 
+    # Print out model parameters
+    ct_model.print_params()
+
     # Perform FDK reconstruction
     print("\n********** Perform FDK reconstruction **************")
     direct_recon = ct_model.direct_recon(sinogram)
