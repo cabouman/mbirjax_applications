@@ -1,8 +1,5 @@
 import os
 import sys
-source_path = "/home/yang1581/Github/mbirjax"
-if source_path not in sys.path:
-    sys.path.insert(0, source_path)
 import numpy as np
 import jax.numpy as jnp
 import pprint
@@ -77,7 +74,7 @@ if __name__ == "__main__":
     print("FDK recon saved to {}".format(os.path.abspath(fdk_path)))
     print("MBIR recon saved to {}".format(os.path.abspath(mbir_path)))
 
-    if verbose > 0:
+    if verbose > 1:
         # Display the results
         mj.slice_viewer(direct_recon, mbir_recon, slice_axis=2, vmin=0, vmax=0.4,
                         slice_label=['FDK', 'MBIR'],
