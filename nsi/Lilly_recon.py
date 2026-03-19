@@ -75,10 +75,14 @@ if __name__ == "__main__":
         print("\n*************** Compute reconstruction ***************")
     recon = mjp.recon_plastic_metal(ct_model, sino, weights_trans, num_metal=num_metal, verbose=verbose)
 
+    # Load voxel pitch
+    delta_voxel_mm = ct_model.get_params('delta_voxel') * ct_model.get_params('alu_value')
+    delta_voxel_um = delta_voxel_mm * 1000
     # Save recon to hdf5
     if verbose>0:
         print("\n*********** save mar and fdk recon in h5 format *************")
-    mar_path = os.path.join(output_path, f"recon_{dataset_tag}_nummetal_{num_metal}_mar.h5")
+    mar_path = os.path.join(output_path,
+    f"recon_{dataset_tag}_nummetal_{num_metal}_voxel_pitch_{delta_voxel_um:.2f}um_mar.h5")
     mj.export_recon_hdf5(mar_path, recon, recon_dict=None, remove_flash=True)
     if verbose>0:
         print("Metal artifact reduction recon saved to {}".format(os.path.abspath(mar_path)))
