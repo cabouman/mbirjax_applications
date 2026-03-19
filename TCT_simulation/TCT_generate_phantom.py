@@ -16,7 +16,6 @@ for package in required_packages:
     else:
         print(f"{package} is already installed.")
 
-import sys
 import mbirjax as mj
 import mbirjax.preprocess as mjp
 import numpy as np
