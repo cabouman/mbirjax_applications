@@ -1,8 +1,28 @@
 import sys
+import importlib.util
+import subprocess
+
+# Install necessary package
+required_packages = ['trimesh']
+for package in required_packages:
+    if importlib.util.find_spec(package) is None:
+        print(f"{package} not found. Installing...")
+        try:
+            subprocess.check_call([sys.executable, "-m", "pip", "install", package])
+            print(f"Successfully installed {package}")
+        except subprocess.CalledProcessError:
+            print(f"Failed to install {package}. Please install it manually.")
+            sys.exit(1)
+    else:
+        print(f"{package} is already installed.")
+
+import sys
 import mbirjax as mj
 import mbirjax.preprocess as mjp
 import numpy as np
 import os
+import trimesh
+from scipy.ndimage import zoom
 
 def get_experiment_params(experiment_name):
     """Returns experiment-specific parameters."""
@@ -99,17 +119,29 @@ if __name__ == "__main__":
                                                                      delta_det_channel_ALU, sino_shape,
                                                                      translation_vectors)
 
-    # Generate ground truth phantom
+    ### Generate ground truth phantom
     print("\n********** Generate ground truth phantom **************")
-    recon_shape = recon_shape[:2]+(int(recon_shape[2]*1.1),)
-    gt_phantom = mj.gen_cad_phantom(cad_file_path, delta_voxel, delta_recon_row, recon_shape)
+    # Load the CAD file and turn it into a 3D phantom (object=1, background=0)
+    gt_phantom = trimesh.load(cad_file_path).voxelized(pitch=0.2).matrix.astype(np.uint8)
+
+    # Resize the phantom to match desired resolution
+    gt_phantom = zoom(gt_phantom, zoom=(0.2 / delta_voxel, 0.2 / delta_voxel, 0.2 / delta_recon_row), order=0)
+    gt_phantom = gt_phantom.transpose(2, 1, 0)
+
+    # Define recon shape for simulated phantom
+    recon_shape = (int(2.0 * gt_phantom.shape[0]), recon_shape[1], int(recon_shape[2]*1.1))
+
+    # Reshape simulated phantom to recon shape
+    pad_total = np.array(recon_shape) - np.array(gt_phantom.shape)
+    pads = [(pad_total[i] // 2, pad_total[i] - pad_total[i] // 2) for i in range(3)]
+    gt_phantom = np.pad(gt_phantom, pads, mode='constant')
 
     # Set parameters for forward projection
     tct_model.set_params(positivity_flag=True)
     tct_model.set_params(delta_det_channel=delta_det_channel_ALU)
     tct_model.set_params(delta_det_row=delta_det_row_ALU)
     tct_model.set_params(delta_voxel=delta_voxel)
-    tct_model.set_params(recon_shape=gt_phantom.shape)
+    tct_model.set_params(recon_shape=recon_shape)
     tct_model.set_params(delta_recon_row=delta_recon_row)
     tct_model.set_params(qggmrf_nbr_wts=qggmrf_nbr_weights)
 
