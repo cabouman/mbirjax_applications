@@ -75,7 +75,7 @@ if __name__ == '__main__':
     # Run VCLS to Select Views and Display Results
     ##############################################
     time0 = time.time()
-    optimal_angle_inds, vcl_value = mjp.get_opt_views(ct_model, reference_object, num_selected_views, verbose=1, seed=seed)
+    optimal_angle_inds, vcl_value = mj.get_opt_views(ct_model, reference_object, num_selected_views, verbose=1, seed=seed)
     optimal_angles = angle_candidates[optimal_angle_inds]
     elapsed = time.time() - time0
     print('Elapsed time for VCLS view selection is {:.3f} seconds'.format(elapsed))
@@ -85,13 +85,13 @@ if __name__ == '__main__':
     formatted = np.array2string(optimal_angles, precision=3, suppress_small=True, separator=', ')
     print('chosen angles: ' + formatted)
     middle_index = reference_object.shape[2] // 2 + 2
-    mjp.show_image_with_projection_rays(reference_object[:, :, middle_index], rotation_angles_rad=optimal_angles, title='Reference Object with Selected View Angles')
+    mj.show_image_with_projection_rays(reference_object[:, :, middle_index], rotation_angles_rad=optimal_angles, title='Reference Object with Selected View Angles')
 
     # Display reference object Fourier transform along with selected angles
     center_slice = reference_object[:, :, reference_object.shape[2] // 2]
     ref_fft = np.fft.fftshift(np.fft.fft2(center_slice))
     angles_perp = optimal_angles + np.pi / 2    # Add 90deg because Fourier transform of edge is perpendicular to edge
-    mjp.show_image_with_projection_rays(np.log10(1e-2 + np.abs(ref_fft)), rotation_angles_rad=angles_perp, title='FFT of Reference Object\n with Selected View Angles')
+    mj.show_image_with_projection_rays(np.log10(1e-2 + np.abs(ref_fft)), rotation_angles_rad=angles_perp, title='FFT of Reference Object\n with Selected View Angles')
 
     # Compute mbir recon with optimal angles
     optimal_angles = angle_candidates[optimal_angle_inds]
