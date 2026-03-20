@@ -35,8 +35,9 @@ def get_experiment_params(experiment_name):
         "num_z_translations": 9,
         "num_det_rows": 1936,
         "num_det_channels": 3064,
+        "num_recon_rows": 72,
         "qggmrf_nbr_weights": [0.1, 1.0, 1.0],
-        "verbose": 1
+        "sharpness": 1,
     }
 
     if experiment_name == "experiment1":
@@ -54,7 +55,7 @@ def get_experiment_params(experiment_name):
 
 
 if __name__ == "__main__":
-    print("This script generates simulated phantoms used in Translation CT simulation experiments")
+    print("This script runs TCT simulation experiment using a CAD model of circuit board")
 
     experiment = sys.argv[1] if len(sys.argv) > 1 else "experiment1"
     params = get_experiment_params(experiment)
@@ -78,8 +79,9 @@ if __name__ == "__main__":
     num_z_translations = params["num_z_translations"]
     num_det_rows = params["num_det_rows"]
     num_det_channels = params["num_det_channels"]
+    num_recon_rows = params["num_recon_rows"]
     qggmrf_nbr_weights = params["qggmrf_nbr_weights"]
-    verbose = params["verbose"]
+    sharpness = params["sharpness"]
 
     # Calculate physical parameters in ALU
     # Note: 1 ALU = 1 delta_det_channel_unit
@@ -108,7 +110,7 @@ if __name__ == "__main__":
     sino_shape = (translation_vectors.shape[0], num_det_rows, num_det_channels)
 
     # Initialize model for forward projection
-    print("\n********** Construct tranlation model for forward projection **************")
+    print("\n********** Construct translation model for forward projection **************")
     tct_model = mj.TranslationModel(sino_shape, translation_vectors, source_detector_dist=source_det_dist_ALU, source_iso_dist=source_iso_dist_ALU)
 
     # Calculate recon_shape, delta_voxel, and delta_recon_row parameters
@@ -135,55 +137,54 @@ if __name__ == "__main__":
     pads = [(pad_total[i] // 2, pad_total[i] - pad_total[i] // 2) for i in range(3)]
     gt_phantom = np.pad(gt_phantom, pads, mode='constant')
 
-    # Set parameters for forward projection
+    # Set model parameters
     tct_model.set_params(positivity_flag=True)
+    tct_model.set_params(partition_sequence=5*[0,] + 100*[1, 3,])
     tct_model.set_params(delta_det_channel=delta_det_channel_ALU)
     tct_model.set_params(delta_det_row=delta_det_row_ALU)
     tct_model.set_params(delta_voxel=delta_voxel)
     tct_model.set_params(recon_shape=recon_shape)
     tct_model.set_params(delta_recon_row=delta_recon_row)
     tct_model.set_params(qggmrf_nbr_wts=qggmrf_nbr_weights)
+    tct_model.set_params(sharpness=sharpness)
+    tct_model.set_params(alu_unit=ALU_unit)
+    tct_model.set_params(alu_value=ALU_value)
 
-    if verbose > 1:
-        # Display translation array
-        translation_vectors_display = np.asarray(translation_vectors).copy()
-        translation_vectors_display[:, 0] /= delta_voxel
-        translation_vectors_display[:, 2] /= delta_voxel
-        translation_vectors_display[:, 1] /= delta_recon_row
-        mj.display_translation_vectors(translation_vectors_display, recon_shape)
+    # Display translation array
+    translation_vectors_display = np.asarray(translation_vectors).copy()
+    translation_vectors_display[:, 0] /= delta_voxel
+    translation_vectors_display[:, 2] /= delta_voxel
+    translation_vectors_display[:, 1] /= delta_recon_row
+    mj.display_translation_vectors(translation_vectors_display, recon_shape)
 
-    tct_model.print_params()
-
-    if verbose > 1:
-        # View ground truth phantom
-        mj.slice_viewer(gt_phantom.transpose(0, 2, 1), title='Ground Truth Recon', slice_label='View', slice_axis=0)
+    # View ground truth phantom
+    mj.slice_viewer(gt_phantom.transpose(0, 2, 1), title='Ground Truth Recon', slice_label='View', slice_axis=0)
 
     # Generate synthetic sonogram data
     print("\n********** Generate forward projections of the phantom **************")
     sino = tct_model.forward_project(gt_phantom)
     sino = np.asarray(sino)
 
-    if verbose > 1:
-        # View synthetic sinogram
-        mj.slice_viewer(sino, slice_axis=0, title='Synthetic sinogram', slice_label='View')
+    # View synthetic sinogram
+    mj.slice_viewer(sino, slice_axis=0, title='Synthetic sinogram', slice_label='View')
 
-    # Store the parameters for reconstruction
-    print("\n********** Store geometry parameters for reconstruction **************")
-    translation_params = dict()
-    translation_params['sinogram_shape'] = sino_shape
-    translation_params['translation_vectors'] = translation_vectors
-    translation_params['source_detector_dist'] = source_det_dist_ALU
-    translation_params['source_iso_dist'] = source_iso_dist_ALU
+    # Set reconstruction shape
+    tct_model.set_params(recon_shape=(num_recon_rows,)+recon_shape[1:])
 
-    optional_params = dict()
-    optional_params['delta_det_channel'] = delta_det_channel_ALU
-    optional_params['delta_det_row'] = delta_det_row_ALU
-    optional_params['delta_voxel'] = delta_voxel
-    optional_params['alu_unit'] = ALU_unit
-    optional_params['alu_value'] = ALU_value
+    # Print out model parameters
+    tct_model.print_params()
 
-    # Save the simulated phantom, synthetic sinogram and reconstruction parameters together
-    print("\n********** save phantom, forward projections and recon parameters in npz format **************")
+    # Perform MBIR reconstruction
+    print("\n********** Perform MBIR reconstruction **************")
+    mbir_recon, mbir_dict = tct_model.recon(sino, max_iterations=200, stop_threshold_change_pct=0.3)
+
+    # Save reconstruction results
+    print("\n*********** save MBIR recon in h5 format *************")
     os.makedirs(output_path, exist_ok=True)
-    simulated_data_path = os.path.join(output_path, 'TCT_simulated_data.npz')
-    np.savez(simulated_data_path, phantom=gt_phantom, sino=sino, translation_params=translation_params, optional_params=optional_params)
+    output_path = os.path.join(output_path, f'TCT_simulation_recon.h5')
+    mj.export_recon_hdf5(output_path, mbir_recon, recon_dict=mbir_dict, top_margin=0, bottom_margin=0)
+
+    # Display results
+    mj.slice_viewer(gt_phantom.transpose(0, 2, 1), mbir_recon.transpose(0, 2, 1),
+                    vmin=0, vmax=0.8, title='Object (left), MBIR reconstruction (right)',
+                    slice_axis=0)
