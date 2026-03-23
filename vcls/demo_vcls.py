@@ -23,7 +23,6 @@ if __name__ == '__main__':
     num_candidate_views = 128
     start_angle = 0
     end_angle = 2 * np.pi
-    prev_selected_angles = angle_candidates[:2] + 1e-6
 
     #####################
     # Set VCLS parameters
@@ -59,6 +58,9 @@ if __name__ == '__main__':
 
     # Compute view angles
     angle_candidates = jnp.linspace(start_angle, end_angle, num_views, endpoint=False)
+
+    # Optional: Define previously selected angles
+    prev_selected_angles = angle_candidates[:2] + 1e-6
 
     # Create the model to contain all the geometry information
     ct_model = mj.get_ct_model(geometry_type, sinogram_shape, angle_candidates, source_detector_dist, source_iso_dist)
