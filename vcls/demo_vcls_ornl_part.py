@@ -31,6 +31,7 @@ if __name__ == '__main__':
     # Set VCLS parameters
     #####################
     num_selected_views = 40
+    priority_order = True  # reorders the selected view indices from most to least important
 
     ###############
     # Download Data
@@ -75,9 +76,10 @@ if __name__ == '__main__':
     # Run VCLS to Select Views and Display Results
     ##############################################
     time0 = time.time()
-    optimal_angle_inds, vcl_value = mj.get_opt_views(ct_model, reference_object, num_selected_views, verbose=1, seed=seed)
+    optimal_angle_inds, vcl_value = mj.get_opt_views(ct_model, reference_object, num_selected_views, priority_order=priority_order, verbose=1, seed=seed)
     optimal_angles = angle_candidates[optimal_angle_inds]
     elapsed = time.time() - time0
+    print('optimal_angle_inds: ', optimal_angle_inds)
     print('Elapsed time for VCLS view selection is {:.3f} seconds'.format(elapsed))
     print('VCL value for selected views = {:.6f}'.format(vcl_value))
 
@@ -117,4 +119,3 @@ if __name__ == '__main__':
 
     mj.slice_viewer(recon_uniform, recon_opt, data_dicts=[recon_dict_uniform, recon_dict_opt], slice_label=['Uniform: Slice', 'VCLS optimal: Slice'],
                     title='Recons from {} views: \nuniformly spaced angles (left) and optimal angles (right)'.format(num_selected_views), vmin=0.0, vmax=0.05)
-
