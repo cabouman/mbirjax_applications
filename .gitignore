@@ -13,6 +13,9 @@ vcls/recon_bases_data
 vcls/recon_bases_data/polygon_data
 nersc/logs
 
+tct/demo_data
+tct/output
+
 slurm*
 
 
