@@ -32,7 +32,7 @@ if __name__ == '__main__':
     r_1 = 0.01
     # r_2 = view sampling rate used for stochastic search in (0,1]. Smaller => faster; Larger => more accurate
     r_2 = 0.5
-    fast = True    # Use built in sparse back projection in mbirjax to speed algorithm
+    priority_order = True # reorders the selected view indices from most to least important
 
 
     ####################################################
@@ -66,13 +66,21 @@ if __name__ == '__main__':
     # Run VCLS to Select Views and Display Results
     ##############################################
     time0 = time.time()
-    optimal_angle_inds, vcl_value = mj.get_opt_views(ct_model, reference_object, num_selected_views, r_1=r_1, r_2=r_2, verbose=1, seed=seed)
+    # Optional: Select the best 2 views
+    # This can be useful in real application when a small number of views is measured first.
+    inital_number_of_views = 2
+    prev_selected_angle_inds, vcl_value = mj.get_opt_views(ct_model, reference_object, inital_number_of_views, r_1=r_1, r_2=r_2, verbose=1, seed=seed)
+    prev_selected_angles = angle_candidates[prev_selected_angle_inds]
+
+    # The select the remaining num_selected_views-2 views
+    optimal_angle_inds, vcl_value = mj.get_opt_views(ct_model, reference_object, num_selected_views - inital_number_of_views, r_1=r_1, r_2=r_2, prev_selected_angles=prev_selected_angles, priority_order=priority_order, verbose=1, seed=seed)
     optimal_angles = angle_candidates[optimal_angle_inds]
     elapsed = time.time() - time0
     print('Elapsed time for selected views is {:.3f} seconds'.format(elapsed))
     print('VCL value for selected views: {:.6f}'.format(vcl_value))
 
     # Display reference object cross-section with selected angles
+    optimal_angles = jnp.concatenate([prev_selected_angles, optimal_angles])
     formatted = np.array2string(optimal_angles, precision=3, suppress_small=True, separator=', ')
     print('chosen angles: ' + formatted)
     mj.show_image_with_projection_rays(reference_object[:, :, 0], rotation_angles_rad=optimal_angles, title='Reference Object with Selected View Angles')
