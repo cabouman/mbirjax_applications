@@ -70,7 +70,7 @@ if __name__ == '__main__':
     # This can be useful in real application when a small number of views is measured first.
     inital_number_of_views = 2
     prev_selected_view_inds, vcl_value = mj.get_opt_views(ct_model, reference_object, inital_number_of_views, r_1=r_1, r_2=r_2, verbose=1, seed=seed)
-    prev_selected_angles = angle_candidates[prev_selected_angle_inds]
+    prev_selected_angles = angle_candidates[prev_selected_view_inds]
 
     # The select the remaining num_selected_views-2 views
     optimal_angle_inds, vcl_value = mj.get_opt_views(ct_model, reference_object, num_selected_views - inital_number_of_views, r_1=r_1, r_2=r_2, prev_selected_view_inds=prev_selected_view_inds, priority_order=priority_order, verbose=1, seed=seed)
