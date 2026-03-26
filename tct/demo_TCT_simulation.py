@@ -134,7 +134,10 @@ if __name__ == "__main__":
     gt_phantom = gt_phantom.transpose(2, 1, 0)
 
     # Define recon shape for simulated phantom
-    recon_shape = (int(2.0 * gt_phantom.shape[0]), recon_shape[1], int(recon_shape[2]*1.2))
+    if recon_shape[2] <= gt_phantom.shape[2]:
+        recon_shape = (recon_shape[0], recon_shape[1], int(gt_phantom.shape[2] * 1.1))
+
+    recon_shape = (int(2.0 * gt_phantom.shape[0]), recon_shape[1], recon_shape[2])
 
     # Reshape simulated phantom to recon shape
     pad_total = np.array(recon_shape) - np.array(gt_phantom.shape)
