@@ -26,15 +26,16 @@ from scipy.ndimage import zoom
 def get_experiment_params(experiment_name):
     """Returns experiment-specific parameters."""
     base_config = {
-        "source_det_dist_mm": 120,
-        "source_iso_dist_mm": 100,
+        "source_det_dist_mm": 80,
+        "source_iso_dist_mm": 65,
         "det_pixel_pitch_mm": 75 / 1000,
-        "x_view_space_mm": 14,
-        "z_view_space_mm": 7,
+        "x_view_space_mm": 15,
+        "z_view_space_mm": 6.5,
         "num_x_translations": 11,
         "num_z_translations": 9,
         "num_det_rows": 1936,
         "num_det_channels": 3064,
+        "phantom_row_pitch_mm": 0.2,
         "num_recon_rows": 72,
         "qggmrf_nbr_weights": [0.1, 1.0, 1.0],
         "sharpness": 1,
@@ -80,6 +81,7 @@ if __name__ == "__main__":
     num_det_rows = params["num_det_rows"]
     num_det_channels = params["num_det_channels"]
     num_recon_rows = params["num_recon_rows"]
+    phantom_row_pitch_mm = params["phantom_row_pitch_mm"]
     qggmrf_nbr_weights = params["qggmrf_nbr_weights"]
     sharpness = params["sharpness"]
 
@@ -100,6 +102,7 @@ if __name__ == "__main__":
     source_det_dist_ALU = source_det_dist_mm * unit_conversion['mm'] / unit_conversion[ALU_unit]
     x_view_spacing_ALU = x_view_space_mm * unit_conversion['mm'] / unit_conversion[ALU_unit]
     z_view_spacing_ALU = z_view_space_mm * unit_conversion['mm'] / unit_conversion[ALU_unit]
+    phantom_row_pitch_ALU = phantom_row_pitch_mm * unit_conversion['mm'] / unit_conversion[ALU_unit]
     half_angle_rad = np.arctan2(max(num_det_rows, num_det_channels) / 2.0, source_iso_dist_ALU)
 
     # Generate translation vectors
@@ -114,11 +117,12 @@ if __name__ == "__main__":
     tct_model = mj.TranslationModel(sino_shape, translation_vectors, source_detector_dist=source_det_dist_ALU, source_iso_dist=source_iso_dist_ALU)
 
     # Calculate recon_shape, delta_voxel, and delta_recon_row parameters
-    recon_shape, delta_voxel, delta_recon_row = mj.utilities.calc_tct_recon_params(source_det_dist_ALU,
+    recon_shape, delta_voxel, _ = mj.utilities.calc_tct_recon_params(source_det_dist_ALU,
                                                                      source_iso_dist_ALU,
                                                                      delta_det_row_ALU,
                                                                      delta_det_channel_ALU, sino_shape,
                                                                      translation_vectors)
+    delta_recon_row = phantom_row_pitch_ALU
 
     ### Generate ground truth phantom
     print("\n********** Generate ground truth phantom **************")
@@ -130,7 +134,10 @@ if __name__ == "__main__":
     gt_phantom = gt_phantom.transpose(2, 1, 0)
 
     # Define recon shape for simulated phantom
-    recon_shape = (int(2.0 * gt_phantom.shape[0]), recon_shape[1], int(recon_shape[2]*1.1))
+    if recon_shape[2] <= gt_phantom.shape[2]:
+        recon_shape = (recon_shape[0], recon_shape[1], int(gt_phantom.shape[2] * 1.1))
+
+    recon_shape = (int(2.0 * gt_phantom.shape[0]), recon_shape[1], recon_shape[2])
 
     # Reshape simulated phantom to recon shape
     pad_total = np.array(recon_shape) - np.array(gt_phantom.shape)
@@ -167,9 +174,6 @@ if __name__ == "__main__":
 
     # View synthetic sinogram
     mj.slice_viewer(sino, slice_axis=0, title='Synthetic sinogram', slice_label='View')
-
-    # Set reconstruction shape
-    tct_model.set_params(recon_shape=(num_recon_rows,)+recon_shape[1:])
 
     # Print out model parameters
     tct_model.print_params()
