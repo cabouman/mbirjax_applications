@@ -60,7 +60,7 @@ if __name__ == "__main__":
             'vmax': 1,
         },
         'Zeiss Synthetic Foam': {
-            'url': '/depot/bouman/data/Zeiss/foam512R1N3000.txrm',
+            'url': '/depot/bouman/data/Zeiss/foam512R1N3000_raw_scan.txrm',
             'sharpness': 0.25,
             'snr_db': 30.0,
             'downsample_factor': 1,
