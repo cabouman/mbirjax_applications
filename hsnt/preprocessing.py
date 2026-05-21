@@ -137,7 +137,7 @@ def load_data(folder_path, wave_idx_start=0, num_total_wave=None):
     active_file_paths = sorted(file_paths, key=_natural_sort_key)[wave_idx_start:wave_idx_start + num_total_wave]
 
     # Multiprocessing parameters
-    num_process = min(max(1, cpu_count() - 1), len(active_file_paths))
+    num_process = min(max(1, cpu_count() // 2), len(active_file_paths))
 
     with Pool(num_process) as pool:
         count_data = pool.map(_load_tiff, active_file_paths)
