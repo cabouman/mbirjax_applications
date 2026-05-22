@@ -8,7 +8,7 @@ This script demonstrates hyperspectral neutron data preprocessing for Ni single-
 import os
 import numpy as np
 import mbirjax as mj
-import preprocessing as h_preproc
+import hsnt_prep_utils as h_preproc
 import matplotlib.pyplot as plt
 
 # Ni dataset information
@@ -24,6 +24,7 @@ output_file_name = ('processed_data_' + proton_charge + '_Ni_' + sample_type + '
 # Setup parameters
 wave_idx_start = 100  # Index of the 1st wavelength bin to be loaded
 num_total_wave = 200  # Number of total wavelength bins to be loaded
+output_type = 'attenuation'  # Options: 'attenuation' and 'transmission'
 
 # Setup background calibration boxes
 # It is a list of 4 1D arrays containing calibration box information for the 4 chips
@@ -39,11 +40,12 @@ processed_data = h_preproc.hyper_data_preprocessing(ob_folder_path,
                                                     proj_folder_path,
                                                     wave_idx_start=wave_idx_start,
                                                     num_total_wave=num_total_wave,
-                                                    back_calib_boxes=back_calib_boxes)
+                                                    back_calib_boxes=back_calib_boxes,
+                                                    output_type=output_type)
 
 # Save data
 metadata = mj.hsnt.create_hsnt_metadata(dataset_name=proton_charge + '_Ni_' + sample_type + '_dataset',
-                                        dataset_type="attenuation")
+                                        dataset_type=output_type)
 mj.hsnt.export_hsnt_data_hdf5(output_file_name, processed_data, metadata)
 
 # Sample processed image

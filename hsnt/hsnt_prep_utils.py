@@ -12,9 +12,12 @@ import numpy as np
 import tifffile
 from scipy.signal import fftconvolve
 
+# Global value for epsilon
+eps = 1e-8
+
 
 def hyper_data_preprocessing(ob_folder_path, proj_folder_path, wave_idx_start=0, num_total_wave=None, ob_smoothing=True,
-                             ob_smoothing_filter_width=3, back_calib_boxes=None):
+                             ob_smoothing_filter_width=3, back_calib_boxes=None, output_type='attenuation'):
     """Function to preprocess hyperspectral neutron data and produce open-beam normalized and background offset
     corrected projection densities.
 
@@ -28,6 +31,7 @@ def hyper_data_preprocessing(ob_folder_path, proj_folder_path, wave_idx_start=0,
         back_calib_boxes(list): list of 4 1D arrays containing calibration box information for the 4 chips
             chip sequence: (top left, top right, bottom left, bottom right)
             each 1D array: (y start, x start, y stop, x stop)
+        output_type(str): either 'attenuation' or 'transmission'
 
     Returns:
         ndarray: processed data with shape (num angles x height x width x wavelengths)
@@ -72,12 +76,16 @@ def hyper_data_preprocessing(ob_folder_path, proj_folder_path, wave_idx_start=0,
         # Replace zeros in the data
         raw_projection = replace_zero(raw_projection)
 
-        # Normalize projection data
-        norm_projection = normalize_projection(raw_projection, open_beam)
+        # Compute transmission data
+        norm_projection = compute_transmission(raw_projection, open_beam)
 
-        # Perform background calibration
-        if back_calib_boxes is not None:
-            norm_projection = calibrate_background(norm_projection, back_calib_boxes)
+        # Convert to attenuation if output_type is attenuation
+        if output_type == 'attenuation':
+            norm_projection = -np.log(norm_projection)
+
+            # Perform background calibration
+            if back_calib_boxes is not None:
+                norm_projection = calibrate_background_ORNL_SNAP(norm_projection, back_calib_boxes)
 
         processed_data.append(norm_projection)
 
@@ -144,6 +152,9 @@ def load_data(folder_path, wave_idx_start=0, num_total_wave=None):
 
     count_data = np.swapaxes(np.array(count_data), 0, 2)
 
+    # Replace nans and infs with zero
+    count_data = np.nan_to_num(count_data, nan=0, posinf=0, neginf=0)
+
     return count_data
 
 
@@ -159,9 +170,6 @@ def replace_zero(hyper_image):
         """
     corrected_image = np.copy(hyper_image)
     num_row, num_column, _ = corrected_image.shape
-
-    # Declare epsilon
-    epsilon = 1e-8
     
     # Find out the indices where the value is zero
     zero_idx = np.argwhere(corrected_image == 0)
@@ -198,7 +206,7 @@ def replace_zero(hyper_image):
     row = zero_idx[:, 0]
     column = zero_idx[:, 1]
     wave_idx = zero_idx[:, 2]
-    corrected_image[row, column, wave_idx] = epsilon
+    corrected_image[row, column, wave_idx] = eps
 
     return corrected_image
 
@@ -234,28 +242,24 @@ def smooth_open_beam(open_beam, filter_width=5):
     return open_beam_smooth
 
 
-def normalize_projection(raw_projection, open_beam):
-    """Function to normalize 3D raw projection data (height x width x wavelengths) at all wavelengths by taking the
-    negative log of the ratio of the raw projection and the corresponding open-beam.
+def compute_transmission(raw_projection, open_beam):
+    """Function to compute transmission data for 3D raw projection data (height x width x wavelengths) at all wavelengths
+    by taking the ratio of the raw projection and the corresponding open-beam.
     
     Args:
         raw_projection(ndarray): raw 3D projection data (height x width x wavelengths)
         open_beam(ndarray): processed 3D open-beam data (height x width x wavelengths)
     
     Returns:
-        ndarray: normalized 3D projection densities (height x width x wavelengths)
+        ndarray: 3D transmission data (height x width x wavelengths)
         """
     # Taking the negative log of the ratio of raw projection and open-beam
-    eps = 1e-8
-    norm_projection = -np.log(np.maximum(raw_projection, eps) / np.maximum(open_beam, eps))
-
-    # Replacing nan, +inf, and -inf with 0
-    norm_projection = np.nan_to_num(norm_projection, nan=0, posinf=0, neginf=0)
+    norm_projection = np.maximum(raw_projection, eps) / np.maximum(open_beam, eps)
 
     return norm_projection
 
 
-def calibrate_background(norm_projection, back_calib_boxes):
+def calibrate_background_ORNL_SNAP(norm_projection, back_calib_boxes):
     """Function to estimate background offsets caused by the mismatch of open-beam and raw projection counts at all
     wavelengths and remove the offsets from the data. Four boxed regions from the four chips where there are no objects
     are used to estimate the background offsets.
