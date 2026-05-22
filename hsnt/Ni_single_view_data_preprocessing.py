@@ -47,6 +47,7 @@ metadata = mj.hsnt.create_hsnt_metadata(dataset_name=proton_charge + '_Ni_' + sa
 mj.hsnt.export_hsnt_data_hdf5(output_file_name, processed_data, metadata)
 
 # Sample processed image
-plt.imshow(processed_data[0, :, :, (num_total_wave - wave_idx_start) // 2], cmap='gray', vmin=0, vmax=None)
+disp_wave_idx = processed_data.shape[3] // 2
+plt.imshow(processed_data[0, :, :, disp_wave_idx], cmap='gray', vmin=0, vmax=None)
 plt.colorbar()
 plt.show()
