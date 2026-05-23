@@ -32,7 +32,7 @@ def hyper_data_preprocessing(proj_folder_path, ob_folder_path=None, open_beam=No
         ob_smoothing_filter_width(int,optional): width of the Hamming filter used for smoothing (must be an odd number)
         back_calib_boxes(list,optional): list of 4 1D arrays containing calibration box information for the 4 chips
             chip sequence: (top left, top right, bottom left, bottom right)
-            each 1D array: (y start, x start, y stop, x stop)
+            each 1D array: (y start, y stop, x start, x stop)
         output_type(str,optional): either 'attenuation' or 'transmission'
         verbose(int,optional): verbosity level. If 0, prints nothing; if 1, prints details
 
@@ -263,7 +263,7 @@ def compute_transmission(raw_projection, open_beam):
     Returns:
         ndarray: 3D transmission data (height x width x wavelengths)
         """
-    # Taking the negative log of the ratio of raw projection and open-beam
+    # Taking the ratio of raw projection and open-beam
     norm_projection = np.maximum(raw_projection, eps) / np.maximum(open_beam, eps)
 
     return norm_projection

@@ -1,6 +1,6 @@
 # Hyperspectral Neutron Data Preprocessing
 
-There are three scripts in this folder.
+There are four scripts in this folder.
 
 ## 1. `hsnt_prep_utils.py`
 
@@ -41,6 +41,10 @@ This script preprocesses the Ni-Cu-Al CT dataset and performs fast hyperspectral
 It first uses `hyper_data_preprocessing` for preprocessing, then uses the MBIRJAX `dehydrate`, `recon`, and `rehydrate` functions to perform FHR.
 
 Because the dataset is large, the script avoids loading all angles into memory at once. Instead, it preprocesses and dehydrates the data one angle at a time.
+
+## 4. `plot_utils.py`
+
+This script contains a function called `plot_hyper_recons` to display hyperspectral reconstructions from different slices and wavelength indices.
 
 ## Note
 

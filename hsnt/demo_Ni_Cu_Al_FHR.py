@@ -10,7 +10,7 @@ import shutil
 import numpy as np
 import mbirjax as mj
 import hsnt_prep_utils as h_preproc
-import matplotlib.pyplot as plt
+import plot_utils as p_utils
 
 # Setup paths
 base_path = '/depot/bouman/data/ORNL/hsnt/tci_2025_Ni_Cu_Al'
@@ -39,8 +39,8 @@ verbose = 0  # Print nothing if 0
 back_calib_boxes = [[10, 110, 10, 110], [10, 110, 410, 510], [410, 510, 10, 110], [410, 510, 410, 510]]
 
 # Display parameters
-disp_wave_idx = 800
-disp_slice = 200
+disp_wave_idx = [300, 600, 900]
+disp_slices = [80, 200, 360]
 
 # Fix seed for random number generation
 np.random.seed(129)
@@ -145,7 +145,6 @@ print("-------------------------------------------")
 hsnt_recon = mj.hsnt.rehydrate(hsnt_dehydrated_recons, hyperspectral_idx=disp_wave_idx)
 
 # Plot image
-print("Displaying reconstructed image for wavelength index: ", disp_wave_idx, ", and slice index: ", disp_slice)
-plt.imshow(hsnt_recon[:, :, disp_slice], cmap='gray', vmin=0, vmax=None)
-plt.colorbar()
-plt.show()
+print("Displaying reconstructed image for wavelength indices: ", disp_wave_idx, ", and slice indices: ", disp_slices)
+rehydrated_idx = [i for i in range(len(disp_wave_idx))]
+p_utils.plot_hyper_recons(hsnt_recon, display_wave_idx=rehydrated_idx, display_slices=disp_slices)
