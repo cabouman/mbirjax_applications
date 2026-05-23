@@ -23,7 +23,7 @@ output_file_name = 'processed_data_' + proton_charge + '_Ni_' + sample_type + '.
 
 # Setup parameters
 wave_idx_start = 100  # Index of the 1st wavelength bin to be loaded
-num_total_wave = 200  # Number of total wavelength bins to be loaded
+num_total_wave = 2500  # Number of total wavelength bins to be loaded
 output_type = 'attenuation'  # Options: 'attenuation' and 'transmission'
 
 # Setup background calibration boxes
