@@ -117,7 +117,7 @@ subspace_data_all_angles = h_preproc.correct_alignment_ORNL_SNAP(subspace_data_a
 angles_r = np.array(angles) * np.pi / 180  # Convert the angles to radian
 num_angles, detector_rows, detector_columns, subspace_dimension = subspace_data_all_angles.shape
 mj_model = mj.ParallelBeamModel((num_angles, detector_rows, detector_columns), angles_r)
-mj_model.set_params(snr_db=recon_snr_db, det_channel_offset=center_offset, verbose=verbose)
+mj_model.set_params(snr_db=recon_snr_db, sharpness=0, det_channel_offset=center_offset, verbose=verbose)
 
 # Perform MBIR
 subspace_recons = []
