@@ -19,7 +19,7 @@ sample_type = 'cylinder'  # Options: 'cylinder' and 'flat'
 base_path = os.path.join('/depot/bouman/data/ORNL/hsnt/Ni_single_view', proton_charge)
 ob_folder_path = os.path.join(base_path, 'open_beam')  # Raw open-beam folder path, may contain one or more observations
 proj_folder_path = os.path.join(base_path, 'Ni_' + sample_type + '_projections')  # Raw projection folder path, may contain one or more views
-output_file_name = ('processed_data_' + proton_charge + '_Ni_' + sample_type + '.h5')  # Output folder name
+output_file_name = 'processed_data_' + proton_charge + '_Ni_' + sample_type + '.h5'  # Output folder name
 
 # Setup parameters
 wave_idx_start = 100  # Index of the 1st wavelength bin to be loaded
@@ -36,12 +36,12 @@ back_calib_boxes = [[10, 110, 10, 110], [10, 110, 410, 510], [410, 510, 10, 110]
 np.random.seed(129)
 
 # Preprocess the projection data (normalization and background offset correction)
-processed_data = h_preproc.hyper_data_preprocessing(ob_folder_path,
-                                                    proj_folder_path,
-                                                    wave_idx_start=wave_idx_start,
-                                                    num_total_wave=num_total_wave,
-                                                    back_calib_boxes=back_calib_boxes,
-                                                    output_type=output_type)
+processed_data, _ = h_preproc.hyper_data_preprocessing(proj_folder_path,
+                                                       ob_folder_path,
+                                                       wave_idx_start=wave_idx_start,
+                                                       num_total_wave=num_total_wave,
+                                                       back_calib_boxes=back_calib_boxes,
+                                                       output_type=output_type)
 
 # Save data
 metadata = mj.hsnt.create_hsnt_metadata(dataset_name=proton_charge + '_Ni_' + sample_type + '_dataset',

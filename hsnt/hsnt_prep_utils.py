@@ -16,47 +16,56 @@ from scipy.signal import fftconvolve
 eps = 1e-8
 
 
-def hyper_data_preprocessing(ob_folder_path, proj_folder_path, wave_idx_start=0, num_total_wave=None, ob_smoothing=True,
-                             ob_smoothing_filter_width=3, back_calib_boxes=None, output_type='attenuation'):
-    """Function to preprocess hyperspectral neutron data and produce open-beam normalized and background offset
-    corrected projection densities.
+def hyper_data_preprocessing(proj_folder_path, ob_folder_path=None, open_beam=None, wave_idx_start=0,
+                             num_total_wave=None, ob_smoothing=True, ob_smoothing_filter_width=3, back_calib_boxes=None,
+                             output_type='attenuation'):
+    """Function to preprocess hyperspectral neutron data and convert raw neutron count data into attenuation or
+    transmission data.
 
     Args:
-        ob_folder_path(str): base folder location of hyperspectral raw open-beam counts (tiff)
         proj_folder_path(str): base folder location of hyperspectral raw projection counts (tiff)
+        ob_folder_path(str,optional): base folder location of hyperspectral raw open-beam counts (tiff)
+        open_beam(ndarray,optional): already processed open-beam array of shape (height x width x wavelengths)
         wave_idx_start(int,optional): starting wavelength index
         num_total_wave(int,optional): number of wavelengths
         ob_smoothing(bool,optional): true/false, smooth open-beam if set to true
         ob_smoothing_filter_width(int,optional): width of the Hamming filter used for smoothing (must be an odd number)
-        back_calib_boxes(list): list of 4 1D arrays containing calibration box information for the 4 chips
+        back_calib_boxes(list,optional): list of 4 1D arrays containing calibration box information for the 4 chips
             chip sequence: (top left, top right, bottom left, bottom right)
             each 1D array: (y start, x start, y stop, x stop)
-        output_type(str): either 'attenuation' or 'transmission'
+        output_type(str,optional): either 'attenuation' or 'transmission'
 
     Returns:
-        ndarray: processed data with shape (num angles x height x width x wavelengths)
+        ndarray: processed projection data with shape (num angles x height x width x wavelengths)
         """
-    # Generate the input paths
-    ob_paths = generate_path(ob_folder_path)
-    proj_paths = generate_path(proj_folder_path)
+    # Make sure either open beam data path or already processed open beam are provided
+    if ob_folder_path is None and open_beam is None:
+        raise Exception("Either ob_folder_path or open_beam must be provided.")
 
-    print('......Starting open-beam data processing......')
+    # Generate the projection data path
+    proj_paths = generate_paths(proj_folder_path)
 
-    ob_all_sets = []
-    for i in range(len(ob_paths)):
-        ob_all_sets.append(load_data(ob_paths[i], wave_idx_start=wave_idx_start, num_total_wave=num_total_wave))
+    if open_beam is None:
+        print('......Starting open-beam data processing......')
+        # Generate the open-beam data path
+        ob_paths = generate_paths(ob_folder_path)
 
-    ob_all_sets = np.array(ob_all_sets).astype(np.float32)
+        # Load open-beam data
+        ob_all_sets = []
+        for i in range(len(ob_paths)):
+            ob_all_sets.append(load_data(ob_paths[i], wave_idx_start=wave_idx_start, num_total_wave=num_total_wave))
 
-    # Average over all the open-beam data sets
-    open_beam = np.mean(ob_all_sets, axis=0)
+        ob_all_sets = np.array(ob_all_sets).astype(np.float32)
 
-    # Replace zeros in the open-beam data
-    open_beam = replace_zero(open_beam)
+        # Average over all the open-beam data sets
+        open_beam = np.mean(ob_all_sets, axis=0)
 
-    # Process open-beam data
-    if ob_smoothing:
-        open_beam = smooth_open_beam(open_beam, filter_width=ob_smoothing_filter_width)
+        # Replace zeros in the open-beam data
+        open_beam = replace_zero(open_beam)
+
+        # Process open-beam data
+        if ob_smoothing:
+            open_beam = smooth_open_beam(open_beam, filter_width=ob_smoothing_filter_width)
 
     print('Open-beam data processing done......')
 
@@ -93,10 +102,10 @@ def hyper_data_preprocessing(ob_folder_path, proj_folder_path, wave_idx_start=0,
 
     print('Projection data processing done......')
 
-    return processed_data
+    return processed_data, open_beam
 
 
-def generate_path(base_folder_path):
+def generate_paths(base_folder_path):
     """Function to generate folder paths for loading hyperspectral data. If there are no folders inside, it will return
     the base folder path only.
 
@@ -120,7 +129,7 @@ def generate_path(base_folder_path):
 
 
 def load_data(folder_path, wave_idx_start=0, num_total_wave=None):
-    """Function to read tiff images from a range of wavelengths from the given location and return the data in a 3D array.
+    """Function to read tiff images for a range of wavelengths from the given location and return the data in a 3D array.
 
     Args:
         folder_path(str): folder location of the data to be loaded
