@@ -26,7 +26,8 @@ angles = [0.0, 6.2, 12.399, 16.231, 22.43, 32.461, 38.661, 42.492, 48.692, 58.72
           64.922, 74.953, 81.153, 84.984, 91.184, 101.215, 107.415, 111.246, 117.446,
           127.477, 133.676, 143.707, 149.907, 153.738, 159.938, 169.969, 176.168]  # View angles in degrees
 num_materials = 3  # Number of materials in the sample
-recon_snr_db = 25  # Assumed SNR for the dataset in dB
+alignment_offsets = [2, 2]  # Chip alignment offset values along the Y and X axes
+recon_snr_db = 30  # Assumed SNR for the dataset in dB
 verbose = 0  # Print nothing if 0
 
 # Setup background calibration boxes
@@ -102,6 +103,9 @@ shutil.rmtree(temp_folder)
 print("---------------------------")
 print("STEP-3: MBIR RECONSTRUCTION")
 print("---------------------------")
+# Fix the chip alignment issues for proper reconstruction
+subspace_data_all_angles = h_preproc.correct_alignment_ORNL_SNAP(subspace_data_all_angles, alignment_offsets)
+
 # MBIR model setup
 angles_r = np.array(angles) * np.pi / 180  # Convert the angles to radian
 detector_rows, detector_columns, num_waves = open_beam.shape
@@ -140,6 +144,6 @@ hsnt_recon = mj.hsnt.rehydrate(hsnt_dehydrated_recons, hyperspectral_idx=disp_wa
 
 # Plot image
 print("Displaying reconstructed image for wavelength index: ", disp_wave_idx, ", and slice index: ", disp_slice)
-plt.imshow(hsnt_recon[:, :, disp_slice, 0], cmap='gray', vmin=0, vmax=None)
+plt.imshow(hsnt_recon[:, :, disp_slice], cmap='gray', vmin=0, vmax=None)
 plt.colorbar()
 plt.show()

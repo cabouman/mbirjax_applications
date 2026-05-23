@@ -314,6 +314,76 @@ def calibrate_background_ORNL_SNAP(norm_projection, back_calib_boxes):
     return back_calib_projection
 
 
+def correct_alignment_ORNL_SNAP(unaligned_data, offsets, fill_gap=True):
+    """Function to correct alignment of the 4 segments in each image caused by the mismatch between the 4 chips.
+
+    Args:
+        unaligned_data(ndarray): 4D projection data (num_angles x height x width x wavelengths)
+        offsets(list): a list of 2 offset values along the Y and X axes, respectively [Y offset, X offset]
+        fill_gap(bool,optional): true/false, the function will fill the gap after moving the chips if true
+
+    Returns:
+        ndarray: aligned projection data (num_angles x height' x width' x wavelengths)
+        """
+
+    safety = 2
+    y_offset, x_offset = offsets
+
+    center_y = unaligned_data.shape[1] // 2
+    center_x = unaligned_data.shape[2] // 2
+
+    if (y_offset == 0) and (x_offset == 0):
+        return unaligned_data
+
+    chip_1 = unaligned_data[:, :center_y, :center_x, :]
+    chip_2 = unaligned_data[:, :center_y, center_x:, :]
+    chip_3 = unaligned_data[:, center_y:, :center_x, :]
+    chip_4 = unaligned_data[:, center_y:, center_x:, :]
+
+    moved_data = np.zeros((unaligned_data.shape[0],
+                           unaligned_data.shape[1] + y_offset,
+                           unaligned_data.shape[2] + x_offset,
+                           unaligned_data.shape[3]), dtype=unaligned_data.dtype)
+
+    moved_data[:, :center_y, :center_x, :] = chip_1
+    moved_data[:, :center_y, center_x + x_offset:, :] = chip_2
+    moved_data[:, center_y + y_offset:, :center_x, :] = chip_3
+    moved_data[:, center_y + y_offset:, center_x + x_offset:, :] = chip_4
+
+    if not fill_gap:
+        return moved_data
+
+    filled_data = np.copy(moved_data)
+
+    # Fill gap along y-axis
+    if y_offset > 0:
+        region_up = np.mean(filled_data[:, center_y - 2 * safety:center_y - safety, :, :],
+                            axis=1, keepdims=True)
+
+        region_down = np.mean(filled_data[:, center_y + y_offset + safety:center_y + y_offset + 2 * safety, :, :],
+                              axis=1, keepdims=True)
+
+        weights_y = np.linspace(0, 1, y_offset + 2 * safety)[None, :, None, None]
+
+        filled_data[:, center_y - safety:center_y + y_offset + safety, :, :] = \
+            weights_y[:, ::-1, :, :] * region_up + weights_y * region_down
+
+    # Fill gap along x-axis
+    if x_offset > 0:
+        region_left = np.mean(filled_data[:, :, center_x - 2 * safety:center_x - safety, :],
+                              axis=2, keepdims=True)
+
+        region_right = np.mean(filled_data[:, :, center_x + x_offset + safety:center_x + x_offset + 2 * safety, :],
+                               axis=2, keepdims=True)
+
+        weights_x = np.linspace(0, 1, x_offset + 2 * safety)[None, None, :, None]
+
+        filled_data[:, :, center_x - safety:center_x + x_offset + safety, :] = \
+            weights_x[:, :, ::-1, :] * region_left + weights_x * region_right
+
+    return filled_data
+
+
 def _load_tiff(file_path):
     return tifffile.imread(file_path).astype(np.float32)
 
