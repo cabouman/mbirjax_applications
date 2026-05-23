@@ -21,7 +21,7 @@ output_file_name = 'dehydrated_recons_' + dataset_name + '.h5'  # Output folder 
 
 # Setup parameters
 wave_idx_start = 100  # Index of the 1st wavelength bin to be loaded
-num_total_wave = 1000  # Number of total wavelength bins to be loaded
+num_total_wave = 1200  # Number of total wavelength bins to be loaded
 angles = [0.0, 6.2, 12.399, 16.231, 22.43, 32.461, 38.661, 42.492, 48.692, 58.723,
           64.922, 74.953, 81.153, 84.984, 91.184, 101.215, 107.415, 111.246, 117.446,
           127.477, 133.676, 143.707, 149.907, 153.738, 159.938, 169.969, 176.168]  # View angles in degrees
