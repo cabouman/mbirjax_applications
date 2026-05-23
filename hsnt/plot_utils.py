@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 
 
 def plot_hyper_recons(recons, display_wave_idx, display_slices, title='Reconstructed hyperspectral images',
-                      vmin=None, vmax=None, cb_orientation='vertical'):
+                      vmin=0, vmax=None, cb_orientation='vertical'):
     """Function to display reconstructed hyperspectral images corresponding to different wavelengths at different slices.
 
     Args:
@@ -20,11 +20,8 @@ def plot_hyper_recons(recons, display_wave_idx, display_slices, title='Reconstru
     display_recons = recons[:, :, display_slices, :]
     display_recons = display_recons[:, :, :, display_wave_idx]
 
-    if vmin is None:
-        vmin = np.percentile(display_recons, 1)
-
     if vmax is None:
-        vmax = np.percentile(display_recons, 99)
+        vmax = np.percentile(display_recons, 99.5)
 
     plt.rcParams['figure.constrained_layout.use'] = True
     fig = plt.figure(figsize=(8 * num_disp_slices, 8 * num_disp_wave))
