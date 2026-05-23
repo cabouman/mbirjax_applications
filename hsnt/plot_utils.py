@@ -21,7 +21,7 @@ def plot_hyper_recons(recons, display_wave_idx, display_slices, title='Reconstru
     display_recons = display_recons[:, :, :, display_wave_idx]
 
     if vmax is None:
-        vmax = np.percentile(display_recons, 99.5)
+        vmax = np.percentile(display_recons, 99.8)
 
     plt.rcParams['figure.constrained_layout.use'] = True
     fig = plt.figure(figsize=(8 * num_disp_slices, 8 * num_disp_wave))
