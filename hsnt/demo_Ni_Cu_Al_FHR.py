@@ -29,7 +29,7 @@ num_materials = 3  # Number of materials in the sample
 alignment_offsets = [2, 2]  # Chip alignment offset values along the Y and X axes
 center_offset = -0.25  # Center of rotation offset
 recon_snr_db = 30  # Assumed SNR for the dataset in dB
-recon_roi = [50, -50, 50, -50]  # region of interest to be reconstructed (y start, y stop, x start, x stop)
+roi = [50, -50, 50, -50]  # region of interest (y start, y stop, x start, x stop)
 verbose = 0  # Print nothing if 0
 
 # Setup background calibration boxes
@@ -68,6 +68,7 @@ for i, angle in enumerate(angles):
                                                                    num_total_wave=num_total_wave,
                                                                    back_calib_boxes=back_calib_boxes,
                                                                    verbose=verbose)
+    processed_data = processed_data[:, roi[0]: roi[1], roi[2]: roi[3]]
     np.save(os.path.join(temp_folder, 'processed_data_' + str(angle) + '.npy'), processed_data)
 
 
@@ -111,9 +112,6 @@ print("STEP-3: MBIR RECONSTRUCTION")
 print("---------------------------")
 # Fix the chip alignment issues for proper reconstruction
 subspace_data_all_angles = h_preproc.correct_alignment_ORNL_SNAP(subspace_data_all_angles, alignment_offsets)
-
-# Crop the region of interest
-subspace_data_all_angles = subspace_data_all_angles[:, recon_roi[0]: recon_roi[1], recon_roi[2]: recon_roi[3]]
 
 # MBIR model setup
 angles_r = np.array(angles) * np.pi / 180  # Convert the angles to radian

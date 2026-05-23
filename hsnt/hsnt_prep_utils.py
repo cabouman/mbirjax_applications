@@ -314,12 +314,13 @@ def calibrate_background_ORNL_SNAP(norm_projection, back_calib_boxes):
     return back_calib_projection
 
 
-def correct_alignment_ORNL_SNAP(unaligned_data, offsets, fill_gap=True):
+def correct_alignment_ORNL_SNAP(unaligned_data, offsets, center=None, fill_gap=True):
     """Function to correct alignment of the 4 segments in each image caused by the mismatch between the 4 chips.
 
     Args:
         unaligned_data(ndarray): 4D projection data (num_angles x height x width x wavelengths)
         offsets(list): a list of 2 offset values along the Y and X axes, respectively [Y offset, X offset]
+        center(list,optional): center coordinates [Y, X]
         fill_gap(bool,optional): true/false, the function will fill the gap after moving the chips if true
 
     Returns:
@@ -329,8 +330,12 @@ def correct_alignment_ORNL_SNAP(unaligned_data, offsets, fill_gap=True):
     safety = 2
     y_offset, x_offset = offsets
 
-    center_y = unaligned_data.shape[1] // 2
-    center_x = unaligned_data.shape[2] // 2
+    if center is None:
+        center_y = unaligned_data.shape[1] // 2
+        center_x = unaligned_data.shape[2] // 2
+    else:
+        center_y = center[0]
+        center_x = center[1]
 
     if (y_offset == 0) and (x_offset == 0):
         return unaligned_data
