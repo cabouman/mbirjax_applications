@@ -27,9 +27,7 @@ def plot_hyper_recons(recons, display_wave_idx, display_slices, title='Reconstru
         vmax = np.percentile(display_recons, 99)
 
     plt.rcParams['figure.constrained_layout.use'] = True
-    plt.rc('font', size=20)
     fig = plt.figure(figsize=(8 * num_disp_slices, 8 * num_disp_wave))
-    fig.suptitle(title, size=30)
     fig.supylabel('Wavelength indices', size=30)
     fig.supxlabel('Display slices', size=30)
 
