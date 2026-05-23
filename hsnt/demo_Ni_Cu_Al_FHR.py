@@ -27,6 +27,7 @@ angles = [0.0, 6.2, 12.399, 16.231, 22.43, 32.461, 38.661, 42.492, 48.692, 58.72
           127.477, 133.676, 143.707, 149.907, 153.738, 159.938, 169.969, 176.168]  # View angles in degrees
 num_materials = 3  # Number of materials in the sample
 alignment_offsets = [2, 2]  # Chip alignment offset values along the Y and X axes
+center_offset = -0.25  # Center of rotation offset
 recon_snr_db = 30  # Assumed SNR for the dataset in dB
 verbose = 0  # Print nothing if 0
 
@@ -35,6 +36,10 @@ verbose = 0  # Print nothing if 0
 #             chip sequence: (top left, top right, bottom left, bottom right)
 #             each 1D array: (y start, y stop, x start, x stop)
 back_calib_boxes = [[10, 110, 10, 110], [10, 110, 410, 510], [410, 510, 10, 110], [410, 510, 410, 510]]
+
+# Display parameters
+disp_wave_idx = 800
+disp_slice = 200
 
 # Fix seed for random number generation
 np.random.seed(129)
@@ -110,7 +115,7 @@ subspace_data_all_angles = h_preproc.correct_alignment_ORNL_SNAP(subspace_data_a
 angles_r = np.array(angles) * np.pi / 180  # Convert the angles to radian
 num_angles, detector_rows, detector_columns, subspace_dimension = subspace_data_all_angles.shape
 mj_model = mj.ParallelBeamModel((num_angles, detector_rows, detector_columns), angles_r)
-mj_model.set_params(snr_db=recon_snr_db, verbose=verbose)
+mj_model.set_params(snr_db=recon_snr_db, det_channel_offset=center_offset, verbose=verbose)
 
 # Perform MBIR
 subspace_recons = []
@@ -134,10 +139,6 @@ mj.hsnt.export_hsnt_data_hdf5(output_file_name, hsnt_dehydrated_recons, metadata
 print("-------------------------------------------")
 print("STEP-4: PARTIAL REHYDRATION & VISUALIZATION")
 print("-------------------------------------------")
-# Choose the middle wavelength bin and middle slice to view
-disp_wave_idx = num_total_wave // 2
-disp_slice = detector_rows // 2
-
 # Rehydrate only the display wavelength reconstruction
 hsnt_recon = mj.hsnt.rehydrate(hsnt_dehydrated_recons, hyperspectral_idx=disp_wave_idx)
 
