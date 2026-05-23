@@ -108,12 +108,11 @@ subspace_data_all_angles = h_preproc.correct_alignment_ORNL_SNAP(subspace_data_a
 
 # MBIR model setup
 angles_r = np.array(angles) * np.pi / 180  # Convert the angles to radian
-detector_rows, detector_columns, num_waves = open_beam.shape
-mj_model = mj.ParallelBeamModel((len(angles), detector_rows, detector_columns), angles_r)
+num_angles, detector_rows, detector_columns, subspace_dimension = subspace_data_all_angles.shape
+mj_model = mj.ParallelBeamModel((num_angles, detector_rows, detector_columns), angles_r)
 mj_model.set_params(snr_db=recon_snr_db, verbose=verbose)
 
 # Perform MBIR
-subspace_dimension = subspace_data_all_angles.shape[-1]
 subspace_recons = []
 for idx in range(subspace_dimension):
     print("Reconstructing data for subspace index: " + str(idx))
@@ -136,7 +135,7 @@ print("-------------------------------------------")
 print("STEP-4: PARTIAL REHYDRATION & VISUALIZATION")
 print("-------------------------------------------")
 # Choose the middle wavelength bin and middle slice to view
-disp_wave_idx = num_waves // 2
+disp_wave_idx = num_total_wave // 2
 disp_slice = detector_rows // 2
 
 # Rehydrate only the display wavelength reconstruction
