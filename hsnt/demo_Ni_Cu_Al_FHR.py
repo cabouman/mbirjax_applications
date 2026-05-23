@@ -42,6 +42,7 @@ np.random.seed(129)
 # ==========================
 # STEP-1: DATA PREPROCESSING
 # ==========================
+print("--------------------------")
 print("STEP-1: DATA PREPROCESSING")
 print("--------------------------")
 # Create a temporary folder to store intermediate data
@@ -66,6 +67,7 @@ for i, angle in enumerate(angles):
 # ==============================
 # STEP-2: LARGE DATA DEHYDRATION
 # ==============================
+print("------------------------------")
 print("STEP-2: LARGE DATA DEHYDRATION")
 print("------------------------------")
 # Perform initial dehydration to estimate subspace basis vectors for each angle
@@ -97,6 +99,7 @@ shutil.rmtree(temp_folder)
 # ===========================
 # STEP-3: MBIR RECONSTRUCTION
 # ===========================
+print("---------------------------")
 print("STEP-3: MBIR RECONSTRUCTION")
 print("---------------------------")
 # MBIR model setup
@@ -125,6 +128,7 @@ mj.hsnt.export_hsnt_data_hdf5(output_file_name, hsnt_dehydrated_recons, metadata
 # ===========================================
 # STEP-4: PARTIAL REHYDRATION & VISUALIZATION
 # ===========================================
+print("-------------------------------------------")
 print("STEP-4: PARTIAL REHYDRATION & VISUALIZATION")
 print("-------------------------------------------")
 # Choose the middle wavelength bin and middle slice to view
