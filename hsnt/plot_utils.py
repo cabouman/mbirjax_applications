@@ -25,6 +25,7 @@ def plot_hyper_recons(recons, display_wave_idx, display_slices, title='Reconstru
 
     plt.rcParams['figure.constrained_layout.use'] = True
     fig = plt.figure(figsize=(8 * num_disp_slices, 8 * num_disp_wave))
+    fig.suptitle(title, size=20)
     fig.supylabel('Wavelength indices')
     fig.supxlabel('Display slices')
 
