@@ -42,7 +42,8 @@ np.random.seed(129)
 # ==========================
 # STEP-1: DATA PREPROCESSING
 # ==========================
-
+print("STEP-1: DATA PREPROCESSING")
+print("--------------------------")
 # Create a temporary folder to store intermediate data
 temp_folder = 'temp_folder'
 os.makedirs(temp_folder, exist_ok=True)
@@ -51,33 +52,39 @@ os.makedirs(temp_folder, exist_ok=True)
 open_beam = None  # Initialized with None for the first angle, will be replaced by the actual open beam for other angles
 all_angles_paths = h_preproc.generate_paths(proj_folder_path)
 for i, angle in enumerate(angles):
+    print("Currently processing data from angle: ", angle)
     processed_data, open_beam = h_preproc.hyper_data_preprocessing(all_angles_paths[i],
                                                                    ob_folder_path=ob_folder_path,
                                                                    open_beam=open_beam,
                                                                    wave_idx_start=wave_idx_start,
                                                                    num_total_wave=num_total_wave,
-                                                                   back_calib_boxes=back_calib_boxes)
+                                                                   back_calib_boxes=back_calib_boxes,
+                                                                   verbose=verbose)
     np.save(os.path.join(temp_folder, 'processed_data_' + str(angle) + '.npy'), processed_data)
 
 
 # ==============================
 # STEP-2: LARGE DATA DEHYDRATION
 # ==============================
-
+print("STEP-2: LARGE DATA DEHYDRATION")
+print("------------------------------")
 # Perform initial dehydration to estimate subspace basis vectors for each angle
 subspace_basis_all_angles = []
 for angle in angles:
+    print("Currently estimating subspace basis for angle: ", angle)
     processed_data = np.load(os.path.join(temp_folder, 'processed_data_' + str(angle) + '.npy'))
     _, subspace_basis, _ = mj.hsnt.dehydrate(processed_data, num_materials=num_materials, verbose=verbose)
     subspace_basis_all_angles.append(subspace_basis)
 subspace_basis_all_angles = np.concatenate(subspace_basis_all_angles, axis=0)
 
 # Estimate refined set of subspace basis vectors combining estimations for all angles
+print("Refining subspace basis")
 _, subspace_basis, dataset_type = mj.hsnt.dehydrate(subspace_basis_all_angles, num_materials=num_materials, verbose=verbose)
 
 # Perform final dehydration for each angle using the refined subspace basis vectors
 subspace_data_all_angles = []
 for angle in angles:
+    print("Currently estimating subspace data for angle: ", angle)
     processed_data = np.load(os.path.join(temp_folder, 'processed_data_' + str(angle) + '.npy'))
     subspace_data, _, _ = mj.hsnt.dehydrate(processed_data, subspace_basis=subspace_basis, verbose=verbose)
     subspace_data_all_angles.append(subspace_data)
@@ -90,7 +97,8 @@ shutil.rmtree(temp_folder)
 # ===========================
 # STEP-3: MBIR RECONSTRUCTION
 # ===========================
-
+print("STEP-3: MBIR RECONSTRUCTION")
+print("---------------------------")
 # MBIR model setup
 angles_r = np.array(angles) * np.pi / 180  # Convert the angles to radian
 detector_rows, detector_columns, num_waves = open_beam.shape
@@ -117,7 +125,8 @@ mj.hsnt.export_hsnt_data_hdf5(output_file_name, hsnt_dehydrated_recons, metadata
 # ===========================================
 # STEP-4: PARTIAL REHYDRATION & VISUALIZATION
 # ===========================================
-
+print("STEP-4: PARTIAL REHYDRATION & VISUALIZATION")
+print("-------------------------------------------")
 # Choose the middle wavelength bin and middle slice to view
 disp_wave_idx = num_waves // 2
 disp_slice = detector_rows // 2
@@ -126,6 +135,7 @@ disp_slice = detector_rows // 2
 hsnt_recon = mj.hsnt.rehydrate(hsnt_dehydrated_recons, hyperspectral_idx=disp_wave_idx)
 
 # Plot image
+print("Displaying reconstructed image for wavelength index: ", disp_wave_idx, ", and slice index: ", disp_slice)
 plt.imshow(hsnt_recon[:, :, disp_slice, 0], cmap='gray', vmin=0, vmax=None)
 plt.colorbar()
 plt.show()

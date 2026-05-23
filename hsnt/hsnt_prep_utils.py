@@ -18,7 +18,7 @@ eps = 1e-8
 
 def hyper_data_preprocessing(proj_folder_path, ob_folder_path=None, open_beam=None, wave_idx_start=0,
                              num_total_wave=None, ob_smoothing=True, ob_smoothing_filter_width=3, back_calib_boxes=None,
-                             output_type='attenuation'):
+                             output_type='attenuation', verbose=1):
     """Function to preprocess hyperspectral neutron data and convert raw neutron count data into attenuation or
     transmission data.
 
@@ -34,6 +34,7 @@ def hyper_data_preprocessing(proj_folder_path, ob_folder_path=None, open_beam=No
             chip sequence: (top left, top right, bottom left, bottom right)
             each 1D array: (y start, x start, y stop, x stop)
         output_type(str,optional): either 'attenuation' or 'transmission'
+        verbose(int,optional): verbosity level. If 0, prints nothing; if 1, prints details
 
     Returns:
         ndarray: processed projection data with shape (num angles x height x width x wavelengths)
@@ -46,7 +47,6 @@ def hyper_data_preprocessing(proj_folder_path, ob_folder_path=None, open_beam=No
     proj_paths = generate_paths(proj_folder_path)
 
     if open_beam is None:
-        print('......Starting open-beam data processing......')
         # Generate the open-beam data path
         ob_paths = generate_paths(ob_folder_path)
 
@@ -67,9 +67,8 @@ def hyper_data_preprocessing(proj_folder_path, ob_folder_path=None, open_beam=No
         if ob_smoothing:
             open_beam = smooth_open_beam(open_beam, filter_width=ob_smoothing_filter_width)
 
-    print('Open-beam data processing done......')
-
-    print('......Starting projection data processing......')
+    if verbose == 1:
+        print('Open-beam data processing done......')
 
     if back_calib_boxes is None:
         warnings.warn("Background offset correction skipped, required background calibration boxes not provided.")
@@ -77,7 +76,8 @@ def hyper_data_preprocessing(proj_folder_path, ob_folder_path=None, open_beam=No
     # We are going to process data one view at a time for multi-view data
     processed_data = []
     for idx in range(len(proj_paths)):
-        print('Currently processing projection data from view index: ', idx)
+        if verbose == 1:
+            print('Currently processing projection data from view index: ', idx)
 
         # Load raw projection data
         raw_projection = load_data(proj_paths[idx], wave_idx_start=wave_idx_start, num_total_wave=num_total_wave)
@@ -100,7 +100,8 @@ def hyper_data_preprocessing(proj_folder_path, ob_folder_path=None, open_beam=No
 
     processed_data = np.array(processed_data).astype(np.float32)
 
-    print('Projection data processing done......')
+    if verbose == 1:
+        print('Projection data processing done......')
 
     return processed_data, open_beam
 
