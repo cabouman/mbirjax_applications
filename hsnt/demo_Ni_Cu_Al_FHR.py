@@ -101,9 +101,6 @@ for angle in angles:
     subspace_data_all_angles.append(subspace_data)
 subspace_data_all_angles = np.concatenate(subspace_data_all_angles, axis=0)
 
-# Delete the temporary folder
-shutil.rmtree(tmp_folder)
-
 
 # ===========================
 # STEP-3: MBIR RECONSTRUCTION
