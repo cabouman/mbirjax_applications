@@ -7,6 +7,11 @@ nersc/demo_data
 nersc/output
 nersc/logs
 
+hsnt/tmp
+hsnt/data
+hsnt/output
+hsnt/logs
+
 vcls/demo_data
 vcls/output
 vcls/recon_bases_data
