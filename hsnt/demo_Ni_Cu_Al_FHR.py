@@ -17,7 +17,8 @@ base_path = '/depot/bouman/data/ORNL/hsnt/tci_2025_Ni_Cu_Al'
 ob_folder_path = os.path.join(base_path, 'open_beam')  # Raw open-beam folder path, may contain one or more observations
 proj_folder_path = os.path.join(base_path, 'projections')  # Raw projection folder path, may contain one or more views
 dataset_name = 'Ni_Cu_Al_dataset'
-output_file_name = 'dehydrated_recons_' + dataset_name + '.h5'  # Output folder name
+tmp_folder = 'tmp'
+output_folder = 'output'
 
 # Setup parameters
 wave_idx_start = 100  # Index of the 1st wavelength bin to be loaded
@@ -52,9 +53,9 @@ np.random.seed(129)
 print("--------------------------")
 print("STEP-1: DATA PREPROCESSING")
 print("--------------------------")
-# Create a temporary folder to store intermediate data
-temp_folder = 'temp_folder'
-os.makedirs(temp_folder, exist_ok=True)
+# Create a temporary and output folders
+os.makedirs(tmp_folder, exist_ok=True)
+os.makedirs(output_folder, exist_ok=True)
 
 # Process data from one angle at a time and store
 open_beam = None  # Initialized with None for the first angle, will be replaced by the actual open beam for other angles
@@ -69,7 +70,7 @@ for i, angle in enumerate(angles):
                                                                    back_calib_boxes=back_calib_boxes,
                                                                    verbose=verbose)
     processed_data = processed_data[:, roi[0]: roi[1], roi[2]: roi[3]]
-    np.save(os.path.join(temp_folder, 'processed_data_' + str(angle) + '.npy'), processed_data)
+    np.save(os.path.join(tmp_folder, 'processed_data_' + str(angle) + '.npy'), processed_data)
 
 
 # ==============================
@@ -82,7 +83,7 @@ print("------------------------------")
 subspace_basis_all_angles = []
 for angle in angles:
     print("Currently estimating subspace basis for angle: ", angle)
-    processed_data = np.load(os.path.join(temp_folder, 'processed_data_' + str(angle) + '.npy'))
+    processed_data = np.load(os.path.join(tmp_folder, 'processed_data_' + str(angle) + '.npy'))
     _, subspace_basis, _ = mj.hsnt.dehydrate(processed_data, num_materials=num_materials, verbose=verbose)
     subspace_basis_all_angles.append(subspace_basis)
 subspace_basis_all_angles = np.concatenate(subspace_basis_all_angles, axis=0)
@@ -95,13 +96,13 @@ _, subspace_basis, dataset_type = mj.hsnt.dehydrate(subspace_basis_all_angles, n
 subspace_data_all_angles = []
 for angle in angles:
     print("Currently estimating subspace data for angle: ", angle)
-    processed_data = np.load(os.path.join(temp_folder, 'processed_data_' + str(angle) + '.npy'))
+    processed_data = np.load(os.path.join(tmp_folder, 'processed_data_' + str(angle) + '.npy'))
     subspace_data, _, _ = mj.hsnt.dehydrate(processed_data, subspace_basis=subspace_basis, verbose=verbose)
     subspace_data_all_angles.append(subspace_data)
 subspace_data_all_angles = np.concatenate(subspace_data_all_angles, axis=0)
 
 # Delete the temporary folder
-shutil.rmtree(temp_folder)
+shutil.rmtree(tmp_folder)
 
 
 # ===========================
@@ -131,6 +132,7 @@ subspace_recons = np.moveaxis(np.array(subspace_recons), 0, -1)
 hsnt_dehydrated_recons = [subspace_recons, subspace_basis, dataset_type]
 
 # Save data
+output_file_name = output_folder + '/dehydrated_recons_' + dataset_name + '.h5'
 metadata = mj.hsnt.create_hsnt_metadata(dataset_name=dataset_name)
 mj.hsnt.export_hsnt_data_hdf5(output_file_name, hsnt_dehydrated_recons, metadata)
 
