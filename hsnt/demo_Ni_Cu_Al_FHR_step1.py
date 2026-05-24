@@ -2,7 +2,7 @@
 Hyperspectral Neutron Tomography
 --------------------------------
 
-Step a for the Ni-Cu-Al FHR demo: preprocess raw projection data and write
+Step 1 for the Ni-Cu-Al FHR demo: preprocess raw projection data and write
 per-angle processed arrays to the tmp folder.
 """
 

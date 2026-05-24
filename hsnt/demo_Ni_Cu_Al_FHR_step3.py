@@ -2,7 +2,7 @@
 Hyperspectral Neutron Tomography
 --------------------------------
 
-Step C for the Ni-Cu-Al FHR demo: import the dehydrated reconstruction from
+Step 3 for the Ni-Cu-Al FHR demo: import the dehydrated reconstruction from
 HDF5, partially rehydrate selected wavelength indices, and display the result.
 """
 
