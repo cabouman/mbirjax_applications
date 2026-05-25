@@ -2,46 +2,77 @@
 Hyperspectral Neutron Tomography
 --------------------------------
 
-Step 3 for the Ni-Cu-Al FHR demo: import the dehydrated reconstruction from
-HDF5, partially rehydrate selected wavelength indices, and display the result.
+Step 3 for the Ni-Cu-Al FHR demo: import the dehydrated sinogram from
+output/sino, reconstruct it, and export the dehydrated reconstruction to
+output/recon as an HDF5 file.
 """
 
 import os
+import numpy as np
 import mbirjax as mj
-import plot_utils as p_utils
+import hsnt_prep_utils as h_preproc
 
 
 # Setup paths
 dataset_name = 'Ni_Cu_Al_dataset'
 output_folder = 'output'
-output_file_name = os.path.join(output_folder, 'dehydrated_recons_' + dataset_name + '.h5')
+sino_folder = os.path.join(output_folder, 'sino')
+recon_folder = os.path.join(output_folder, 'recon')
+input_file_name = os.path.join(sino_folder, 'dehydrated_sino_' + dataset_name + '.h5')
+output_file_name = os.path.join(recon_folder, 'dehydrated_recons_' + dataset_name + '.h5')
 
-# Display parameters
-disp_wave_idx = [300, 600, 900]
-disp_slices = [80, 200, 360]
+# Setup parameters
+alignment_offsets = [2, 2]  # Chip alignment offset values along the Y and X axes
+center_offset = -0.25  # Center of rotation offset
+recon_snr_db = 30  # Assumed SNR for the dataset in dB
+verbose = 0  # Print nothing if 0
+
+# Fix seed for random number generation
+np.random.seed(129)
 
 
 def main():
-    print("-------------------------------------------")
-    print("STEP-4: PARTIAL REHYDRATION & VISUALIZATION")
-    print("-------------------------------------------")
+    print("---------------------------")
+    print("STEP-3: MBIR RECONSTRUCTION")
+    print("---------------------------")
 
-    if not os.path.exists(output_file_name):
+    if not os.path.exists(input_file_name):
         raise FileNotFoundError(
-            "Missing dehydrated reconstruction file. Run demo_Ni_Cu_Al_FHR_b_step2_reconstruct_export.py first. "
-            f"Expected file: {output_file_name}"
+            "Missing dehydrated sinogram file. Run demo_Ni_Cu_Al_FHR_step2.py first. "
+            f"Expected file: {input_file_name}"
         )
 
-    hsnt_dehydrated_recons, metadata = mj.hsnt.import_hsnt_data_hdf5(output_file_name, dataset_name)
-    print("Loaded dataset: ", metadata["dataset_name"])
+    os.makedirs(recon_folder, exist_ok=True)
 
-    # Rehydrate only the display wavelength reconstruction
-    hsnt_recon = mj.hsnt.rehydrate(hsnt_dehydrated_recons, hyperspectral_idx=disp_wave_idx)
+    hsnt_dehydrated_sino, metadata = mj.hsnt.import_hsnt_data_hdf5(input_file_name, dataset_name)
+    subspace_data_all_angles, subspace_basis, dataset_type = hsnt_dehydrated_sino
+    print("Loaded dataset: ", metadata['dataset_name'])
+    if metadata['angles'] is None:
+        raise ValueError("Missing angles metadata in dehydrated sinogram file.")
+    angles = metadata['angles']
 
-    # Plot image
-    print("Displaying reconstructed image for wavelength indices: ", disp_wave_idx, ", and slice indices: ", disp_slices)
-    rehydrated_idx = [i for i in range(len(disp_wave_idx))]
-    p_utils.plot_hyper_recons(hsnt_recon, display_wave_idx=rehydrated_idx, display_slices=disp_slices)
+    # Fix the chip alignment issues for proper reconstruction
+    subspace_data_all_angles = h_preproc.correct_alignment_ORNL_SNAP(subspace_data_all_angles, alignment_offsets)
+
+    # MBIR model setup
+    angles_r = np.array(angles) * np.pi / 180  # Convert the angles to radian
+    num_angles, detector_rows, detector_columns, subspace_dimension = subspace_data_all_angles.shape
+    mj_model = mj.ParallelBeamModel((num_angles, detector_rows, detector_columns), angles_r)
+    mj_model.set_params(snr_db=recon_snr_db, sharpness=0, det_channel_offset=center_offset, verbose=verbose)
+
+    # Perform MBIR
+    subspace_recons = []
+    for idx in range(subspace_dimension):
+        print("Reconstructing data for subspace index: " + str(idx))
+        subspace_recon, _ = mj_model.recon(subspace_data_all_angles[:, :, :, idx])
+        subspace_recons.append(subspace_recon)
+    subspace_recons = np.moveaxis(np.array(subspace_recons), 0, -1)
+
+    # Pack dehydrated reconstructions and save
+    hsnt_dehydrated_recons = [subspace_recons, subspace_basis, dataset_type]
+    metadata = mj.hsnt.create_hsnt_metadata(dataset_name=dataset_name)
+    mj.hsnt.export_hsnt_data_hdf5(output_file_name, hsnt_dehydrated_recons, metadata)
+    print("Saved dehydrated reconstruction to: ", output_file_name)
 
 
 if __name__ == '__main__':

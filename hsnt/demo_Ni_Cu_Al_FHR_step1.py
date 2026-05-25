@@ -3,7 +3,7 @@ Hyperspectral Neutron Tomography
 --------------------------------
 
 Step 1 for the Ni-Cu-Al FHR demo: preprocess raw projection data and write
-per-angle processed arrays to the tmp folder.
+per-angle processed arrays to the output/prep folder.
 """
 
 import os
@@ -15,7 +15,8 @@ import hsnt_prep_utils as h_preproc
 base_path = '/depot/bouman/data/ORNL/hsnt/tci_2025_Ni_Cu_Al'
 ob_folder_path = os.path.join(base_path, 'open_beam')  # Raw open-beam folder path, may contain one or more observations
 proj_folder_path = os.path.join(base_path, 'projections')  # Raw projection folder path, may contain one or more views
-tmp_folder = 'tmp'
+output_folder = 'output'
+prep_folder = os.path.join(output_folder, 'prep')
 
 # Setup parameters
 wave_idx_start = 100  # Index of the 1st wavelength bin to be loaded
@@ -41,7 +42,8 @@ def main():
     print("STEP-1: DATA PREPROCESSING")
     print("--------------------------")
 
-    os.makedirs(tmp_folder, exist_ok=True)
+    os.makedirs(prep_folder, exist_ok=True)
+    np.savez(os.path.join(prep_folder, 'metadata.npz'), angles=np.array(angles))
 
     # Process data from one angle at a time and store
     open_beam = None  # Initialized with None for the first angle, then reused for other angles
@@ -56,7 +58,7 @@ def main():
                                                                        back_calib_boxes=back_calib_boxes,
                                                                        verbose=verbose)
         processed_data = processed_data[:, roi[0]: roi[1], roi[2]: roi[3]]
-        np.save(os.path.join(tmp_folder, 'processed_data_' + str(angle) + '.npy'), processed_data)
+        np.save(os.path.join(prep_folder, 'processed_data_' + str(angle) + '.npy'), processed_data)
 
 
 if __name__ == '__main__':
