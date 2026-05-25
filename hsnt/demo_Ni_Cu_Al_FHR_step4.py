@@ -3,8 +3,8 @@ Hyperspectral Neutron Tomography
 --------------------------------
 
 Step 4 for the Ni-Cu-Al FHR demo: import the dehydrated reconstruction from
-output/recon, partially rehydrate selected wavelength indices, and display the
-result.
+output/hsnt/recon, partially rehydrate selected wavelength indices, and display
+the result.
 """
 
 import os
@@ -15,7 +15,8 @@ import plot_utils as p_utils
 # Setup paths
 dataset_name = 'Ni_Cu_Al_dataset'
 output_folder = 'output'
-recon_folder = os.path.join(output_folder, 'recon')
+hsnt_output_folder = os.path.join(output_folder, 'hsnt')
+recon_folder = os.path.join(hsnt_output_folder, 'recon')
 input_file_name = os.path.join(recon_folder, 'dehydrated_recons_' + dataset_name + '.h5')
 
 # Display parameters

@@ -3,8 +3,8 @@ Hyperspectral Neutron Tomography
 --------------------------------
 
 Step 2 for the Ni-Cu-Al FHR demo: load preprocessed per-angle arrays from
-output/prep, dehydrate the sinogram, and export the dehydrated sinogram to
-output/sino as an HDF5 file.
+output/hsnt/prep, dehydrate the sinogram, and export the dehydrated sinogram to
+output/hsnt/sino as an HDF5 file.
 """
 
 import os
@@ -15,8 +15,9 @@ import mbirjax as mj
 # Setup paths
 dataset_name = 'Ni_Cu_Al_dataset'
 output_folder = 'output'
-prep_folder = os.path.join(output_folder, 'prep')
-sino_folder = os.path.join(output_folder, 'sino')
+hsnt_output_folder = os.path.join(output_folder, 'hsnt')
+prep_folder = os.path.join(hsnt_output_folder, 'prep')
+sino_folder = os.path.join(hsnt_output_folder, 'sino')
 output_file_name = os.path.join(sino_folder, 'dehydrated_sino_' + dataset_name + '.h5')
 
 # Setup parameters

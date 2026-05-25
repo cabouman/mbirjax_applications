@@ -3,8 +3,8 @@ Hyperspectral Neutron Tomography
 --------------------------------
 
 Step 3 for the Ni-Cu-Al FHR demo: import the dehydrated sinogram from
-output/sino, reconstruct it, and export the dehydrated reconstruction to
-output/recon as an HDF5 file.
+output/hsnt/sino, reconstruct it, and export the dehydrated reconstruction to
+output/hsnt/recon as an HDF5 file.
 """
 
 import os
@@ -16,8 +16,9 @@ import hsnt_prep_utils as h_preproc
 # Setup paths
 dataset_name = 'Ni_Cu_Al_dataset'
 output_folder = 'output'
-sino_folder = os.path.join(output_folder, 'sino')
-recon_folder = os.path.join(output_folder, 'recon')
+hsnt_output_folder = os.path.join(output_folder, 'hsnt')
+sino_folder = os.path.join(hsnt_output_folder, 'sino')
+recon_folder = os.path.join(hsnt_output_folder, 'recon')
 input_file_name = os.path.join(sino_folder, 'dehydrated_sino_' + dataset_name + '.h5')
 output_file_name = os.path.join(recon_folder, 'dehydrated_recons_' + dataset_name + '.h5')
 

@@ -3,7 +3,7 @@ Hyperspectral Neutron Tomography
 --------------------------------
 
 Step 1 for the Ni-Cu-Al FHR demo: preprocess raw projection data and write
-per-angle processed arrays to the output/prep folder.
+per-angle processed arrays to the output/hsnt/prep folder.
 """
 
 import os
@@ -16,7 +16,8 @@ base_path = '/depot/bouman/data/ORNL/hsnt/tci_2025_Ni_Cu_Al'
 ob_folder_path = os.path.join(base_path, 'open_beam')  # Raw open-beam folder path, may contain one or more observations
 proj_folder_path = os.path.join(base_path, 'projections')  # Raw projection folder path, may contain one or more views
 output_folder = 'output'
-prep_folder = os.path.join(output_folder, 'prep')
+hsnt_output_folder = os.path.join(output_folder, 'hsnt')
+prep_folder = os.path.join(hsnt_output_folder, 'prep')
 
 # Setup parameters
 wave_idx_start = 100  # Index of the 1st wavelength bin to be loaded
