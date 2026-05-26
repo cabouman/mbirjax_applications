@@ -18,7 +18,7 @@ output_folder = 'output'
 hsnt_output_folder = os.path.join(output_folder, 'hsnt')
 prep_folder = os.path.join(hsnt_output_folder, 'prep')
 sino_folder = os.path.join(hsnt_output_folder, 'sino')
-output_file_name = os.path.join(sino_folder, 'dehydrated_sino_' + dataset_name + '.h5')
+output_file_name = os.path.join(sino_folder, 'dehydrated_sino.h5')
 
 # Setup parameters
 num_materials = 3  # Number of materials in the sample

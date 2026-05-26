@@ -14,13 +14,12 @@ import hsnt_prep_utils as h_preproc
 
 
 # Setup paths
-dataset_name = 'Ni_Cu_Al_dataset'
 output_folder = 'output'
 hsnt_output_folder = os.path.join(output_folder, 'hsnt')
 sino_folder = os.path.join(hsnt_output_folder, 'sino')
 recon_folder = os.path.join(hsnt_output_folder, 'recon')
-input_file_name = os.path.join(sino_folder, 'dehydrated_sino_' + dataset_name + '.h5')
-output_file_name = os.path.join(recon_folder, 'dehydrated_recons_' + dataset_name + '.h5')
+input_file_name = os.path.join(sino_folder, 'dehydrated_sino.h5')
+output_file_name = os.path.join(recon_folder, 'dehydrated_recon.h5')
 
 # Setup parameters
 alignment_offsets = [2, 2]  # Chip alignment offset values along the Y and X axes
@@ -45,8 +44,9 @@ def main():
 
     os.makedirs(recon_folder, exist_ok=True)
 
-    hsnt_dehydrated_sino, metadata = mj.hsnt.import_hsnt_data_hdf5(input_file_name, dataset_name)
+    hsnt_dehydrated_sino, metadata = mj.hsnt.import_hsnt_data_hdf5(input_file_name)
     subspace_data_all_angles, subspace_basis, dataset_type = hsnt_dehydrated_sino
+    dataset_name = metadata.get('dataset_name', 'Unknown')
     print("Loaded dataset: ", metadata['dataset_name'])
     if metadata['angles'] is None:
         raise ValueError("Missing angles metadata in dehydrated sinogram file.")

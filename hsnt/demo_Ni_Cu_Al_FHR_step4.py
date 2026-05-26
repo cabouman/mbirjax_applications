@@ -13,11 +13,10 @@ import plot_utils as p_utils
 
 
 # Setup paths
-dataset_name = 'Ni_Cu_Al_dataset'
 output_folder = 'output'
 hsnt_output_folder = os.path.join(output_folder, 'hsnt')
 recon_folder = os.path.join(hsnt_output_folder, 'recon')
-input_file_name = os.path.join(recon_folder, 'dehydrated_recons_' + dataset_name + '.h5')
+input_file_name = os.path.join(recon_folder, 'dehydrated_recon.h5')
 
 # Display parameters
 disp_wave_idx = [300, 600, 900]
@@ -35,7 +34,7 @@ def main():
             f"Expected file: {input_file_name}"
         )
 
-    hsnt_dehydrated_recons, metadata = mj.hsnt.import_hsnt_data_hdf5(input_file_name, dataset_name)
+    hsnt_dehydrated_recons, metadata = mj.hsnt.import_hsnt_data_hdf5(input_file_name)
     print("Loaded dataset: ", metadata['dataset_name'])
 
     # Rehydrate only the display wavelength reconstruction
