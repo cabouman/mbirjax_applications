@@ -45,7 +45,7 @@ def main():
 
     os.makedirs(recon_folder, exist_ok=True)
 
-    hsnt_dehydrated_sino, metadata = mj.hsnt.import_hsnt_data_hdf5(input_file_name, dataset_name)
+    hsnt_dehydrated_sino, metadata = mj.import_hsnt_data_hdf5(input_file_name)
     subspace_data_all_angles, subspace_basis, dataset_type = hsnt_dehydrated_sino
     print("Loaded dataset: ", metadata['dataset_name'])
     if metadata['angles'] is None:
@@ -71,8 +71,8 @@ def main():
 
     # Pack dehydrated reconstructions and save
     hsnt_dehydrated_recons = [subspace_recons, subspace_basis, dataset_type]
-    metadata = mj.hsnt.create_hsnt_metadata(dataset_name=dataset_name)
-    mj.hsnt.export_hsnt_data_hdf5(output_file_name, hsnt_dehydrated_recons, metadata)
+    metadata = mj.create_hsnt_metadata(dataset_name=dataset_name)
+    mj.export_hsnt_data_hdf5(output_file_name, hsnt_dehydrated_recons, metadata)
     print("Saved dehydrated reconstruction to: ", output_file_name)
 
 
