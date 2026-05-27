@@ -63,13 +63,13 @@ def main():
     for angle in angles:
         print("Currently estimating subspace basis for angle: ", angle)
         processed_data = np.load(_processed_data_path(angle))
-        _, subspace_basis, _ = mj.hsnt.dehydrate(processed_data, num_materials=num_materials, verbose=verbose)
+        _, subspace_basis, _ = mj.dehydrate(processed_data, num_materials=num_materials, verbose=verbose)
         subspace_basis_all_angles.append(subspace_basis)
     subspace_basis_all_angles = np.concatenate(subspace_basis_all_angles, axis=0)
 
     # Estimate refined set of subspace basis vectors combining estimations for all angles
     print("Refining subspace basis")
-    _, subspace_basis, dataset_type = mj.hsnt.dehydrate(subspace_basis_all_angles, num_materials=num_materials,
+    _, subspace_basis, dataset_type = mj.dehydrate(subspace_basis_all_angles, num_materials=num_materials,
                                                         verbose=verbose)
 
     # Perform final dehydration for each angle using the refined subspace basis vectors
@@ -77,14 +77,14 @@ def main():
     for angle in angles:
         print("Currently estimating subspace data for angle: ", angle)
         processed_data = np.load(_processed_data_path(angle))
-        subspace_data, _, _ = mj.hsnt.dehydrate(processed_data, subspace_basis=subspace_basis, verbose=verbose)
+        subspace_data, _, _ = mj.dehydrate(processed_data, subspace_basis=subspace_basis, verbose=verbose)
         subspace_data_all_angles.append(subspace_data)
     subspace_data_all_angles = np.concatenate(subspace_data_all_angles, axis=0)
 
     # Pack dehydrated sinogram and save
     hsnt_dehydrated_sino = [subspace_data_all_angles, subspace_basis, dataset_type]
     metadata = mj.hsnt.create_hsnt_metadata(dataset_name=dataset_name, angles=np.array(angles))
-    mj.hsnt.export_hsnt_data_hdf5(output_file_name, hsnt_dehydrated_sino, metadata)
+    mj.export_hsnt_data_hdf5(output_file_name, hsnt_dehydrated_sino, metadata)
     print("Saved dehydrated sinogram to: ", output_file_name)
 
 

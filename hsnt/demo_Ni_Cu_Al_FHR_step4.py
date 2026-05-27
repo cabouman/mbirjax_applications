@@ -34,11 +34,11 @@ def main():
             f"Expected file: {input_file_name}"
         )
 
-    hsnt_dehydrated_recons, metadata = mj.hsnt.import_hsnt_data_hdf5(input_file_name)
+    hsnt_dehydrated_recons, metadata = mj.import_hsnt_data_hdf5(input_file_name)
     print("Loaded dataset: ", metadata['dataset_name'])
 
     # Rehydrate only the display wavelength reconstruction
-    hsnt_recon = mj.hsnt.rehydrate(hsnt_dehydrated_recons, hyperspectral_idx=disp_wave_idx)
+    hsnt_recon = mj.rehydrate(hsnt_dehydrated_recons, hyperspectral_idx=disp_wave_idx)
 
     # Plot image
     print("Displaying reconstructed image for wavelength indices: ", disp_wave_idx, ", and slice indices: ", disp_slices)

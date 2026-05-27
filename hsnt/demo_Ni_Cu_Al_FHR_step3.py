@@ -44,7 +44,7 @@ def main():
 
     os.makedirs(recon_folder, exist_ok=True)
 
-    hsnt_dehydrated_sino, metadata = mj.hsnt.import_hsnt_data_hdf5(input_file_name)
+    hsnt_dehydrated_sino, metadata = mj.import_hsnt_data_hdf5(input_file_name)
     subspace_data_all_angles, subspace_basis, dataset_type = hsnt_dehydrated_sino
     dataset_name = metadata.get('dataset_name', 'Unknown')
     print("Loaded dataset: ", metadata['dataset_name'])
