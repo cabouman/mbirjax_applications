@@ -79,6 +79,36 @@ if __name__ == "__main__":
             'vmin': 0,
             'vmax': 10,
         },
+        'Nano CT Sample B': {
+            'url': '/depot/bouman/data/AFRL/lipp/Black_Sheep_tomo-B_CS-2.txrm',
+            'sharpness': 2.0,
+            'snr_db': 35.0,
+            'downsample_factor': 1,
+            'subsample_view_factor': 1,
+            'view_alignment': False,
+            'vmin': 0,
+            'vmax': 0.001,
+        },
+        'Nano CT Sample C': {
+            'url': '/depot/bouman/data/AFRL/lipp/Black_Sheep_tomo-C_CS0.txrm',
+            'sharpness': 2.0,
+            'snr_db': 35.0,
+            'downsample_factor': 1,
+            'subsample_view_factor': 1,
+            'view_alignment': False,
+            'vmin': 0,
+            'vmax': 0.001,
+        },
+        'Nano CT Sample D': {
+            'url': '/depot/bouman/data/AFRL/lipp/Black_Sheep_tomo-D_CS-3.8.txrm',
+            'sharpness': 2.0,
+            'snr_db': 35.0,
+            'downsample_factor': 1,
+            'subsample_view_factor': 1,
+            'view_alignment': False,
+            'vmin': 0,
+            'vmax': 0.001,
+        },
     }
 
     # Prompt user for dataset selection using a numbered menu
@@ -108,13 +138,17 @@ if __name__ == "__main__":
 
     # Load the sinogram and metadata
     print("\n********** Load sinogram and metadata from the data **************")
-    sinogram, cone_beam_params, optional_params = mjp.zeiss_cb.compute_sino_and_params(dataset_url, downsample_factor=(downsample_factor, downsample_factor),
+    sinogram, geometry_params, optional_params, zeiss_metadata = mjp.zeiss.compute_sino_and_params(dataset_url, downsample_factor=(downsample_factor, downsample_factor),
                                                                                                  subsample_view_factor=subsample_view_factor)
 
-    # Construct cone beam model
-    print("\n********** Construct cone beam model **************")
-    ct_model = mj.ConeBeamModel(**cone_beam_params)
-    ct_model.set_params(**optional_params)
+    # Construct tomography model
+    print("\n********** Construct tomography model **************")
+    if zeiss_metadata['scanner_type'] == 'ultra':
+        ct_model = mj.ParallelBeamModel(**geometry_params)
+        ct_model.set_params(**optional_params)
+    else:
+        ct_model = mj.ConeBeamModel(**geometry_params)
+        ct_model.set_params(**optional_params)
 
     # Rerun auto-parameter functions because we changed the assumed detector pitch
     ct_model.auto_set_recon_geometry() # Reset default recon shape
@@ -129,8 +163,8 @@ if __name__ == "__main__":
     # Print out model parameters
     ct_model.print_params()
 
-    # Perform FDK reconstruction
-    print("\n********** Perform FDK reconstruction **************")
+    # Perform Direct reconstruction
+    print("\n********** Perform direct reconstruction **************")
     direct_recon = ct_model.direct_recon(sinogram)
 
     if view_alignment is True:
@@ -138,8 +172,8 @@ if __name__ == "__main__":
         print("\n********** Perform sinogram alignment **************")
         sinogram = mjp.align_sino_views(ct_model, sinogram, direct_recon)
 
-        # Perform FDK reconstruction
-        print("\n********** Perform FDK reconstruction after alignment **************")
+        # Perform direct reconstruction
+        print("\n********** Perform direct reconstruction after alignment **************")
         direct_recon = ct_model.direct_recon(sinogram)
 
     # Weights
@@ -150,17 +184,17 @@ if __name__ == "__main__":
     mbir_recon, recon_dict = ct_model.recon(sinogram, weights=weights)
 
     # Save recon to hdf5
-    print("\n*********** save mbir and fdk recon in h5 format *************")
+    print("\n*********** save mbir and direct recon in h5 format *************")
     os.makedirs(output_path, exist_ok=True)  # mkdir if directory does not exist
-    fdk_path = os.path.join(output_path, f"cone_fdk_recon.h5")
-    mj.export_recon_hdf5(fdk_path, direct_recon, recon_dict=None)
-    mbir_path = os.path.join(output_path, f"cone_mbir_recon.h5")
+    direct_path = os.path.join(output_path, f"zeiss_fdk_recon.h5")
+    mj.export_recon_hdf5(direct_path, direct_recon, recon_dict=None)
+    mbir_path = os.path.join(output_path, f"zeiss_mbir_recon.h5")
     mj.export_recon_hdf5(mbir_path, mbir_recon, recon_dict=None, remove_flash=True)
-    print("FDK recon saved to {}".format(os.path.abspath(fdk_path)))
+    print("Direct recon saved to {}".format(os.path.abspath(direct_path)))
     print("MBIR recon saved to {}".format(os.path.abspath(mbir_path)))
 
     if verbose > 1:
         # Display the results
         mj.slice_viewer(direct_recon, mbir_recon, slice_axis=2, vmin=vmin, vmax=vmax,
-                        slice_label=['FDK', 'MBIR'],
-                        title='Comparison between FDK and MBIR reconstructions')
+                        slice_label=['Direct', 'MBIR'],
+                        title='Comparison between Direct and MBIR reconstructions')
