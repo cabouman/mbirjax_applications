@@ -6,6 +6,5 @@ python Lilly_recon.py \
   --subsample_view_factor 2 \
   --num_metal 0 \
   --sino_cropping 1
-
-
+  2>&1 | tee ~/mbirjax_notes/Lilly_no_metal_ds1_run.log
 
