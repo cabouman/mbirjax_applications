@@ -1,9 +1,6 @@
 import numpy as np
 import os
-import time
 import pprint
-import jax.numpy as jnp
-import scipy
 import argparse
 import mbirjax as mj
 import mbirjax.preprocess as mjp
@@ -59,8 +56,12 @@ if __name__ == "__main__":
             print("\n********** Cropping sinogram margins and update cone-beam geometry parameters **********")
         sino, cone_beam_params, optional_params = mjp.auto_crop_sino_conebeam(sino, cone_beam_params, optional_params)
 
-    # Clip sinogram to be positive
-    sino = jnp.maximum(sino, 0.0)   # Clip sinogram to be non-negative
+    # Clip sinogram to be non-negative, ON THE HOST.  Using np.maximum (not jnp.maximum) keeps the full
+    # sinogram in host memory: jnp.maximum would copy the whole sinogram onto one GPU (and gen_weights
+    # below would add a second full-sino GPU array), only for split_sino_recon to gather them back to the
+    # host -- a wasteful round-trip that can OOM a single GPU before the recon starts.  Kept host, each
+    # half-recon shards its own half from the host.
+    sino = np.maximum(sino, 0.0)
 
     if verbose>0:
         print("\n***************** Set up MBIRJAX model ****************")
