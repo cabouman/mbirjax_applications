@@ -93,9 +93,24 @@ if __name__ == "__main__":
     if verbose>0:
         ct_model.print_params()
 
+    # Per-sequence mbirjax log path, so each partition-sequence run keeps its own log.
+    logfile_path = os.path.expanduser(f"~/mbirjax_notes/recon_{dataset_tag}_pseq_{partition_sequence_name}.log")
+
     if verbose>0:
         print("\n*************** Compute reconstruction ***************")
-    recon = mjp.recon_plastic_metal(ct_model, sino, weights_trans, num_metal=num_metal, verbose=verbose)
+    if num_metal == 0:
+        # No metal artifact reduction: this is a plain MBIR recon, so call split_sino_recon
+        # directly (recon_plastic_metal does the same internally for num_metal==0) and use its
+        # native logfile_path option to write the detailed log into ~/mbirjax_notes.  We pass
+        # stop_threshold_change_pct=0.5 to match recon_plastic_metal's default for apples-to-apples.
+        recon, _ = ct_model.split_sino_recon(sino, weights=weights_trans, stop_threshold_change_pct=0.5,
+                                             logfile_path=logfile_path)
+    else:
+        # recon_plastic_metal does not forward logfile_path, so this case logs to the mbirjax
+        # default location (~/.mbirjax/logs/recon.log).
+        recon = mjp.recon_plastic_metal(ct_model, sino, weights_trans, num_metal=num_metal, verbose=verbose)
+    if verbose>0 and num_metal == 0:
+        print(f"Saved mbirjax recon log to {logfile_path}")
 
     # Load voxel pitch
     delta_voxel_mm = ct_model.get_params('delta_voxel') * ct_model.get_params('alu_value')
