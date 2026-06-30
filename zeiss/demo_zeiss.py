@@ -1,8 +1,9 @@
 import os
 import sys
-import numpy as np
-import jax.numpy as jnp
 import pprint
+# Import mbirjax before jax: at import it sets TF_CPP_MIN_LOG_LEVEL (to quiet benign multi-GPU
+# allocator warnings) and the XLA device-count flag, and those must be set BEFORE jaxlib initializes.
+# So do not add an `import jax...` above this line.
 import mbirjax as mj
 import mbirjax.preprocess as mjp
 
