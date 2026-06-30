@@ -1,10 +1,10 @@
 seed = 42  # Change this value to control randomness across runs
 
+import os
 import numpy as np
-import jax.numpy as jnp
 import mbirjax as mj
 import mbirjax.preprocess as mjp
-import os
+import jax.numpy as jnp
 
 """
 Restrict to center slices to investigate noise in center slices.  

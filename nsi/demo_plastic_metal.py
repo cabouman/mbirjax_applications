@@ -1,12 +1,9 @@
-import numpy as np
 import os
-import time
 import pprint
-import jax.numpy as jnp
-import scipy
 import argparse
 import mbirjax as mj
 import mbirjax.preprocess as mjp
+import jax.numpy as jnp
 
 pp = pprint.PrettyPrinter(indent=4)
 

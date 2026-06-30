@@ -1,7 +1,5 @@
 import warnings
 import time
-import numpy as np
-import jax.numpy as jnp
 import mbirjax as mj
 import mbirjax.preprocess as mjp
 import os
