@@ -1,4 +1,9 @@
 import os
+
+# Fraction of each GPU's memory JAX may preallocate (default 0.75 leaves ~25% idle).
+# MUST be set before 'import jax'
+os.environ.setdefault("XLA_PYTHON_CLIENT_MEM_FRACTION", "0.9")
+
 import sys
 import numpy as np
 import jax
@@ -20,8 +25,10 @@ PARTITION_SEQUENCES = {
     "slow_start":   [2, 2, 3, 4, 5, 6, 7],    # linger at granularity 4 before progressing
     "slow_dip":     [2, 3, 2, 4, 5, 6, 7],    # 4,8,4,16,32,64,128
 }
-# Select which sequence to use for this run (edit this one line to sweep).
-PARTITION_SEQUENCE_NAME = "default"
+# Per-dataset defaults, used when a dataset entry below does not specify its own
+# 'partition_sequence' / 'max_iterations' key.
+DEFAULT_PARTITION_SEQUENCE_NAME = "default"   # a key into PARTITION_SEQUENCES above
+DEFAULT_MAX_ITERATIONS = 15                    # mbirjax recon() default
 
 
 def report_peak_gpu_memory(label=""):
@@ -62,11 +69,13 @@ if __name__ == "__main__":
             'url': '/depot/bouman/data/ORNL/versa/ParAM-Round-1_Z62.txrm',
             'sharpness': 1.5,
             'snr_db': 35.0,
-            'downsample_factor': 2,
+            'downsample_factor': 1,
             'subsample_view_factor': 2,
             'view_alignment': False,
             'vmin': 0,
             'vmax': 0.4,
+            'partition_sequence': 'coarse_4_128',  # skip granularity 1 so 2k^3 fits in GPU memory
+            'max_iterations': 30,                  # 2k^3 Z62 still changing >0.5%/iter at 15; adjust as needed
         },
         'ORNL SiC Composite': {
             'url': '/depot/bouman/data/ORNL/versa/SiC-SiC_CompositeFFOV_tomo-A.txrm',
@@ -174,6 +183,9 @@ if __name__ == "__main__":
     view_alignment = available_datasets[dataset]['view_alignment']
     vmin = available_datasets[dataset]['vmin']
     vmax = available_datasets[dataset]['vmax']
+    # Optional per-dataset recon controls; fall back to defaults when not specified.
+    partition_sequence_name = available_datasets[dataset].get('partition_sequence', DEFAULT_PARTITION_SEQUENCE_NAME)
+    max_iterations = available_datasets[dataset].get('max_iterations', DEFAULT_MAX_ITERATIONS)
 
     # Load the sinogram and metadata
     print("\n********** Load sinogram and metadata from the data **************")
@@ -196,9 +208,10 @@ if __name__ == "__main__":
     ct_model.set_params(sharpness=sharpness, snr_db=snr_db, verbose=1)
 
     # Override the partition sequence to control recon granularity (memory vs. convergence tradeoff)
-    partition_sequence = PARTITION_SEQUENCES[PARTITION_SEQUENCE_NAME]
+    partition_sequence = PARTITION_SEQUENCES[partition_sequence_name]
     ct_model.set_params(partition_sequence=partition_sequence)
-    print(f"Using partition sequence '{PARTITION_SEQUENCE_NAME}': {partition_sequence}")
+    print(f"Using partition sequence '{partition_sequence_name}': {partition_sequence}")
+    print(f"Using max_iterations = {max_iterations}")
 
     if verbose > 1:
         # Display the sinogram
@@ -225,13 +238,9 @@ if __name__ == "__main__":
 
     # Perform MBIR reconstruction
     print("\n********** Perform MBIR reconstruction **************")
-    mbir_recon, recon_dict = ct_model.recon(sinogram, weights=weights)
-    mbir_recon.block_until_ready()  # ensure the recon has fully executed before reading memory stats
+    mbir_recon, recon_dict = ct_model.recon(sinogram, weights=weights, max_iterations=max_iterations)
 
-    # Report peak GPU memory for this partition sequence (the point of the experiment)
-    report_peak_gpu_memory(label=f"(partition_sequence='{PARTITION_SEQUENCE_NAME}')")
-
-    # Save recon to hdf5
+    # Save recon to hdf5 FIRST, so the (expensive) result is on disk before anything else runs.
     print("\n*********** save mbir and direct recon in h5 format *************")
     os.makedirs(output_path, exist_ok=True)  # mkdir if directory does not exist
     direct_path = os.path.join(output_path, f"zeiss_fdk_recon.h5")
@@ -240,6 +249,11 @@ if __name__ == "__main__":
     mj.export_recon_hdf5(mbir_path, mbir_recon, recon_dict=None, remove_flash=True)
     print("Direct recon saved to {}".format(os.path.abspath(direct_path)))
     print("MBIR recon saved to {}".format(os.path.abspath(mbir_path)))
+
+    # Report peak GPU memory for this partition sequence (the point of the experiment).
+    # recon() returns a host (numpy) array with the device work already complete, so no
+    # block_until_ready is needed (and a numpy array doesn't have that method).
+    report_peak_gpu_memory(label=f"(partition_sequence='{partition_sequence_name}')")
 
     if verbose > 1:
         # Display the results
