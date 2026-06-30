@@ -1,12 +1,51 @@
 import os
 import sys
 import numpy as np
+import jax
 import jax.numpy as jnp
 import pprint
 import mbirjax as mj
 import mbirjax.preprocess as mjp
 
 pp = pprint.PrettyPrinter(indent=4)
+
+# === Partition-sequence experiments (granularity vs. GPU memory) ===
+# Values are INDICES into the default granularity [1, 2, 4, 8, 16, 32, 64, 128, 256],
+# granularity 1 (index 0) does a full-image preconditioned-gradient step, 
+# which has the highest per-device peak memory; 
+# starting coarser (index >= 2) reduces the memory demand.
+PARTITION_SEQUENCES = {
+    "default":      [0, 2, 4, 6, 7],          # mbirjax default (includes granularity 1)
+    "coarse_4_128": [2, 3, 4, 5, 6, 7],       # 4,8,16,32,64,128
+    "slow_start":   [2, 2, 3, 4, 5, 6, 7],    # linger at granularity 4 before progressing
+    "slow_dip":     [2, 3, 2, 4, 5, 6, 7],    # 4,8,4,16,32,64,128
+}
+# Select which sequence to use for this run (edit this one line to sweep).
+PARTITION_SEQUENCE_NAME = "default"
+
+
+def report_peak_gpu_memory(label=""):
+    """Print the per-device peak GPU memory high-water mark.
+
+    peak_bytes_in_use is cumulative since process start (not a snapshot), so for this script --
+    which performs a single recon per invocation -- it reports the true peak the run required.
+    The MAX over devices is the number that determines whether the recon fits on one GPU.
+    """
+    print(f"\n********** Peak GPU memory usage {label} **************")
+    peak_per_device = []
+    for d in jax.devices():
+        try:
+            peak = d.memory_stats().get('peak_bytes_in_use')
+        except Exception:
+            peak = None
+        if peak is None:
+            print(f"  {d}: peak_bytes_in_use unavailable (not a GPU?)")
+            continue
+        peak_per_device.append(peak)
+        print(f"  {d}: peak {peak / 2**30:.2f} GiB")
+    if peak_per_device:
+        print(f"  Max over devices:  {max(peak_per_device) / 2**30:.2f} GiB  (the per-GPU fit constraint)")
+        print(f"  Sum over devices:  {sum(peak_per_device) / 2**30:.2f} GiB")
 
 if __name__ == "__main__":
     print("This script is for reconstructing cone beam CT data from Zeiss scanner")
@@ -156,6 +195,11 @@ if __name__ == "__main__":
     # Sharpness and snr_db
     ct_model.set_params(sharpness=sharpness, snr_db=snr_db, verbose=1)
 
+    # Override the partition sequence to control recon granularity (memory vs. convergence tradeoff)
+    partition_sequence = PARTITION_SEQUENCES[PARTITION_SEQUENCE_NAME]
+    ct_model.set_params(partition_sequence=partition_sequence)
+    print(f"Using partition sequence '{PARTITION_SEQUENCE_NAME}': {partition_sequence}")
+
     if verbose > 1:
         # Display the sinogram
         mj.slice_viewer(sinogram, slice_axis=0, title='Original sinogram')
@@ -182,6 +226,10 @@ if __name__ == "__main__":
     # Perform MBIR reconstruction
     print("\n********** Perform MBIR reconstruction **************")
     mbir_recon, recon_dict = ct_model.recon(sinogram, weights=weights)
+    mbir_recon.block_until_ready()  # ensure the recon has fully executed before reading memory stats
+
+    # Report peak GPU memory for this partition sequence (the point of the experiment)
+    report_peak_gpu_memory(label=f"(partition_sequence='{PARTITION_SEQUENCE_NAME}')")
 
     # Save recon to hdf5
     print("\n*********** save mbir and direct recon in h5 format *************")
