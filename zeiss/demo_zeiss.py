@@ -6,9 +6,6 @@ os.environ.setdefault("XLA_PYTHON_CLIENT_MEM_FRACTION", "0.9")
 
 import sys
 import numpy as np
-import jax
-import jax.numpy as jnp
-import pprint
 import mbirjax as mj
 import mbirjax.preprocess as mjp
 
