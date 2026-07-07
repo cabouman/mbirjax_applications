@@ -8,15 +8,9 @@ import mbirjax.preprocess as mjp
 pp = pprint.PrettyPrinter(indent=4)
 
 # === Predefined partition sequences ===
-# Values are INDICES into the default granularity [1, 2, 4, 8, 16, 32, 64, 128, 256],
-# so index 2->granularity 4, ..., index 7->granularity 128.  Starting at index 2 keeps
-# granularity >= 4 (avoids the memory-heavy granularity-1 step on very large recons),
-# and the coarsest used is index 7 (granularity 128).
 PARTITION_SEQUENCES = {
-    "default":      [0, 2, 4, 6, 7],          # mbirjax default (includes granularity 1)
-    "coarse_4_128": [2, 3, 4, 5, 6, 7],       # 4,8,16,32,64,128
-    "slow_start":   [2, 2, 3, 4, 5, 6, 7],    # linger at granularity 4 before progressing
-    "slow_dip":     [2, 3, 2, 4, 5, 6, 7],    # 4,8,4,16,32,64,128
+    "default":  [0, 2, 4, 6, 7],          # mbirjax default (includes granularity 1)
+    "skip_0":    [2, 4, 6, 7],             # 4,16,64,128
 }
 
 if __name__ == "__main__":

@@ -9,7 +9,7 @@ DATA_PATH=/depot/bouman/data/Lilly/Autoinjector_HighRes_Horizontal/
 LOG_DIR=~/mbirjax_notes
 mkdir -p "$LOG_DIR"
 
-for PSEQ in default coarse_4_128 slow_start slow_dip; do
+for PSEQ in default skip_0; do
   echo "==================== partition_sequence: $PSEQ ===================="
   python Lilly_recon_partition_sequence.py \
     --data_path "$DATA_PATH" \
