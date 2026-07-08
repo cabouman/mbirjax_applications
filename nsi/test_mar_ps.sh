@@ -5,7 +5,7 @@
 DATA_PATH=/depot/bouman/data/Lilly/Autoinjector_HighRes_Horizontal/
 
 echo "==================== partition_sequence: $PSEQ ===================="
-python Lilly_recon_partition_sequence.py \
+python Lilly_recon_ps.py \
   --data_path "$DATA_PATH" \
   --downsampling 1 \
   --subsample_view_factor 2 \
