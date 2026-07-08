@@ -90,7 +90,7 @@ if __name__ == "__main__":
         ct_model.print_params()
 
     # Set location of log file
-    logfile_path = os.path.expanduser(f"{logfile_path}recon_{dataset_tag}_pseq_{partition_sequence_name}.log")
+    logfile_path = os.path.expanduser(f"{logfile_path}recon_{dataset_tag}_nummetal_{num_metal}_pseq_{partition_sequence_name}.log")
 
     if verbose>0:
         print("\n*************** Compute reconstruction ***************")
