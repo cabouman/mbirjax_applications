@@ -92,6 +92,9 @@ if __name__ == "__main__":
     # Set location of log file
     logfile_path = os.path.expanduser(f"{logfile_path}recon_{dataset_tag}_nummetal_{num_metal}_pseq_{partition_sequence_name}.log")
 
+    import time
+    time_start = time.time()
+
     if verbose>0:
         print("\n*************** Compute reconstruction ***************")
     if num_metal == 0:
@@ -104,6 +107,9 @@ if __name__ == "__main__":
     if verbose>0 and num_metal == 0:
         print(f"Saved mbirjax recon log to {logfile_path}")
 
+    print(f"Time taken: {time.time() - time_start}")
+    mj.get_memory_stats()
+    
     # Load voxel pitch
     delta_voxel_mm = ct_model.get_params('delta_voxel') * ct_model.get_params('alu_value')
     delta_voxel_um = delta_voxel_mm * 1000
