@@ -17,6 +17,7 @@ if __name__ == "__main__":
     # === MBIR Recon parameters ===
     sharpness = 1.0
     verbose = 1
+    stop_threshold_change_pct = 0.2  # used by both the plain and MAR branches for matched stopping
 
     # ----------------------------
     # Parse command line arguments
@@ -97,14 +98,12 @@ if __name__ == "__main__":
 
     if verbose>0:
         print("\n*************** Compute reconstruction ***************")
-    if num_metal == 0:
-        # perform standard MBIR recon using split sino to reduce memory
-        recon, _ = ct_model.split_sino_recon(sino, weights=weights_trans, max_iterations=max_iterations,
-                                             logfile_path=logfile_path)
-    else:
-        # perform MAR recon
-        recon = mjp.recon_plastic_metal(ct_model, sino, weights_trans, num_metal=num_metal, verbose=verbose)
-    if verbose>0 and num_metal == 0:
+    # MAR recon; num_metal == 0 gives a standard MBIR recon (split sino for cone beam)
+    recon = mjp.recon_plastic_metal(ct_model, sino, weights_trans, num_metal=num_metal, verbose=verbose,
+                                    max_iterations=max_iterations,
+                                    stop_threshold_change_pct=stop_threshold_change_pct,
+                                    logfile_path=logfile_path)
+    if verbose>0:
         print(f"Saved mbirjax recon log to {logfile_path}")
 
     print(f"Time taken: {time.time() - time_start}")
