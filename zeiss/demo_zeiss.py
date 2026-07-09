@@ -20,10 +20,8 @@ pp = pprint.PrettyPrinter(indent=4)
 # which has the highest per-device peak memory; 
 # starting coarser (index >= 2) reduces the memory demand.
 PARTITION_SEQUENCES = {
-    "default":      [0, 2, 4, 6, 7],          # mbirjax default (includes granularity 1)
-    "coarse_4_128": [2, 3, 4, 5, 6, 7],       # 4,8,16,32,64,128
-    "slow_start":   [2, 2, 3, 4, 5, 6, 7],    # linger at granularity 4 before progressing
-    "slow_dip":     [2, 3, 2, 4, 5, 6, 7],    # 4,8,4,16,32,64,128
+    "default":  [0, 2, 4, 6, 7],          # mbirjax default (includes granularity 1)
+    "skip_0":   [2, 4, 6, 7],             # 4,16,64,128
 }
 # Per-dataset defaults, used when a dataset entry below does not specify its own
 # 'partition_sequence' / 'max_iterations' key.
@@ -74,7 +72,7 @@ if __name__ == "__main__":
             'view_alignment': False,
             'vmin': 0,
             'vmax': 0.4,
-            'partition_sequence': 'coarse_4_128',  # skip granularity 1 so 2k^3 fits in GPU memory
+            'partition_sequence': 'skip_0',        # skip granularity 1 so 2k^3 fits in GPU memory
             'max_iterations': 30,                  # 2k^3 Z62 still changing >0.5%/iter at 15; adjust as needed
         },
         'ORNL SiC Composite': {
