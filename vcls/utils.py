@@ -1,5 +1,4 @@
 import numpy as np
-import jax.numpy as jnp
 from matplotlib.path import Path
 
 

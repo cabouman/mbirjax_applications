@@ -2,10 +2,9 @@ seed = 42  # Change this value to control randomness across runs
 
 import numpy as np
 import time
-import jax.numpy as jnp
 import mbirjax as mj
 import utils as dut
-
+import jax.numpy as jnp
 
 
 if __name__ == '__main__':

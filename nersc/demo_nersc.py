@@ -1,10 +1,10 @@
 import os
 import sys
 import numpy as np
-import jax.numpy as jnp
 import pprint
 import mbirjax as mj
 import mbirjax.preprocess as mjp
+import jax.numpy as jnp
 import h5py
 
 pp = pprint.PrettyPrinter(indent=4)
