@@ -21,9 +21,9 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="MBIRJAX Plastic-Metal Reconstruction Demo")
     parser.add_argument("--data_path", type=str, default=None,
                         help="Path to existing data directory.")
-    parser.add_argument("--downsampling", type=int, default=1,  # Perhaps change to subsample_detector_factor
+    parser.add_argument("--downsampling", type=int, default=4,  # Perhaps change to subsample_detector_factor
                         help="Subsampling factor for detector rows and channels.")
-    parser.add_argument("--subsample_view_factor", type=int, default=1,
+    parser.add_argument("--subsample_view_factor", type=int, default=4,
                         help="Subsampling factor for projection views.")
     parser.add_argument("--num_metal", type=int, default=None,
                         help="Number of metal types for segmentation and MAR. "
