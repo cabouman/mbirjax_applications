@@ -10,7 +10,6 @@ if __name__ == "__main__":
 
     # Set user determined parameters
     verbose = 1
-    recon_slice_offset = 0.0
     downsample = 1
 
     output_path = './output'
@@ -48,10 +47,14 @@ if __name__ == "__main__":
 
     # Set optional NSI geometry parameters
     ct_model.set_params(**optional_params)
+    # Recompute the automatic recon geometry now that the real detector pitches and
+    # offsets are set (see mbirjax.preprocess.nsi.compute_sino_and_params).
+    ct_model.auto_set_recon_geometry()
 
     # Set user determined parameter values
     ct_model.set_params(sharpness=sharpness, snr_db=snr_db, verbose=verbose)
-    ct_model.set_params(recon_slice_offset=recon_slice_offset)
+    # (recon_slice_offset is placed by auto_set_recon_geometry above; override via
+    # set_params only to reconstruct a deliberately shifted slab.)
 
     # Generate weights
     weights_trans = mj.gen_weights(sino, weight_type='transmission_root')

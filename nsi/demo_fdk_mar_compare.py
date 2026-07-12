@@ -58,6 +58,9 @@ if __name__ == "__main__":
 
     # Set additional geometry arguments
     ct_model.set_params(**optional_params)
+    # Recompute the automatic recon geometry now that the real detector pitches and
+    # offsets are set (see mbirjax.preprocess.nsi.compute_sino_and_params).
+    ct_model.auto_set_recon_geometry()
 
     # Set reconstruction parameter values
     ct_model.set_params(sharpness=sharpness, verbose=1, positivity_flag=True)
