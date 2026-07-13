@@ -12,5 +12,4 @@ python Lilly_recon_ps.py \
   --num_metal 2 \
   --sino_cropping 1 \
   --partition_sequence skip_0 \
-  --max_iterations 15 \
-  2>&1 | tee ~/mbirjax_notes/Lilly_mar_run.log
+  --max_iterations 15
