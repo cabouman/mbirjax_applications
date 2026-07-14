@@ -12,6 +12,10 @@ hsnt/data
 hsnt/output
 hsnt/logs
 
+zeiss/data
+zeiss/logs
+zeiss/output
+
 vcls/demo_data
 vcls/output
 vcls/recon_bases_data

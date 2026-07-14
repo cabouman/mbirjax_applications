@@ -2,7 +2,6 @@ seed = 42  # Change this value to control randomness across runs
 
 import numpy as np
 import time
-import jax.numpy as jnp
 import mbirjax as mj
 import mbirjax.preprocess as mjp
 import utils as dut

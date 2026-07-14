@@ -1,12 +1,9 @@
-import numpy as np
 import os
-import time
 import pprint
-import jax.numpy as jnp
-import scipy
 import argparse
 import mbirjax as mj
 import mbirjax.preprocess as mjp
+import jax.numpy as jnp
 
 pp = pprint.PrettyPrinter(indent=4)
 
@@ -24,12 +21,17 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="MBIRJAX Plastic-Metal Reconstruction Demo")
     parser.add_argument("--data_path", type=str, default=None,
                         help="Path to existing data directory.")
-    parser.add_argument("--downsampling", type=int, default=1,  # Perhaps change to subsample_detector_factor
+    parser.add_argument("--downsampling", type=int, default=4,  # Perhaps change to subsample_detector_factor
                         help="Subsampling factor for detector rows and channels.")
-    parser.add_argument("--subsample_view_factor", type=int, default=1,
+    parser.add_argument("--subsample_view_factor", type=int, default=4,
                         help="Subsampling factor for projection views.")
-    parser.add_argument("--num_metal", type=int, default=2,
-                        help="Number of metal types for segmentation and MAR.")
+    parser.add_argument("--num_metal", type=int, default=None,
+                        help="Number of metal types for segmentation and MAR. "
+                             "Defaults to the recommended value for the selected dataset.")
+    parser.add_argument("--dataset", type=str, default="public",
+                        choices=["public", "AI", "CAI_horizontal", "CAI_vertical"],
+                        help="Dataset to use. 'public' is a publicly available demo dataset; "
+                             "the others are internal Lilly test datasets.")
     args = parser.parse_args()
 
     # Output path
@@ -37,22 +39,30 @@ if __name__ == "__main__":
     os.makedirs(output_path, exist_ok=True)  # mkdir if directory does not exist
 
     # === Choose dataset ===
-    dataset_choice = "AI"
+    dataset_choice = args.dataset
 
     # Options:
-    #   "AI"             -> Autoinjector HighRes Horizontal
-    #   "CAI_horizontal" -> Connected Autoinjector Horizontal
-    #   "CAI_vertical"   -> Connected Autoinjector Vertical
+    #   "public"         -> Publicly available demo dataset (default)
+    #   "AI"             -> Autoinjector HighRes Horizontal (internal)
+    #   "CAI_horizontal" -> Connected Autoinjector Horizontal (internal)
+    #   "CAI_vertical"   -> Connected Autoinjector Vertical (internal)
 
-    if dataset_choice == "AI":
+    if dataset_choice == "public":
+        dataset_url = 'https://www.datadepot.rcac.purdue.edu/bouman/data/demo_nsi_vert_metal_all_views.tgz'
+        dataset_tag = 'public'
+        default_num_metal = 1
+    elif dataset_choice == "AI":
         dataset_url = '/depot/bouman/data/Lilly/Autoinjector_HighRes_Horizontal.tgz'
         dataset_tag = 'ai'
+        default_num_metal = 2
     elif dataset_choice == "CAI_horizontal":
         dataset_url = '/depot/bouman/data/Lilly/Connected_Autoinjector_Horizontal.tgz'
         dataset_tag = 'cai_h'
+        default_num_metal = 2
     elif dataset_choice == "CAI_vertical":
         dataset_url = '/depot/bouman/data/Lilly/Connected_Autoinjector_Vertical.tgz'
         dataset_tag = 'cai_v'
+        default_num_metal = 2
     else:
         raise ValueError(f"Unknown dataset choice: {dataset_choice}")
 
@@ -70,7 +80,7 @@ if __name__ == "__main__":
     # Override default down sampling rate if provided
     downsample = args.downsampling
 
-    num_metal = args.num_metal
+    num_metal = args.num_metal if args.num_metal is not None else default_num_metal
 
     # Set down sampling rates
     downsample_rate = [downsample, downsample]
