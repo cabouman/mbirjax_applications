@@ -87,16 +87,14 @@ if __name__ == "__main__":
     subsample_view_factor = args.subsample_view_factor
 
     print("\n************** NSI dataset preprocessing **************")
-    sino, cone_beam_params, optional_params = \
-        mjp.nsi.compute_sino_and_params(dataset_dir, downsample_factor=downsample_rate, subsample_view_factor=subsample_view_factor)
+    sino, ct_model = \
+        mjp.nsi.get_sino_and_model(dataset_dir, downsample_factor=downsample_rate, subsample_view_factor=subsample_view_factor)
 
     # #### beam hardening correction
     sino = mjp.BH_correction(sino, alpha=alpha)
     sino = jnp.maximum(sino, 0.0)   # Clip sinogram to be non-negative
 
     print("\n***************** Set up MBIRJAX model ****************")
-    ct_model = mj.ConeBeamModel(**cone_beam_params)
-    ct_model.set_params(**optional_params)
     ct_model.set_params(sharpness=sharpness, verbose=verbose, positivity_flag=True)
     weights_trans = mj.gen_weights(sino, weight_type='transmission_root')
     ct_model.print_params()

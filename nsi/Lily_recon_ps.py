@@ -9,8 +9,8 @@ pp = pprint.PrettyPrinter(indent=4)
 
 # === Predefined partition sequences ===
 PARTITION_SEQUENCES = {
-    "default":  [0, 2, 4, 6, 7],          # mbirjax default (includes granularity 1)
-    "skip_0":    [2, 4, 6, 7],             # 4,16,64,128
+    "default": [0, 2, 4, 6, 7],  # mbirjax default (includes granularity 1)
+    "skip_0": [2, 4, 6, 7],  # 4,16,64,128
 }
 
 if __name__ == "__main__":
@@ -41,11 +41,11 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     # Set output path
-    output_path = './output/lilly/'   # path to store output recon images
+    output_path = './output/lilly/'  # path to store output recon images
     os.makedirs(output_path, exist_ok=True)  # mkdir if directory does not exist
 
     # Set log path
-    logfile_path = './logs/'   # path to store output logs
+    logfile_path = './logs/'  # path to store output logs
     os.makedirs(logfile_path, exist_ok=True)  # mkdir if directory does not exist
 
     if args.data_path is not None and not os.path.isdir(args.data_path):
@@ -64,9 +64,10 @@ if __name__ == "__main__":
     downsample_rate = [downsample, downsample]
     dataset_tag = os.path.basename(dataset_dir.rstrip("/"))
 
-    if verbose>0:
-        print("\n************** NSI dataset preprocessing **************")
     cropping = bool(args.sino_cropping)
+
+    if verbose > 0:
+        print("\n************** NSI dataset preprocessing **************")
     sino, ct_model = \
         mjp.nsi.get_sino_and_model(dataset_dir, downsample_factor=downsample_rate,
                                    subsample_view_factor=subsample_view_factor, auto_crop=cropping)
@@ -74,30 +75,32 @@ if __name__ == "__main__":
     # Using np.maximum (not jnp.maximum) keeps the full sinogram in host memory.
     sino = np.maximum(sino, 0.0)
 
-    if verbose>0:
+    if verbose > 0:
         print("\n***************** Set up MBIRJAX model ****************")
     ct_model.set_params(sharpness=sharpness, verbose=verbose, positivity_flag=True)
     ct_model.set_params(partition_sequence=partition_sequence)
-    if verbose>0:
+    if verbose > 0:
         print(f"Using partition sequence '{partition_sequence_name}': {partition_sequence}")
     weights_trans = mj.gen_weights(sino, weight_type='transmission_root')
-    if verbose>0:
+    if verbose > 0:
         ct_model.print_params()
 
     # Set location of log file
-    logfile_path = os.path.expanduser(f"{logfile_path}recon_{dataset_tag}_nummetal_{num_metal}_pseq_{partition_sequence_name}.log")
+    logfile_path = os.path.expanduser(
+        f"{logfile_path}recon_{dataset_tag}_nummetal_{num_metal}_pseq_{partition_sequence_name}.log")
 
     import time
+
     time_start = time.time()
 
-    if verbose>0:
+    if verbose > 0:
         print("\n*************** Compute reconstruction ***************")
     # MAR recon; num_metal == 0 gives a standard MBIR recon (split sino for cone beam)
     recon = mjp.recon_plastic_metal(ct_model, sino, weights_trans, num_metal=num_metal, verbose=verbose,
                                     max_iterations=max_iterations,
                                     stop_threshold_change_pct=stop_threshold_change_pct,
                                     logfile_path=logfile_path)
-    if verbose>0:
+    if verbose > 0:
         print(f"Saved mbirjax recon log to {logfile_path}")
 
     print(f"Time taken: {time.time() - time_start}")
@@ -107,10 +110,10 @@ if __name__ == "__main__":
     delta_voxel_mm = ct_model.get_params('delta_voxel') * ct_model.get_params('alu_value')
     delta_voxel_um = delta_voxel_mm * 1000
     # Save recon to hdf5
-    if verbose>0:
+    if verbose > 0:
         print("\n*********** save mar and fdk recon in h5 format *************")
     hdf5_path = os.path.join(output_path,
-    f"recon_{dataset_tag}_nummetal_{num_metal}_voxel_pitch_{delta_voxel_um:.2f}um_pseq_{partition_sequence_name}.h5")
+                             f"recon_{dataset_tag}_nummetal_{num_metal}_voxel_pitch_{delta_voxel_um:.2f}um_pseq_{partition_sequence_name}.h5")
     mj.export_recon_hdf5(hdf5_path, recon, recon_dict=None, remove_flash=True)
-    if verbose>0:
+    if verbose > 0:
         print("Metal artifact reduction recon saved to {}".format(os.path.abspath(hdf5_path)))

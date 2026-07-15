@@ -185,22 +185,12 @@ if __name__ == "__main__":
     partition_sequence_name = available_datasets[dataset].get('partition_sequence', DEFAULT_PARTITION_SEQUENCE_NAME)
     max_iterations = available_datasets[dataset].get('max_iterations', DEFAULT_MAX_ITERATIONS)
 
-    # Load the sinogram and metadata
-    print("\n********** Load sinogram and metadata from the data **************")
-    sinogram, geometry_params, optional_params, zeiss_metadata = mjp.zeiss.compute_sino_and_params(dataset_url, downsample_factor=(downsample_factor, downsample_factor),
-                                                                                                 subsample_view_factor=subsample_view_factor)
-
-    # Construct tomography model
-    print("\n********** Construct tomography model **************")
-    if zeiss_metadata['scanner_type'] == 'ultra':
-        ct_model = mj.ParallelBeamModel(**geometry_params)
-        ct_model.set_params(**optional_params)
-    else:
-        ct_model = mj.ConeBeamModel(**geometry_params)
-        ct_model.set_params(**optional_params)
-
-    # Rerun auto-parameter functions because we changed the assumed detector pitch
-    ct_model.auto_set_recon_geometry() # Reset default recon shape
+    # Load the sinogram and construct the tomography model.
+    # get_sino_and_model runs construct + set_params + auto_set_recon_geometry internally, and
+    # auto-selects the model class (ultra -> ParallelBeamModel, else ConeBeamModel).
+    print("\n********** Load sinogram and construct tomography model **************")
+    sinogram, ct_model = mjp.zeiss.get_sino_and_model(dataset_url, downsample_factor=(downsample_factor, downsample_factor),
+                                                      subsample_view_factor=subsample_view_factor)
 
     # Sharpness and snr_db
     ct_model.set_params(sharpness=sharpness, snr_db=snr_db, verbose=1)

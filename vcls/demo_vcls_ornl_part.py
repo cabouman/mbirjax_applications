@@ -55,14 +55,12 @@ if __name__ == '__main__':
     )
     filename = os.path.join(dataset_dir_scan, hdf5_files[0])
     print('Loading sinogram and computing beam hardening correction')
-    full_sino, cone_beam_params, optional_params = mjp.pymbir.compute_sino_and_params(filename)
+    full_sino, ct_model = mjp.pymbir.get_sino_and_model(filename)
     print('Sinogram shape: {}'.format(full_sino.shape))
-    angle_candidates = cone_beam_params['angles']  # This is probably not the best way to do this
 
-    # Construct cone beam object using ORNL parameters
-    ct_model = mj.ConeBeamModel(**cone_beam_params)
-    # Set optional geometry parameters
-    ct_model.set_params(**optional_params)
+    # Recover the raw geometry parameters for use below (view angles, detector geometry)
+    required, optional, _ = ct_model.get_all_params()
+    angle_candidates = np.asarray(required['angles'])  # This is probably not the best way to do this
 
     ## Force consistency between recon and reference object shapes
     # Print out default recon shape
@@ -101,8 +99,8 @@ if __name__ == '__main__':
     recon_opt, recon_dict_opt = ct_model_opt.recon(sinogram_opt)
 
     # Compute detector cone angle
-    num_det_channels_for_recon = cone_beam_params["sinogram_shape"][2]
-    source_detector_dist = cone_beam_params["source_detector_dist"]
+    num_det_channels_for_recon = required["sinogram_shape"][2]
+    source_detector_dist = required["source_detector_dist"]
     detector_cone_angle = 2 * np.arctan2(num_det_channels_for_recon / 2, source_detector_dist)
 
     # Compute uniform sampling angles for a short scan

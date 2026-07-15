@@ -43,22 +43,16 @@ if __name__ == "__main__":
     subsample_view_factor = 2*downsample  # view subsample factor.
 
     print("\n************** NSI dataset preprocessing **************")
-    sino, cone_beam_params, optional_params = \
-        mj.preprocess.nsi.compute_sino_and_params(dataset_dir,
-                                                       downsample_factor=downsample_factor,
-                                                       subsample_view_factor=subsample_view_factor)
+    sino, ct_model = \
+        mj.preprocess.nsi.get_sino_and_model(dataset_dir,
+                                             downsample_factor=downsample_factor,
+                                             subsample_view_factor=subsample_view_factor)
 
     # beam hardening correction
     sino = jnp.maximum(sino, 0.0)
     sino = mjp.BH_correction(sino, alpha=alpha)
 
     print("\n************** Set up MBIRJAX model **************")
-    # ConeBeamModel constructor
-    ct_model = mj.ConeBeamModel(**cone_beam_params)
-
-    # Set additional geometry arguments
-    ct_model.set_params(**optional_params)
-
     # Set reconstruction parameter values
     ct_model.set_params(sharpness=sharpness, verbose=1, positivity_flag=True)
 

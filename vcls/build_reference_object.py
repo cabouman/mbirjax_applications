@@ -43,12 +43,8 @@ if __name__ == '__main__':
         if f.lower().endswith(('.h5', '.hdf5'))
     )
     filename = os.path.join(dataset_dir_scan, hdf5_files[0])
-    full_sino, cone_beam_params, optional_params = mjp.pymbir.compute_sino_and_params(filename)
+    full_sino, ct_model = mjp.pymbir.get_sino_and_model(filename)
 
-    # Construct cone beam object using ORNL parameters
-    ct_model = mj.ConeBeamModel(**cone_beam_params)
-    # Set optional geometry parameters
-    ct_model.set_params(**optional_params)
     # Set reconstruction parameters
     ct_model.set_params(sharpness=sharpness, snr_db=snr_db)
 
