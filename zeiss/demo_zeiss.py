@@ -29,29 +29,6 @@ DEFAULT_PARTITION_SEQUENCE_NAME = "default"   # a key into PARTITION_SEQUENCES a
 DEFAULT_MAX_ITERATIONS = 15                    # mbirjax recon() default
 
 
-def report_peak_gpu_memory(label=""):
-    """Print the per-device peak GPU memory high-water mark.
-
-    peak_bytes_in_use is cumulative since process start (not a snapshot), so for this script --
-    which performs a single recon per invocation -- it reports the true peak the run required.
-    The MAX over devices is the number that determines whether the recon fits on one GPU.
-    """
-    print(f"\n********** Peak GPU memory usage {label} **************")
-    peak_per_device = []
-    for d in jax.devices():
-        try:
-            peak = d.memory_stats().get('peak_bytes_in_use')
-        except Exception:
-            peak = None
-        if peak is None:
-            print(f"  {d}: peak_bytes_in_use unavailable (not a GPU?)")
-            continue
-        peak_per_device.append(peak)
-        print(f"  {d}: peak {peak / 2**30:.2f} GiB")
-    if peak_per_device:
-        print(f"  Max over devices:  {max(peak_per_device) / 2**30:.2f} GiB  (the per-GPU fit constraint)")
-        print(f"  Sum over devices:  {sum(peak_per_device) / 2**30:.2f} GiB")
-
 if __name__ == "__main__":
     print("This script is for reconstructing cone beam CT data from Zeiss scanner")
 
@@ -238,10 +215,9 @@ if __name__ == "__main__":
     print("Direct recon saved to {}".format(os.path.abspath(direct_path)))
     print("MBIR recon saved to {}".format(os.path.abspath(mbir_path)))
 
-    # Report peak GPU memory for this partition sequence (the point of the experiment).
-    # recon() returns a host (numpy) array with the device work already complete, so no
-    # block_until_ready is needed (and a numpy array doesn't have that method).
-    report_peak_gpu_memory(label=f"(partition_sequence='{partition_sequence_name}')")
+    # Report partition sequence and peak GPU memory usage
+    print(f"\n********** Memory usage (partition_sequence='{partition_sequence_name}') **************")
+    mj.get_memory_stats()
 
     if verbose > 1:
         # Display the results
