@@ -7,12 +7,6 @@ import mbirjax.preprocess as mjp
 
 pp = pprint.PrettyPrinter(indent=4)
 
-# === Predefined partition sequences ===
-PARTITION_SEQUENCES = {
-    "default":  [0, 2, 4, 6, 7],          # mbirjax default (includes granularity 1)
-    "skip_0":    [2, 4, 6, 7],             # 4,16,64,128
-}
-
 if __name__ == "__main__":
     # === MBIR Recon parameters ===
     sharpness = 1.0
@@ -33,9 +27,9 @@ if __name__ == "__main__":
                         help="Number of metal types for segmentation and MAR.")
     parser.add_argument("--sino_cropping", type=int, default=1,
                         help="Flag for applying sinogram cropping")
-    parser.add_argument("--partition_sequence", type=str, default="default",
-                        choices=list(PARTITION_SEQUENCES.keys()),
-                        help="Name of a predefined partition sequence (see PARTITION_SEQUENCES).")
+    parser.add_argument("--partition_sequence", type=str, default=None,
+                        help="Comma-separated granularity indices, e.g. 2,4,6,7. "
+                             "If omitted, mbirjax uses its default sequence.")
     parser.add_argument("--max_iterations", type=int, default=15,
                         help="Maximum number of MBIR iterations.")
     args = parser.parse_args()
@@ -56,8 +50,9 @@ if __name__ == "__main__":
     downsample = args.downsampling
     num_metal = args.num_metal
     subsample_view_factor = args.subsample_view_factor
-    partition_sequence_name = args.partition_sequence
-    partition_sequence = PARTITION_SEQUENCES[partition_sequence_name]
+    partition_sequence = None
+    if args.partition_sequence is not None:
+        partition_sequence = [int(i) for i in args.partition_sequence.split(",")]
     max_iterations = args.max_iterations
 
     # Set program parameters
@@ -77,15 +72,19 @@ if __name__ == "__main__":
     if verbose>0:
         print("\n***************** Set up MBIRJAX model ****************")
     ct_model.set_params(sharpness=sharpness, verbose=verbose, positivity_flag=True)
-    ct_model.set_params(partition_sequence=partition_sequence)
-    if verbose>0:
-        print(f"Using partition sequence '{partition_sequence_name}': {partition_sequence}")
+    if partition_sequence is not None:
+        ct_model.set_params(partition_sequence=partition_sequence)
+        if verbose>0:
+            print(f"Using partition sequence {partition_sequence}")
     weights_trans = mj.gen_weights(sino, weight_type='transmission_root')
     if verbose>0:
         ct_model.print_params()
 
+    # Filenames carry a pseq tag only when a sequence was prescribed
+    pseq_tag = "" if partition_sequence is None else "_pseq_" + "-".join(str(i) for i in partition_sequence)
+
     # Set location of log file
-    logfile_path = os.path.expanduser(f"{logfile_path}recon_{dataset_tag}_nummetal_{num_metal}_pseq_{partition_sequence_name}.log")
+    logfile_path = os.path.expanduser(f"{logfile_path}recon_{dataset_tag}_nummetal_{num_metal}{pseq_tag}.log")
 
     import time
     time_start = time.time()
@@ -110,7 +109,7 @@ if __name__ == "__main__":
     if verbose>0:
         print("\n*********** save mar and fdk recon in h5 format *************")
     hdf5_path = os.path.join(output_path,
-    f"recon_{dataset_tag}_nummetal_{num_metal}_voxel_pitch_{delta_voxel_um:.2f}um_pseq_{partition_sequence_name}.h5")
+    f"recon_{dataset_tag}_nummetal_{num_metal}_voxel_pitch_{delta_voxel_um:.2f}um{pseq_tag}.h5")
     mj.export_recon_hdf5(hdf5_path, recon, recon_dict=None, remove_flash=True)
     if verbose>0:
         print("Metal artifact reduction recon saved to {}".format(os.path.abspath(hdf5_path)))
