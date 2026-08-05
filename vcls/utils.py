@@ -1,5 +1,61 @@
 import numpy as np
+import matplotlib.pyplot as plt
 from matplotlib.path import Path
+
+
+def create_artificial_roi(reference_object):
+    """Create an ROI that includes the two upper edges of the object."""
+    num_rows, num_cols, num_slices = reference_object.shape
+
+    roi_2d = np.zeros((num_rows, num_cols), dtype=bool)
+    roi_2d[int(0.07 * num_rows):int(0.57 * num_rows),
+           int(0.25 * num_cols):int(0.76 * num_cols)] = True
+
+    roi = np.repeat(roi_2d[:, :, np.newaxis], num_slices, axis=2)
+
+    return roi
+
+
+def show_roi(reference_object, roi):
+    """Display the ROI on one reference-object slice."""
+    slice_index = reference_object.shape[2] // 2
+
+    fig, axis = plt.subplots(figsize=(5, 5))
+    axis.imshow(reference_object[:, :, slice_index], cmap='gray')
+    axis.contour(roi[:, :, slice_index], levels=[0.5], colors='tab:red')
+    axis.set_title('Reference Object with ROI')
+    axis.axis('off')
+    fig.tight_layout()
+    plt.show()
+
+
+def show_view_angle_comparison(image, angle_sets, titles):
+    """Display several sets of projection angles on the same reference image."""
+    rows, cols = image.shape
+    center_x, center_y = cols / 2, rows / 2
+    radius = min(rows, cols) / 2
+
+    fig, axes = plt.subplots(1, len(angle_sets), figsize=(5 * len(angle_sets), 5))
+    for axis, angles, title in zip(axes, angle_sets, titles):
+        rotation_angles = np.pi / 2 + np.asarray(angles)
+        colors = plt.cm.tab10(np.arange(len(rotation_angles)) % 10)
+
+        axis.imshow(image, cmap='gray', origin='upper', extent=[0, cols, rows, 0])
+        axis.set_aspect('equal')
+        for angle, color in zip(rotation_angles, colors):
+            dx = 0.95 * radius * np.cos(angle)
+            dy = -0.95 * radius * np.sin(angle)
+            axis.arrow(
+                center_x, center_y, dx, dy, color=color, linewidth=1.75,
+                head_width=min(rows, cols) * 0.02, length_includes_head=True
+            )
+
+        axis.set_title(title)
+        axis.axis('off')
+
+    fig.suptitle('Selected View Angle Comparison')
+    fig.tight_layout()
+    plt.show()
 
 
 def gen_polygon_phantom(num_rows=512, num_slices=256):

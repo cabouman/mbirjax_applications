@@ -5,7 +5,6 @@ import jax.numpy as jnp
 import mbirjax as mj
 import numpy as np
 import utils as dut
-import vcls
 
 
 if __name__ == '__main__':
@@ -19,7 +18,6 @@ if __name__ == '__main__':
     magnification = 2.0
     cone_angle = (15/180)*np.pi
     num_candidate_views = 128
-    #num_selected_views = 25
     num_selected_views = 15
     start_angle = 0
     end_angle = 2 * np.pi
@@ -64,7 +62,7 @@ if __name__ == '__main__':
     # Select views without and with ROI voxels
     ##############################################
     start_time = time.time()
-    no_roi_angle_inds, no_roi_vcl_value = vcls.get_opt_views(
+    no_roi_angle_inds, no_roi_vcl_value = mj.get_opt_views(
         ct_model,
         reference_object,
         num_selected_views,
@@ -77,7 +75,7 @@ if __name__ == '__main__':
     no_roi_elapsed = time.time() - start_time
 
     start_time = time.time()
-    roi_angle_inds, roi_vcl_value = vcls.get_opt_views(
+    roi_angle_inds, roi_vcl_value = mj.get_opt_views(
         ct_model,
         reference_object,
         num_selected_views,
