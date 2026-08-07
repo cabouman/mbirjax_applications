@@ -1,8 +1,8 @@
 seed = 42 # Change this value to control randomness across runs
 
 import time
-import jax.numpy as jnp
 import mbirjax as mj
+import jax.numpy as jnp
 import numpy as np
 import utils as dut
 
