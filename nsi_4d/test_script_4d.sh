@@ -8,6 +8,7 @@
 #   3. Run:  bash test_script_4d.sh
 #
 
+cd "$(dirname "${BASH_SOURCE[0]}")"
 
 DATA_PATH=/depot/bouman/data/Lilly/4DCT/Phantom_30s_Run1_Dec2024/
 OUTPUT_PATH=./output
@@ -23,7 +24,7 @@ python Lilly_recon.py \
   2>&1 | tee ~/4dct_logs/recon_4d_run.log
 
 # Quick test - reconstruct only the first N time frames, add:
-#   --num_frames 20 \
+#   --num_frames 25 \
 #
 # Advanced (leave at defaults unless you know why):
 #   --frames_per_rotation 6      # time frames per 360 deg; must match the gating geometry

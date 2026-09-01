@@ -1,6 +1,6 @@
 # Plan: simplify the Lilly 4D CLI (`Lilly_recon.py` + `test_script_4d.sh`)
 
-Status: **plan only — not yet implemented.**
+Status: **implemented** (commit 8c4cfd4).
 
 ## Goal
 Make the 4D MACE deliverable easy for Lilly to run for real reconstructions by
@@ -52,7 +52,12 @@ No change to the CLI code — both stay as `argparse` args with defaults 6 / 2.0
 overridable. They leave the shell command but are **both documented in a comment** in
 `test_script_4d.sh` so an advanced user can find and override them.
 
-- `frame_overlap_factor = 2.0` — pure algorithm tuning; safe to bury as a default.
+- `frame_overlap_factor = 2.0` — sets each frame's angular span to
+  `factor * (360 / frames_per_rotation)` degrees, so it fixes both the views per frame and
+  the number of frames: on the Lilly phantom (2.5 deg/view, 2400 views) 2.0 gives a 120 deg
+  48-view frame and 99 frames, while 4.0 gives 240 deg / 96 views and 97 frames.  It trades
+  temporal resolution against per-frame SNR rather than being pure tuning, but 2.0 is the
+  validated value, so it is still reasonable to bury as a default.
 - `frames_per_rotation = 6` — encodes acquisition geometry (anchor points 60 deg apart ->
   period-6). It is a property of the data, not the algorithm, and cannot be auto-derived from
   the NSI metadata in the current interface, so a differently-gated scan must override it.
@@ -125,10 +130,13 @@ No other logic changes. All mbirjax calls stay as-is (verified against the
 Trim to what Lilly actually sets; everything else is a documented override.
 
 ```bash
+cd "$(dirname "${BASH_SOURCE[0]}")"
+
 DATA_PATH=/depot/bouman/data/Lilly/4DCT/Phantom_30s_Run1_Dec2024/
 OUTPUT_PATH=./output
 
-mkdir -p "$OUTPUT_PATH" ~/4dct_logs/
+mkdir -p "$OUTPUT_PATH"
+mkdir -p ~/4dct_logs/
 
 python Lilly_recon.py \
   --data_path           "$DATA_PATH" \
@@ -137,12 +145,17 @@ python Lilly_recon.py \
   --max_mace_iterations 10 \
   2>&1 | tee ~/4dct_logs/recon_4d_run.log
 
-# Quick test - reconstruct only the first N time frames:
-#   --num_frames 20
+# Quick test - reconstruct only the first N time frames, add:
+#   --num_frames 25 \
+#
 # Advanced (leave at defaults unless you know why):
-#   --frames_per_rotation 6     # time frames per 360 deg; must match the gating geometry
-#   --frame_overlap_factor 2.0  # frames sharing any given view (MACE tuning)
+#   --frames_per_rotation 6      # time frames per 360 deg; must match the gating geometry
+#   --frame_overlap_factor 2.0   # frames sharing any given view (MACE tuning)
 ```
+
+The leading `cd` makes the script independent of the caller's working directory, so
+`bash /any/path/test_script_4d.sh` still finds `Lilly_recon.py` and writes `./output` beside
+the script rather than wherever it was invoked from.
 
 Removed from the visible script: `--frames_per_rotation`, `--frame_overlap_factor`,
 `--subsample_view_factor`, `--weight_type`. Both frame flags are documented in the comment
@@ -154,7 +167,7 @@ above; all removed flags remain reachable via `--help`. `--max_mace_iterations` 
 - CLI surface for downsampling: `--downsample_row`, `--downsample_column`,
   `--subsample_view_factor` (3 flags) -> `--downsampling` (1 flag).
 - `--max_iterations` -> `--max_mace_iterations` (renamed for clarity vs. the MAR script).
-- Visible shell knobs: 8 -> 4 (`DATA_PATH`, `--output_path`, `--downsampling`,
+- Visible shell knobs: 9 -> 4 (`DATA_PATH`, `--output_path`, `--downsampling`,
   `--max_mace_iterations`), with quick-test and advanced overrides shown as comments.
 
 ## Decisions

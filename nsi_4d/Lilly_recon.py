@@ -11,18 +11,8 @@ Every parameter is a CLI flag; the defaults are the validated values for the
 4DCT phantom dataset.
 """
 
-import os
-import sys
-
-# Strip incompatible system CUDA/cuDNN from LD_LIBRARY_PATH before JAX initializes.
-# This must run before any JAX import.
-if "LD_LIBRARY_PATH" in os.environ and not os.environ.get("_JAX_CLEAN_REEXEC"):
-    env = os.environ.copy()
-    env.pop("LD_LIBRARY_PATH", None)
-    env["_JAX_CLEAN_REEXEC"] = "1"
-    os.execvpe(sys.executable, [sys.executable] + sys.argv, env)
-
 import argparse
+import os
 import time
 
 import mbirjax as mj
