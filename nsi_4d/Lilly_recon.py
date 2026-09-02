@@ -171,7 +171,7 @@ def main():
 
     # The middle x slice (the YZ plane through the center) stepping through time.
     gif_path = os.path.join(output_path, "recon_4d.gif")
-    mj.save_4d_volume_as_gif(recon_4d, gif_path, slice_axis=1, vmin=0, vmax=args.gif_vmax)
+    mj.save_volume_as_gif(recon_4d, gif_path, vmin=0, vmax=args.gif_vmax)
     print(f"[INFO] GIF saved to:   {os.path.abspath(gif_path)}")
 
 
