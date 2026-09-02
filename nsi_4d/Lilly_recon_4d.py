@@ -32,8 +32,9 @@ def parse_args():
                    help="NSI dataset directory, or a .tgz path/URL to download and extract.")
     g.add_argument("--download_dir", type=str, default="./data",
                    help="Extraction directory used when --data_path is a .tgz.")
-    g.add_argument("--output_path", type=str, default="./output",
-                   help="Directory for output files (recon, init cache, logs, GIF).")
+    g.add_argument("--output_path", type=str, default="./output/lilly",
+                   help="Directory for the recon (.npy), GIF and init cache. Logs go to ./logs/. "
+                        "Files are named recon_4d_<dataset>_voxel_pitch_<um>um, as in nsi/Lilly_recon.py.")
 
     g = parser.add_argument_group("preprocessing")
     g.add_argument("--downsampling", type=int, default=1,
@@ -108,8 +109,6 @@ def main():
 
     output_path = args.output_path
     os.makedirs(output_path, exist_ok=True)
-    init_dir = os.path.join(output_path, "init")
-    log_dir = os.path.join(output_path, "logs")
 
     print("\n************** NSI dataset preprocessing **************")
     sino, ct_model = mjp.nsi.get_sino_and_model(
@@ -142,6 +141,16 @@ def main():
     print(f"Time frames: {mace_model.nt} "
           f"({mace_model.view_slices[0].stop - mace_model.view_slices[0].start} views each)")
 
+    # Output naming follows nsi/Lilly_recon.py: dataset tag plus voxel pitch, with the frame count
+    # appended so a partial --num_frames run never overwrites a full one.  The init cache is keyed by
+    # the same stem because its loader checks only the array shape.
+    dataset_tag = os.path.basename(dataset_dir.rstrip("/"))
+    delta_voxel_um = ct_model.get_params('delta_voxel') * ct_model.get_params('alu_value') * 1000
+    frames_tag = f"_frames_{mace_model.nt}"
+    stem = f"recon_4d_{dataset_tag}_voxel_pitch_{delta_voxel_um:.2f}um{frames_tag}"
+    init_dir = os.path.join(output_path, "init", stem)
+    log_dir = os.path.join("./logs", stem)
+
     # transmission_root is the validated weighting for 4D data; the model itself defaults to
     # unit weights, following TomographyModel.recon, so the choice is made explicitly here.
     weights = (None if args.weight_type == "unweighted"
@@ -159,7 +168,7 @@ def main():
     )
     run_time_h = (time.time() - time0) / 3600
 
-    out_path = os.path.abspath(os.path.join(output_path, f"recon_4d_{run_time_h:.2f}h.npy"))
+    out_path = os.path.abspath(os.path.join(output_path, f"{stem}.npy"))
     np.save(out_path, recon_4d)
     print(f"\n[INFO] Total wall time: {run_time_h:.2f} hours.")
     print(f"[INFO] Iterations run: {recon_dict['recon_params']['iterations completed']} "
@@ -170,7 +179,7 @@ def main():
     append_run_info(log_dir, args, dataset_dir, mace_model.nt, run_time_h, out_path)
 
     # The middle x slice (the YZ plane through the center) stepping through time.
-    gif_path = os.path.join(output_path, "recon_4d.gif")
+    gif_path = os.path.join(output_path, f"{stem}.gif")
     mj.save_volume_as_gif(recon_4d, gif_path, vmin=0, vmax=args.gif_vmax)
     print(f"[INFO] GIF saved to:   {os.path.abspath(gif_path)}")
 
