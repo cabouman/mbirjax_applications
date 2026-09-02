@@ -5,7 +5,7 @@ Typical usage (via shell script):
     bash test_script_4d.sh
 
 Or directly:
-    python Lilly_recon.py --data_path /path/to/nsi/dataset
+    python Lilly_recon_4d.py --data_path /path/to/nsi/dataset
 
 Every parameter is a CLI flag; the defaults are the validated values for the
 4DCT phantom dataset.
@@ -90,7 +90,7 @@ def resolve_dataset(args):
 def append_run_info(log_dir, args, dataset_dir, num_frames, run_time_h, out_path):
     """Append the script settings to the run_info.txt started by MACE4DModel.recon()."""
     with open(os.path.join(log_dir, "run_info.txt"), "a") as f:
-        f.write("\n# Script settings (Lilly_recon.py)\n")
+        f.write("\n# Script settings (Lilly_recon_4d.py)\n")
         f.write(f"dataset              = {dataset_dir}\n")
         f.write(f"downsampling         = {args.downsampling}\n")
         f.write(f"frames_per_rotation  = {args.frames_per_rotation}\n")

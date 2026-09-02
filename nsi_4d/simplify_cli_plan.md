@@ -138,7 +138,7 @@ OUTPUT_PATH=./output
 mkdir -p "$OUTPUT_PATH"
 mkdir -p ~/4dct_logs/
 
-python Lilly_recon.py \
+python Lilly_recon_4d.py \
   --data_path           "$DATA_PATH" \
   --output_path         "$OUTPUT_PATH" \
   --downsampling        1 \
