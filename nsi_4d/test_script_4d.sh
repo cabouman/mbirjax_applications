@@ -21,7 +21,7 @@ PYTHONUNBUFFERED=1 python Lilly_recon_4d.py \
 
 # Quick test - reconstruct only the first N time frames, add:
 #   --num_frames 25 \
-#
+#   No view subsampling here for 4D data to ensure better recon quality
 # Advanced (leave at defaults unless you know why):
 #   --output_path ./output/lilly # where the recon, GIF and init cache are written
 #   --frames_per_rotation 6      # time frames per 360 deg; must match the gating geometry
