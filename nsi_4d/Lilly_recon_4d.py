@@ -137,7 +137,7 @@ def main():
         verbose=args.verbose,
     )
     if args.serial:
-        mace_model.configure_devices(1)
+        mace_model.set_device_pool(1)
     print(f"Time frames: {mace_model.nt} "
           f"({mace_model.view_slices[0].stop - mace_model.view_slices[0].start} views each)")
 
