@@ -76,14 +76,18 @@ def parse_args():
     g.add_argument("--verbose", type=int, default=1, help="0 = silent, 1 = progress, 2 = debug.")
     g.add_argument("--gif_vmax", type=float, default=0.06,
                    help="Upper display bound for the output GIF, in units of attenuation.")
-    g.add_argument("--gif_slice_axis", type=int, default=1, choices=[0, 1, 2, 3],
-                   help="Axis held fixed in the output GIF: 0=time, 1=x, 2=y, 3=z. The default "
-                        "fixes x, so the GIF plays a YZ plane over time; fixing time instead "
-                        "walks through the volume of a single time frame.")
+    g.add_argument("--gif_slice_axis", type=int, default=None, choices=[0, 1, 2, 3],
+                   help="Write one GIF holding this axis fixed: 0=time, 1=x, 2=y, 3=z. Omit "
+                        "(default) to write all three spatial planes. Fixing time walks through "
+                        "the volume of a single time frame instead of playing over time.")
     g.add_argument("--gif_slice_index", type=int, default=None,
-                   help="Index along --gif_slice_axis. Omit for the middle of that axis.")
+                   help="Index along --gif_slice_axis, which must be given as well. Omit for the "
+                        "middle of that axis.")
 
-    return parser.parse_args()
+    args = parser.parse_args()
+    if args.gif_slice_index is not None and args.gif_slice_axis is None:
+        parser.error("--gif_slice_index needs --gif_slice_axis, to say which axis it indexes.")
+    return args
 
 
 def resolve_dataset(args):
@@ -184,17 +188,20 @@ def main():
 
     append_run_info(log_dir, args, dataset_dir, mace_model.nt, run_time_h, out_path)
 
-    # The plane selected by --gif_slice_axis, playing over time; fixing time instead walks
-    # through that one frame's volume.  The index is resolved here rather than left to the
-    # library default so it can go in the file name, which keeps runs that differ only in the
-    # plane shown from overwriting each other.
-    gif_slice_index = (recon_4d.shape[args.gif_slice_axis] // 2 if args.gif_slice_index is None
-                       else args.gif_slice_index)
-    gif_path = os.path.join(output_path,
-                            f"{stem}_{'txyz'[args.gif_slice_axis]}{gif_slice_index}.gif")
-    mj.save_volume_as_gif(recon_4d, gif_path, slice_axis=args.gif_slice_axis,
-                          slice_index=gif_slice_index, vmin=0, vmax=args.gif_vmax)
-    print(f"[INFO] GIF saved to:   {os.path.abspath(gif_path)}")
+    # One GIF per spatial plane by default, each playing over time.  The recon takes hours and
+    # the GIFs take seconds, so writing all three spares the reviewer from having to pick the
+    # interesting plane before the run.  --gif_slice_axis narrows it to one, and can fix time
+    # instead, which walks through a single frame's volume.  The index is resolved here rather
+    # than left to the library default so it can go in the file name, which keeps runs that
+    # differ only in the plane shown from overwriting each other.
+    gif_axes = (1, 2, 3) if args.gif_slice_axis is None else (args.gif_slice_axis,)
+    for axis in gif_axes:
+        index = (recon_4d.shape[axis] // 2 if args.gif_slice_index is None
+                 else args.gif_slice_index)
+        gif_path = os.path.join(output_path, f"{stem}_{'txyz'[axis]}{index}.gif")
+        mj.save_volume_as_gif(recon_4d, gif_path, slice_axis=axis, slice_index=index,
+                              vmin=0, vmax=args.gif_vmax)
+        print(f"[INFO] GIF saved to:   {os.path.abspath(gif_path)}")
 
 
 if __name__ == "__main__":
