@@ -26,4 +26,6 @@ PYTHONUNBUFFERED=1 python Lilly_recon_4d.py \
 # Advanced parameters:
 #   --output_path ./output/lilly # where the recon, GIF and init cache are written
 #   --frames_per_rotation 6      # time frames per 360 deg; must match the gating geometry
-#   --frame_overlap_factor 2.0   # frames sharing any given view (MACE tuning)
+#   --frame_overlap_factor 2.0   # frames sharing any given view; At 1.0 frames partition the scan into disjoint wedges;
+#                                # at the default 2.0 every view is shared by two frame, so consecutive frames overlap by 50%;
+#                                # widening each frame's angular coverage at the cost of motion blurring.
