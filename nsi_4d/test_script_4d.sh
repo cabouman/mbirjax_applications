@@ -24,5 +24,7 @@ PYTHONUNBUFFERED=1 python Lilly_recon_4d.py \
 #   No view subsampling here for 4D data to ensure better recon quality
 # Advanced (leave at defaults unless you know why):
 #   --output_path ./output/lilly # where the recon, GIF and init cache are written
+#   --gif_slice_axis 1           # plane shown in the GIF: 0=time, 1=x, 2=y, 3=z
+#   --gif_slice_index 130        # index along that axis; default is the middle
 #   --frames_per_rotation 6      # time frames per 360 deg; must match the gating geometry
 #   --frame_overlap_factor 2.0   # frames sharing any given view (MACE tuning)
