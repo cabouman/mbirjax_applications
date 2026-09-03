@@ -148,7 +148,7 @@ def main():
     )
     if args.serial:
         mace_model.set_device_pool(1)
-    print(f"Time frames: {mace_model.nt} "
+    print(f"Time frames: {mace_model.num_frames} "
           f"({mace_model.view_slices[0].stop - mace_model.view_slices[0].start} views each)")
 
     # Output naming follows nsi/Lilly_recon.py: dataset tag plus voxel pitch, with the frame count
@@ -156,7 +156,7 @@ def main():
     # the same stem because its loader checks only the array shape.
     dataset_tag = os.path.basename(dataset_dir.rstrip("/"))
     delta_voxel_um = ct_model.get_params('delta_voxel') * ct_model.get_params('alu_value') * 1000
-    frames_tag = f"_frames_{mace_model.nt}"
+    frames_tag = f"_frames_{mace_model.num_frames}"
     stem = f"recon_4d_{dataset_tag}_voxel_pitch_{delta_voxel_um:.2f}um{frames_tag}"
     init_dir = os.path.join(output_path, "init", stem)
     log_dir = os.path.join("./logs", stem)
@@ -186,7 +186,7 @@ def main():
     print(f"[INFO] Recon saved to: {out_path}")
     print(f"[INFO] Logs:           {os.path.abspath(log_dir)}")
 
-    append_run_info(log_dir, args, dataset_dir, mace_model.nt, run_time_h, out_path)
+    append_run_info(log_dir, args, dataset_dir, mace_model.num_frames, run_time_h, out_path)
 
     # One GIF per spatial plane by default, each playing over time.  The recon takes hours and
     # the GIFs take seconds, so writing all three spares the reviewer from having to pick the
