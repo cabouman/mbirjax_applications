@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# 4D MACE CT Reconstruction — demo run script.
+# Demo run script for 4D MACE CT reconstruction.
 #
 # Instructions:
 #   1. Set DATA_PATH to the extracted NSI dataset directory.
@@ -18,14 +18,16 @@ PYTHONUNBUFFERED=1 python Lilly_recon_4d.py \
   --max_mace_iterations 10 \
   2>&1 | tee ~/mbirjax_notes/Lilly_4d_ds1_run.log
 
-# No view subsampling here for 4D data to ensure better recon quality
+# The views are not subsampled for 4D data, in order to preserve recon quality.
 
-# For a Quick test - reconstruct only the first N time frames, add:
+# For a quick test, reconstruct only the first N time frames by adding:
 #   --num_frames 25 \
 
 # Advanced parameters:
-#   --output_path ./output/lilly # where the recon, GIF and init cache are written
-#   --frames_per_rotation 6      # time frames per 360 deg; must match the gating geometry
-#   --frame_overlap_factor 2.0   # frames sharing any given view; At 1.0 frames partition the scan into disjoint wedges;
-#                                # at the default 2.0 every view is shared by two frame, so consecutive frames overlap by 50%;
-#                                # widening each frame's angular coverage at the cost of motion blurring.
+#   --output_path ./output/lilly # Directory for the recon, GIF and init cache.
+#   --frames_per_rotation 6      # Time frames per 360 degrees.  Must match the gating geometry.
+#   --frame_overlap_factor 2.0   # Number of frames that share any given view.  At 1.0 the
+#                                # frames do not overlap.  At the default 2.0 every view is
+#                                # shared by two frames, so consecutive frames overlap by 50%.
+#                                # Larger values give each frame more views at the cost of
+#                                # more motion blur.

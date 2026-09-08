@@ -1,13 +1,13 @@
 """
-4D MACE CT Reconstruction — command-line driver.
+Command-line driver for 4D MACE CT reconstruction.
 
-Typical usage (via shell script):
+Typical usage is through the shell script:
     bash test_script_4d.sh
 
-Or directly:
+The script can also be run directly:
     python Lilly_recon_4d.py --data_path /path/to/nsi/dataset
 
-Every parameter is a CLI flag; the defaults are the validated values for the
+Every parameter is a command-line flag.  The defaults are the validated values for the
 4DCT phantom dataset.
 """
 
@@ -21,7 +21,7 @@ import numpy as np
 
 
 def parse_args():
-    """Command-line interface. Defaults are the validated values for the 4DCT phantom."""
+    """Parse the command-line arguments.  The defaults are the validated values for the 4DCT phantom."""
     parser = argparse.ArgumentParser(
         description="4D MACE CT Reconstruction",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
@@ -65,21 +65,21 @@ def parse_args():
     g.add_argument("--weight_type", type=str, default="transmission_root",
                    choices=["unweighted", "transmission", "transmission_root", "emission"],
                    help="Sinogram weighting, as in mj.gen_weights. transmission_root is the "
-                        "validated setting for 4D transmission data; 'unweighted' passes "
-                        "weights=None, which is the same as all-ones weights without the array.")
+                        "validated setting for 4D transmission data. 'unweighted' passes "
+                        "weights=None, which means unit weights.")
     g.add_argument("--no_dejitter", action="store_true", help="Disable the DCT-I temporal dejitter.")
 
     g = parser.add_argument_group("execution")
     g.add_argument("--serial", action="store_true",
-                   help="Run all tasks on one device (alias for one-device mode). "
-                        "By default all visible GPUs are used; restrict them with CUDA_VISIBLE_DEVICES.")
+                   help="Run all tasks on one device. By default all visible GPUs are "
+                        "used. Restrict them with CUDA_VISIBLE_DEVICES.")
     g.add_argument("--verbose", type=int, default=1, help="0 = silent, 1 = progress, 2 = debug.")
     g.add_argument("--gif_vmax", type=float, default=0.06,
                    help="Upper display bound for the output GIF, in units of attenuation.")
     g.add_argument("--gif_slice_axis", type=int, default=None, choices=[0, 1, 2, 3],
                    help="Write one GIF holding this axis fixed: 0=time, 1=x, 2=y, 3=z. Omit "
-                        "(default) to write all three spatial planes. Fixing time walks through "
-                        "the volume of a single time frame instead of playing over time.")
+                        "(default) to write all three spatial planes. Fixing time steps through "
+                        "the slices of a single time frame instead of playing over time.")
     g.add_argument("--gif_slice_index", type=int, default=None,
                    help="Index along --gif_slice_axis, which must be given as well. Omit for the "
                         "middle of that axis.")
@@ -91,7 +91,7 @@ def parse_args():
 
 
 def resolve_dataset(args):
-    """Return the dataset directory; a non-directory data_path is downloaded/extracted."""
+    """Return the dataset directory.  A data_path that is not a directory is downloaded and extracted."""
     if os.path.isdir(args.data_path):
         return args.data_path
     os.makedirs(args.download_dir, exist_ok=True)
@@ -129,8 +129,8 @@ def main():
     ct_model.set_params(sharpness=args.sharpness, positivity_flag=True, verbose=args.verbose)
 
     print("\n************** Build 4D MACE model **************")
-    # The frame structure follows from the model's angles alone, so it is fixed here; the
-    # sinogram enters at recon() below.
+    # The frame structure follows from the model's angles alone, so it is fixed here.
+    # The sinogram enters at recon() below.
     mace_model = mj.MACE4DModel(
         ct_model,
         frames_per_rotation=args.frames_per_rotation,
@@ -151,9 +151,10 @@ def main():
     print(f"Time frames: {mace_model.num_frames} "
           f"({mace_model.view_slices[0].stop - mace_model.view_slices[0].start} views each)")
 
-    # Output naming follows nsi/Lilly_recon.py: dataset tag plus voxel pitch, with the frame count
-    # appended so a partial --num_frames run never overwrites a full one.  The init cache is keyed by
-    # the same stem because its loader checks only the array shape.
+    # The output naming follows nsi/Lilly_recon.py and uses the dataset tag plus the voxel
+    # pitch.  The frame count is appended so that a partial --num_frames run never
+    # overwrites a full one.  The init cache uses the same stem because its loader checks
+    # only the array shape.
     dataset_tag = os.path.basename(dataset_dir.rstrip("/"))
     delta_voxel_um = ct_model.get_params('delta_voxel') * ct_model.get_params('alu_value') * 1000
     frames_tag = f"_frames_{mace_model.num_frames}"
@@ -161,8 +162,8 @@ def main():
     init_dir = os.path.join(output_path, "init", stem)
     log_dir = os.path.join("./logs", stem)
 
-    # transmission_root is the validated weighting for 4D data; the model itself defaults to
-    # unit weights, following TomographyModel.recon, so the choice is made explicitly here.
+    # transmission_root is the validated weighting for 4D data.  The model itself defaults
+    # to unit weights, so the choice is made explicitly here.
     weights = (None if args.weight_type == "unweighted"
                else mj.gen_weights(sino, weight_type=args.weight_type))
 
@@ -188,12 +189,12 @@ def main():
 
     append_run_info(log_dir, args, dataset_dir, mace_model.num_frames, run_time_h, out_path)
 
-    # One GIF per spatial plane by default, each playing over time.  The recon takes hours and
-    # the GIFs take seconds, so writing all three spares the reviewer from having to pick the
-    # interesting plane before the run.  --gif_slice_axis narrows it to one, and can fix time
-    # instead, which walks through a single frame's volume.  The index is resolved here rather
-    # than left to the library default so it can go in the file name, which keeps runs that
-    # differ only in the plane shown from overwriting each other.
+    # By default, one GIF is written per spatial plane, each playing over time.  The recon
+    # takes hours and the GIFs take seconds, so writing all three avoids having to pick the
+    # interesting plane before the run.  --gif_slice_axis narrows the output to one axis,
+    # and fixing time instead steps through the slices of a single frame.  The slice index
+    # is resolved here so that it can go into the file name.  Then runs that differ only
+    # in the plane shown do not overwrite each other.
     gif_axes = (1, 2, 3) if args.gif_slice_axis is None else (args.gif_slice_axis,)
     for axis in gif_axes:
         index = (recon_4d.shape[axis] // 2 if args.gif_slice_index is None
