@@ -1,4 +1,8 @@
 # Repository for MBIRJAX demonstrations
+
+> **MBIRJAX is now legacy software.** It has been replaced by MBIRTorch, which has the same API, runs on PyTorch, and is faster and more memory efficient. MBIRJAX will not be updated further. Users should migrate to MBIRTorch. The same demonstrations for MBIRTorch are in [mbirtorch_applications](https://github.com/cabouman/mbirtorch_applications).
+> Repository: https://github.com/cabouman/mbirtorch. Documentation: https://mbirtorch.readthedocs.io. Migration guide: https://mbirtorch.readthedocs.io/en/latest/usr_migration.html
+
 ## Overview
 This repository contains scripts that demonstrate the usage of [MBIRJAX](https://github.com/cabouman/mbirjax) in selected CT applications.
 ## Quick start guide
